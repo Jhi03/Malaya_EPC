@@ -1,0 +1,247 @@
+body {
+    font-family: 'Arial', sans-serif;
+    margin: 0;
+    display: flex;
+    height: 100vh;
+}
+
+/* Sidebar styles */
+.sidebar {
+    width: 210px;
+    background-color: #333;
+    color: white;
+    height: 100vh;
+    padding: 15px;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-start;
+}
+
+.logo {
+    display: flex;
+    align-items: center;
+    font-size: 16px;
+    font-weight: bold;
+    margin-bottom: 20px;
+    padding: 10px 0;
+}
+
+.logo-img {
+    width: 40px;
+    height: 40px;
+    background-color: #f4c542;
+    border-radius: 5px;
+    margin-right: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #333;
+    font-weight: bold;
+}
+
+.nav-buttons {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+}
+
+.nav-button {
+    background: none;
+    border: none;
+    color: white;
+    text-align: left;
+    font-size: 14px;
+    padding: 10px;
+    width: 100%;
+    display: flex;
+    justify-content: space-between;
+    cursor: pointer;
+    text-decoration: none;
+}
+
+.nav-button.active {
+    color: #f4c542;
+    font-weight: bold;
+}
+
+.create-btn {
+    background: none;
+    border: 1px solid white;
+    color: white;
+    padding: 10px;
+    width: 100%;
+    font-size: 16px;
+    cursor: pointer;
+    border-radius: 5px;
+    margin-top: auto;
+    margin-bottom: 20px;
+}
+
+/* Content Pane */
+.content {
+    flex-grow: 1;
+    display: flex;
+    flex-direction: column;
+    background-color: #f5f5f5;
+}
+
+/* Header */
+.top-bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    height: 45px;
+    background: white;
+    border-bottom: 2px solid #333;
+    padding: 0 20px;
+}
+
+.hamburger {
+    background: none;
+    border: none;
+    font-size: 24px;
+    cursor: pointer;
+}
+
+.page-title {
+    font-size: 16px;
+    font-weight: bold;
+    margin: 0;
+}
+
+.user-icon {
+    background: none;
+    border: none;
+    font-size: 24px;
+    cursor: pointer;
+    color: #333;
+}
+
+/* Search and Filter Bar */
+.search-filter-bar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 15px;
+    background-color: white;
+    border-bottom: 1px solid #eee;
+}
+
+.search-container {
+    flex-grow: 1;
+    max-width: 400px;
+}
+
+.search-input {
+    width: 100%;
+    padding: 8px 12px;
+    border: 1px solid #ccc;
+    border-radius: 20px;
+}
+
+.filter-options {
+    display: flex;
+    gap: 10px;
+}
+
+.sort-btn, .filter-btn {
+    background: none;
+    border: none;
+    padding: 5px 10px;
+    cursor: pointer;
+}
+
+/* Project Grid */
+.project-grid {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 20px;
+    padding: 20px;
+    align-content: flex-start;
+}
+
+.project-card {
+    border: 1px solid #ccc;
+    border-radius: 5px;
+    width: 280px;
+    height: 110px;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    background-color: white;
+}
+
+.project-info {
+    padding: 15px;
+    background-color: #333;
+    color: white;
+}
+
+.project-name {
+    margin: 0;
+    font-size: 16px;
+    font-weight: bold;
+}
+
+.project-code {
+    margin: 5px 0 0;
+    font-size: 12px;
+    color: #ccc;
+}
+
+.project-actions {
+    display: flex;
+    padding: 10px;
+    gap: 5px;
+}
+
+.btn-records {
+    flex-grow: 1;
+    background-color: #3498db;
+    border: none;
+    color: white;
+    padding: 8px 0;
+    border-radius: 3px;
+    font-size: 12px;
+    font-weight: bold;
+}
+
+.btn-analytics {
+    background-color: #2ecc71;
+    border: none;
+    color: white;
+    width: 35px;
+    height: 32px;
+    border-radius: 3px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+/* Add Project Card */
+.add-project {
+    border: 1px dashed #999;
+    background-color: #f9f9f9;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+}
+
+.add-project-content {
+    text-align: center;
+}
+
+.add-icon {
+    font-size: 32px;
+    width: 50px;
+    height: 50px;
+    line-height: 44px;
+    border-radius: 50%;
+    border: 1px solid #333;
+    margin: 0 auto 10px;
+}
+
+.add-text {
+    font-size: 14px;
+}
