@@ -111,7 +111,7 @@ body {
 /* Search and Filter Bar */
 .search-filter-bar {
     display: flex;
-    justify-content: space-between;
+    justify-content: flex-start;
     align-items: center;
     padding: 10px;
     border-bottom: 1px solid #eee;
@@ -133,6 +133,8 @@ body {
 .filter-options {
     display: flex;
     gap: 10px;
+    padding-left: 10px;
+    font-size: 12px;
 }
 
 .sort-btn, .filter-btn {
