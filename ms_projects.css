@@ -113,7 +113,7 @@ body {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding: 15px;
+    padding: 10px;
     border-bottom: 1px solid #eee;
 }
 
@@ -124,9 +124,10 @@ body {
 
 .search-input {
     width: 100%;
-    padding: 8px 12px;
+    padding: 2px 14px;
     border: 1px solid #ccc;
     border-radius: 20px;
+    font-size: 12px;
 }
 
 .filter-options {
@@ -153,7 +154,6 @@ body {
     border: 1px solid #ccc;
     border-radius: 5px;
     width: 280px;
-    height: 110px;
     display: flex;
     flex-direction: column;
     overflow: hidden;
