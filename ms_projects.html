@@ -2,7 +2,9 @@
 <!--NOTES: 
 - Add new project: save projects form inputs in a database
 - PHP: Filled out form will display "project card" in Projects page
-- PHP: Selecting "Records" will take project id( ? | refer to database later ) to open a Records Page -->
+- PHP: Selecting "Records" or "Anlytics" will take project id( ? | refer to database later ) to open a Records/Analytics Page 
+
+- added href for CamSur "record" and "analytics" to create template for records and analytics page-->
 <html lang="en">
 <head>
     <meta charset="UTF-8">
@@ -65,8 +67,8 @@
                     <p class="project-code">CODE: CamsurMFS</p>
                 </div>
                 <div class="project-actions">
-                    <button class="btn-records">RECORDS</button>
-                    <button class="btn-analytics">📈</button>
+                    <a href="ms_records_template.html" class="btn-records">RECORDS</a>
+                    <a href="ms_analytics_template.html" class="btn-analytics">📈</a>
                 </div>
             </div>
             
@@ -102,11 +104,10 @@
 
                     <div class="form-row">
                         <div class="form-group">
-                            <label for="clientFirstName">First Name</label>
+                            <label for="clientFirstName">Client Name</label>
                             <input type="text" id="clientFirstName" placeholder="First Name" required>
                         </div>
                         <div class="form-group">
-                            <label for="clientLastName">Last Name</label>
                             <input type="text" id="clientLastName" placeholder="Last Name" required>
                         </div>
                     </div>
