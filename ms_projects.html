@@ -80,9 +80,96 @@
         </div>
     </div>
 
+    <!-- Pop-up Modal -->
+    <div id="addProjectModal" class="modal">
+        <div class="modal-content">
+            <h2>NEW PROJECT</h2>
+            <form id="projectForm">
+                <div class="form-group">
+                    <label>Project Name</label>
+                    <input type="text" id="projectName" placeholder="Project Name" required>
+                </div>
+                <div class="form-group">
+                    <label>Project Code</label>
+                    <input type="text" id="projectCode" placeholder="Project Code" required>
+                </div>
+                <div class="form-group">
+                    <label>Client Name</label>
+                    <input type="text" id="clientFirstName" placeholder="First Name" required>
+                    <input type="text" id="clientLastName" placeholder="Last Name" required>
+                </div>
+                <div class="form-group">
+                    <label>Description</label>
+                    <textarea id="description" placeholder="Project Description" required></textarea>
+                </div>
+                <div class="form-actions">
+                    <button type="submit" class="btn-add">ADD</button>
+                    <button type="button" class="btn-cancel" id="closeModal">CANCEL</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+
     <script>
+        //Sidebar Trigger (pullup or collapse sidebar)
         document.getElementById("toggleSidebar").addEventListener("click", function() {
             document.getElementById("sidebar").classList.toggle("d-none");
+        });
+        
+        //Add Project Form
+        document.addEventListener("DOMContentLoaded", function () {
+            const modal = document.getElementById("addProjectModal");
+            const addProjectBtn = document.querySelector(".add-project");
+            const closeModalBtn = document.getElementById("closeModal");
+            const projectForm = document.getElementById("projectForm");
+            const projectGrid = document.querySelector(".project-grid");
+
+            // Open modal
+            addProjectBtn.addEventListener("click", () => {
+                modal.style.display = "flex";
+            });
+
+            // Close modal
+            closeModalBtn.addEventListener("click", () => {
+                modal.style.display = "none";
+            });
+
+            // Handle form submission
+            projectForm.addEventListener("submit", function (event) {
+                event.preventDefault(); // Prevent page refresh
+
+                // Get form values
+                const name = document.getElementById("projectName").value;
+                const code = document.getElementById("projectCode").value;
+                const firstName = document.getElementById("clientFirstName").value;
+                const lastName = document.getElementById("clientLastName").value;
+                const description = document.getElementById("description").value;
+
+                // Create a new project card
+                const projectCard = document.createElement("div");
+                projectCard.classList.add("project-card");
+                projectCard.innerHTML = `
+                    <div class="project-info">
+                        <h3 class="project-name">${name}</h3>
+                        <p class="project-code">CODE: ${code}</p>
+                        <p class="client-name">${firstName} ${lastName}</p>
+                    </div>
+                    <div class="project-actions">
+                        <button class="btn-records">RECORDS</button>
+                        <button class="btn-analytics">📈</button>
+                    </div>
+                `;
+
+                // Add the new project card to the grid
+                projectGrid.appendChild(projectCard);
+
+                // Clear form inputs
+                projectForm.reset();
+
+                // Close the modal
+                modal.style.display = "none";
+            });
         });
     </script>
 </body>
