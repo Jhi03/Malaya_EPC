@@ -1,4 +1,8 @@
 <!DOCTYPE html>
+<!--NOTES: 
+- Add new project: save projects form inputs in a database
+- PHP: Filled out form will display "project card" in Projects page
+- PHP: Selecting "Records" will take project id( ? | refer to database later ) to open a Records Page -->
 <html lang="en">
 <head>
     <meta charset="UTF-8">
@@ -81,32 +85,43 @@
     </div>
 
     <!-- Pop-up Modal -->
-    <div id="addProjectModal" class="modal">
-        <div class="modal-content">
-            <h2>NEW PROJECT</h2>
-            <form id="projectForm">
-                <div class="form-group">
-                    <label>Project Name</label>
-                    <input type="text" id="projectName" placeholder="Project Name" required>
-                </div>
-                <div class="form-group">
-                    <label>Project Code</label>
-                    <input type="text" id="projectCode" placeholder="Project Code" required>
-                </div>
-                <div class="form-group">
-                    <label>Client Name</label>
-                    <input type="text" id="clientFirstName" placeholder="First Name" required>
-                    <input type="text" id="clientLastName" placeholder="Last Name" required>
-                </div>
-                <div class="form-group">
-                    <label>Description</label>
-                    <textarea id="description" placeholder="Project Description" required></textarea>
-                </div>
-                <div class="form-actions">
-                    <button type="submit" class="btn-add">ADD</button>
-                    <button type="button" class="btn-cancel" id="closeModal">CANCEL</button>
-                </div>
-            </form>
+        <div id="addProjectModal" class="modal">
+            <div class="modal-content">
+                <h2 class="modal-title">NEW PROJECT</h2>
+                <form id="projectForm">
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="projectName">Project Name</label>
+                            <input type="text" id="projectName" placeholder="Project Name" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="projectCode">Project Code</label>
+                            <input type="text" id="projectCode" placeholder="Project Code" required>
+                        </div>
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="clientFirstName">First Name</label>
+                            <input type="text" id="clientFirstName" placeholder="First Name" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="clientLastName">Last Name</label>
+                            <input type="text" id="clientLastName" placeholder="Last Name" required>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="description">Description</label>
+                        <textarea id="description" placeholder="Project Description" required></textarea>
+                    </div>
+
+                    <div class="form-actions">
+                        <button type="submit" class="btn-add">ADD</button>
+                        <button type="button" class="btn-cancel" id="closeModal">CANCEL</button>
+                    </div>
+                </form>
+            </div>
         </div>
     </div>
 

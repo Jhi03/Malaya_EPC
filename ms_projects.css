@@ -260,26 +260,61 @@ body {
     text-align: center;
 }
 
-.form-group {
-    margin-bottom: 15px;
+.modal-title {
+    font-size: 18px;
+    border-bottom: 1px solid #eee; /* Change color if needed */
+    padding-bottom: 4px;
+    margin-bottom: 16px;
 }
 
+/* Layout for input pairs */
+.form-row {
+    display: flex;
+    gap: 1rem;
+}
+
+.form-group {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    margin-bottom: 1rem;
+}
+
+label {
+    text-align: left;
+    margin-bottom: 4px;
+    font-size: 14px;
+}
+
+/* Rounded inputs */
 input, textarea {
-    width: 100%;
+    border: 1px solid #ccc;
+    border-radius: 8px;
     padding: 8px;
-    margin-top: 5px;
+    font-size: 14px;
+    width: 100%;
+    box-sizing: border-box;
+}
+
+/* Optional: textarea resize and height */
+textarea {
+    resize: vertical;
+    min-height: 80px;
 }
 
 .form-actions {
     display: flex;
-    justify-content: space-between;
+    justify-content: flex-start;
 }
 
 .btn-add {
     background: #5cb85c;
     color: white;
     border: none;
-    padding: 10px;
+    padding-right: 25px;
+    padding-left: 25px;
+    margin-right: 10px;
+    border-radius: 8px;
     cursor: pointer;
 }
 
@@ -288,5 +323,8 @@ input, textarea {
     color: white;
     border: none;
     padding: 10px;
+    padding-right: 13px;
+    padding-left: 15px;
+    border-radius: 8px;
     cursor: pointer;
 }
