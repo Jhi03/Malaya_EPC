@@ -6,6 +6,70 @@
 
 - added href for CamSur "record" and "analytics" to create template for records and analytics page-->
 <html lang="en">
+    <?php
+        // Database connection
+        $host = 'localhost';
+        $user = 'root';
+        $password = ''; // Change as needed
+        $database = 'malayasol';
+        $conn = new mysqli($host, $user, $password, $database);
+
+        // Check connection
+        if ($conn->connect_error) {
+            die("Connection failed: " . $conn->connect_error);
+        }
+
+        // Form submission
+        if ($_SERVER["REQUEST_METHOD"] === "POST") {
+            // Collect and sanitize form data
+            $project_name = trim($_POST['projectName']);
+            $project_id = strtoupper(trim($_POST['projectCode']));
+            $first_name = trim($_POST['clientFirstName']);
+            $last_name = trim($_POST['clientLastName']);
+            $company_name = trim($_POST['companyName']);
+            $creation_date = date("Y-m-d");
+
+            // Validate all fields
+            if (empty($project_name) || empty($project_id) || empty($first_name) || empty($last_name) || empty($company_name)) {
+                die("All fields are required.");
+            }
+
+            // Insert into projects table
+            $stmt = $conn->prepare("INSERT INTO projects (project_id, project_name, first_name, last_name, company_name, budget, creation_date)
+                                    VALUES (?, ?, ?, ?, ?, 0, ?)");
+            $stmt->bind_param("ssssss", $project_id, $project_name, $first_name, $last_name, $company_name, $creation_date);
+
+            if ($stmt->execute()) {
+                // Create new table for project
+                $table_name = "project_" . strtolower($project_id);
+                $createTableSQL = "CREATE TABLE `$table_name` (
+                    record_id INT(9) AUTO_INCREMENT PRIMARY KEY,
+                    project_id VARCHAR(30),
+                    category VARCHAR(30),
+                    description VARCHAR(30),
+                    budget INT(9),
+                    actual INT(9),
+                    variance INT(9),
+                    tax INT(5),
+                    remarks VARCHAR(50),
+                    date DATE,
+                    creation_date DATE NOT NULL,
+                    edit_date DATE
+                )";
+
+                if ($conn->query($createTableSQL) === TRUE) {
+                    echo "success";
+                } else {
+                    echo "Error creating project table: " . $conn->error;
+                }
+            } else {
+                echo "Error adding project: " . $stmt->error;
+            }
+
+            $stmt->close();
+            $conn->close();
+        }
+    ?>
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -94,27 +158,32 @@
                     <div class="form-row">
                         <div class="form-group">
                             <label for="projectName">Project Name</label>
-                            <input type="text" id="projectName" placeholder="Project Name" required>
+                            <input type="text" name="projectName" id="projectName" placeholder="Project Name" required>
                         </div>
                         <div class="form-group">
                             <label for="projectCode">Project Code</label>
-                            <input type="text" id="projectCode" placeholder="Project Code" required>
+                            <input type="text" name="projectCode" id="projectCode" placeholder="Project Code" required>
                         </div>
                     </div>
 
                     <div class="form-row">
                         <div class="form-group">
                             <label for="clientFirstName">Client Name</label>
-                            <input type="text" id="clientFirstName" placeholder="First Name" required>
+                            <input type="text" name="clientFirstName" id="clientFirstName" placeholder="First Name" required>
                         </div>
                         <div class="form-group">
-                            <input type="text" id="clientLastName" placeholder="Last Name" required>
+                            <input type="text" name="clientLastName" id="clientLastName" placeholder="Last Name" required>
                         </div>
                     </div>
 
                     <div class="form-group">
+                        <label for="description">Company</label>
+                        <input type="text" name="Company" id="Company" placeholder="Company Name" required>
+                    </div>
+
+                    <div class="form-group">
                         <label for="description">Description</label>
-                        <textarea id="description" placeholder="Project Description" required></textarea>
+                        <textarea name="description" id="description" placeholder="Project Description" required></textarea>
                     </div>
 
                     <div class="form-actions">
