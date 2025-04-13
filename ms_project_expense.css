@@ -111,30 +111,54 @@ body {
 /* Search and Filter Bar */
 .search-filter-bar {
     display: flex;
-    justify-content: flex-start;
+    justify-content: space-between;
     align-items: center;
-    padding: 10px;
+    flex-wrap: wrap;
+    padding: 10px 20px;
     border-bottom: 1px solid #eee;
+    background-color: #fff;
+    gap: 12px;
+}
+
+.left-controls {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
+}
+
+.add-record-btn {
+    background-color: #fff;
+    color: #000;
+    border: 1px solid #000;
+    padding: 6px 16px;
+    border-radius: 20px;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background-color 0.2s ease;
+    text-transform: uppercase;
+}
+
+.add-record-btn:hover {
+    background-color: #f9f9f9;
 }
 
 .search-container {
-    flex-grow: 1;
-    max-width: 400px;
+    max-width: 250px;
 }
 
 .search-input {
     width: 100%;
-    padding: 2px 14px;
+    padding: 5px 14px;
     border: 1px solid #ccc;
     border-radius: 20px;
-    font-size: 12px;
+    font-size: 13px;
 }
 
 .filter-options {
     display: flex;
-    gap: 10px;
-    padding-left: 10px;
-    font-size: 12px;
+    gap: 8px;
 }
 
 .sort-btn, .filter-btn {
@@ -144,107 +168,92 @@ body {
     cursor: pointer;
 }
 
-/* Project Grid */
-.project-grid {
+.sort-btn:hover,
+.filter-btn:hover {
+    background-color: #f3f3f3;
+}
+
+.view-toggle {
     display: flex;
-    flex-wrap: wrap;
-    gap: 20px;
+    gap: 8px;
+}
+
+.toggle-btn {
+    border: 1px solid;
+    padding: 6px 14px;
+    border-radius: 20px;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    text-transform: uppercase;
+    transition: all 0.2s ease-in-out;
+}
+
+.toggle-btn.active {
+    background-color: #fff;
+    color: #000;
+    border-color: #000;
+}
+
+.toggle-btn:not(.active) {
+    background-color: #000;
+    color: #fff;
+    border-color: #000;
+}
+
+/* Project Summary Styling */
+.project-summary {
+    background-color: #f7f7f7;
+    border: 1px solid #ddd;
+    border-radius: 8px;
     padding: 20px;
-}
-
-.project-card {
-    border: 1px solid #ccc;
-    border-radius: 5px;
-    width: 280px;
-    display: flex;
-    flex-direction: column;
-    overflow: hidden;
-}
-
-.project-info {
-    padding: 15px;
-    background-color: #333;
-    color: white;
-}
-
-.project-name {
-    margin: 0;
-    font-size: 16px;
-    font-weight: bold;
-}
-
-.project-code {
-    margin: 5px 0 0;
-    font-size: 12px;
-    color: #ccc;
-}
-
-.project-actions {
-    display: flex;
-    padding: 10px;
-    gap: 5px;
-}
-
-.btn-records {
-    flex-grow: 1;
-    display: inline-block;
-    text-align: center;
-    background-color: #3498db;
-    border: none;
-    color: white;
-    padding: 6px 0;
-    border-radius: 3px;
-    font-size: 12px;
-    font-weight: bold;
-    text-decoration: none; /* remove underline */
-    cursor: pointer;
-}
-
-.btn-analytics {
-    display: inline-block;
-    text-align: center;
-    background-color: #2ecc71;
-    border: none;
-    color: white;
-    width: 30px;
-    border-radius: 3px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    text-decoration: none; /* remove underline */
-    cursor: pointer;
-}
-
-/* Add Project Card */
-.add-project {
-    border: 1px dashed #999;
-    background-color: #f9f9f9;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    cursor: pointer;
-}
-
-.add-project:hover {
-    background-color: #f0f0f0;
-}
-
-.add-project-content {
-    text-align: center;
-}
-
-.add-icon {
-    font-size: 30px;
-    width: 50px;
-    height: 50px;
-    line-height: 47px;
-    border-radius: 50%;
-    border: 1px solid #333;
-    margin: 0 auto 10px;
-}
-
-.add-text {
+    margin: 20px;
     font-size: 14px;
+    line-height: 1.6;
+}
+
+.project-summary p {
+    margin: 6px 0;
+}
+
+.project-summary strong {
+    color:rgb(0, 0, 0);
+    display: inline-block;
+    width: 120px;
+}
+
+/* Records Table Styling */
+.records-table-container {
+    margin: 0 20px 20px;
+    overflow-x: auto;
+}
+
+table.table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13px;
+    background-color: #fff;
+}
+
+table.table th,
+table.table td {
+    border: 1px solid #ccc;
+    padding: 8px 10px;
+    text-align: center;
+}
+
+table.table th {
+    background-color: #f0f0f0;
+    font-weight: bold;
+}
+
+table.table td i {
+    cursor: pointer;
+    font-size: 14px;
+}
+
+table.table tr:hover {
+    background-color: #f9f9f9;
 }
 
 /* Add Project Form Styling */

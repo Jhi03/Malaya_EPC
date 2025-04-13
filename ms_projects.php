@@ -1,23 +1,4 @@
 <?php
-    /*NOTES: 
-    04-05-25
-    - Add new project: save projects form inputs in a database [done]
-    - PHP: Filled out form will display "project card" in Projects page [done]
-    - PHP: Selecting "Records" or "Anlytics" will take project id( ? | refer to database later ) to open a Records/Analytics Page [in progress]
-
-    - added href for CamSur "record" and "analytics" to create template for records and analytics page 
-
-    04-13-25
-    - Added PHP connection and commands to add form input from "Add New Project"
-    - project id, project name, client name, company, description are added taken as input
-    - backend adds budget as zero (0) by default and creation date for documentation
-    -   make sure to add user id for footprint and accountability later
-    - form inputs are "trimmed" for white space
-    -   consider removing trim for project name ; only project code is important to be trimmed to avoid query issues (filtering) later
-    - form will not continue with creation if fields are not filled out 
-    - project cards are updated to dynamically display existing projects
-    */
-    
     // Database connection
     $host = 'localhost';
     $user = 'root';
@@ -87,7 +68,7 @@
             <img src="Malaya_Logo.png" alt="Logo"> Malaya Sol <br>Accounting System
         </div>
         <div class="nav-buttons">
-            <a href="ms_dashboard.html"><button>Dashboard</button></a>
+            <a href="ms_dashboard.php"><button>Dashboard</button></a>
             <a class="active" href="ms_projects.html"><button>Projects <span>▼</span></button></a>
             <a href="ms_assets.html"><button>Assets</button></a>
             <a href="ms_expenses.html"><button>Expenses</button></a>
@@ -134,8 +115,8 @@
                         <p class="project-code">CODE: <?= htmlspecialchars($row['project_id']) ?></p>
                     </div>
                     <div class="project-actions">
-                        <a href="ms_records_template.html" class="btn-records">RECORDS</a>
-                        <a href="ms_analytics_template.html" class="btn-analytics">📈</a>
+                    <a href="ms_records.php?projectCode=<?= urlencode($row['project_id']) ?>" class="btn-records">RECORDS</a>
+                    <a href="ms_analytics_template.html" class="btn-analytics">📈</a>
                     </div>
                 </div>
             <?php endwhile; ?>
@@ -253,3 +234,33 @@
     </script>
 </body>
 </html>
+
+<!-- 
+NOTES: 
+    04-05-25
+    - Add new project: save projects form inputs in a database [done]
+    - PHP: Filled out form will display "project card" in Projects page [done]
+    - PHP: Selecting "Records" or "Anlytics" will take project id( ? | refer to database later ) to open a Records/Analytics Page [in progress]
+
+    - added href for CamSur "record" and "analytics" to create template for records and analytics page 
+
+    04-13-25
+    CHANGES:
+    - Added PHP connection and commands to add form input from "Add New Project"
+    - project id, project name, client name, company, description are added taken as input
+    - backend adds budget as zero (0) by default and creation date for documentation
+    - form inputs are "trimmed" for white space
+    -   consider removing trim for project name ; only project code is important to be trimmed to avoid query issues (filtering) later
+    - form will not continue with creation if fields are not filled out 
+    - project cards are updated to dynamically display existing projects
+
+    TO BE WORKED ON:
+    - records button in project card works except analytics button
+    - 
+
+    NOT YET FUNCTIONAL:
+    - search bar, sort by and filter   
+    - analytics button in project card
+    - user profile button
+
+-->

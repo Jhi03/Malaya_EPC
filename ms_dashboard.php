@@ -15,7 +15,7 @@
             <img src="Malaya_Logo.png" alt="Logo"> Malaya Sol <br>Accounting System
         </div>
         <div class="nav-buttons">
-            <a class="active" href="ms_dashboard.html"><button>Dashboard</button></a>
+            <a class="active" href="ms_dashboard.php"><button>Dashboard</button></a>
             <a href="ms_projects.php"><button>Projects <span>▼</span></button></a>
             <a href="ms_assets.html"><button>Assets</button></a>
             <a href="ms_expenses.html"><button>Expenses</button></a>
