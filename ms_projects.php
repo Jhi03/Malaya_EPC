@@ -1,75 +1,77 @@
+<?php
+    /*NOTES: 
+    04-05-25
+    - Add new project: save projects form inputs in a database [done]
+    - PHP: Filled out form will display "project card" in Projects page [done]
+    - PHP: Selecting "Records" or "Anlytics" will take project id( ? | refer to database later ) to open a Records/Analytics Page [in progress]
+
+    - added href for CamSur "record" and "analytics" to create template for records and analytics page 
+
+    04-13-25
+    - Added PHP connection and commands to add form input from "Add New Project"
+    - project id, project name, client name, company, description are added taken as input
+    - backend adds budget as zero (0) by default and creation date for documentation
+    -   make sure to add user id for footprint and accountability later
+    - form inputs are "trimmed" for white space
+    -   consider removing trim for project name ; only project code is important to be trimmed to avoid query issues (filtering) later
+    - form will not continue with creation if fields are not filled out 
+    - project cards are updated to dynamically display existing projects
+    */
+    
+    // Database connection
+    $host = 'localhost';
+    $user = 'root';
+    $password = ''; // Change as needed
+    $database = 'malayasol';
+    $conn = new mysqli($host, $user, $password, $database);
+
+    // Check connection
+    if ($conn->connect_error) {
+        die("Connection failed: " . $conn->connect_error);
+    }
+
+    // No form submission
+    if ($_SERVER["REQUEST_METHOD"] !== "POST") {
+        $query = "SELECT * FROM projects";
+        $result = $conn->query($query);
+    }
+
+    // Form submission
+    if ($_SERVER["REQUEST_METHOD"] === "POST") {
+        // Collect and sanitize form data
+        $project_name = trim($_POST['projectName']);
+        $project_id = strtoupper(trim($_POST['projectCode']));
+        $first_name = trim($_POST['clientFirstName']);
+        $last_name = trim($_POST['clientLastName']);
+        $company_name = trim($_POST['companyName']);
+        $description = ($_POST['description']);
+        $creation_date = date("Y-m-d");
+    
+        // Validate all fields
+        if (empty($project_name) || empty($project_id) || empty($first_name) || empty($last_name) || empty($company_name)) {
+            die("All fields are required.");
+        }
+    
+        // Insert into projects table
+        $stmt = $conn->prepare("INSERT INTO projects (project_id, project_name, first_name, last_name, company_name, description, budget, creation_date)
+                                VALUES (?, ?, ?, ?, ?, ?, 0, ?)");
+        $stmt->bind_param("sssssss", $project_id, $project_name, $first_name, $last_name, $company_name, $description, $creation_date);
+    
+        //runs the INSERT
+        if ($stmt->execute()) {
+            echo "success"; // Let JS know everything went well
+        } else {
+            echo "Error: " . $stmt->error; // Echo detailed error
+        }
+    
+        $stmt->close();
+        $conn->close();
+        exit;
+    }    
+?>
+
 <!DOCTYPE html>
-<!--NOTES: 
-- Add new project: save projects form inputs in a database
-- PHP: Filled out form will display "project card" in Projects page
-- PHP: Selecting "Records" or "Anlytics" will take project id( ? | refer to database later ) to open a Records/Analytics Page 
-
-- added href for CamSur "record" and "analytics" to create template for records and analytics page-->
 <html lang="en">
-    <?php
-        // Database connection
-        $host = 'localhost';
-        $user = 'root';
-        $password = ''; // Change as needed
-        $database = 'malayasol';
-        $conn = new mysqli($host, $user, $password, $database);
-
-        // Check connection
-        if ($conn->connect_error) {
-            die("Connection failed: " . $conn->connect_error);
-        }
-
-        // Form submission
-        if ($_SERVER["REQUEST_METHOD"] === "POST") {
-            // Collect and sanitize form data
-            $project_name = trim($_POST['projectName']);
-            $project_id = strtoupper(trim($_POST['projectCode']));
-            $first_name = trim($_POST['clientFirstName']);
-            $last_name = trim($_POST['clientLastName']);
-            $company_name = trim($_POST['companyName']);
-            $creation_date = date("Y-m-d");
-
-            // Validate all fields
-            if (empty($project_name) || empty($project_id) || empty($first_name) || empty($last_name) || empty($company_name)) {
-                die("All fields are required.");
-            }
-
-            // Insert into projects table
-            $stmt = $conn->prepare("INSERT INTO projects (project_id, project_name, first_name, last_name, company_name, budget, creation_date)
-                                    VALUES (?, ?, ?, ?, ?, 0, ?)");
-            $stmt->bind_param("ssssss", $project_id, $project_name, $first_name, $last_name, $company_name, $creation_date);
-
-            if ($stmt->execute()) {
-                // Create new table for project
-                $table_name = "project_" . strtolower($project_id);
-                $createTableSQL = "CREATE TABLE `$table_name` (
-                    record_id INT(9) AUTO_INCREMENT PRIMARY KEY,
-                    project_id VARCHAR(30),
-                    category VARCHAR(30),
-                    description VARCHAR(30),
-                    budget INT(9),
-                    actual INT(9),
-                    variance INT(9),
-                    tax INT(5),
-                    remarks VARCHAR(50),
-                    date DATE,
-                    creation_date DATE NOT NULL,
-                    edit_date DATE
-                )";
-
-                if ($conn->query($createTableSQL) === TRUE) {
-                    echo "success";
-                } else {
-                    echo "Error creating project table: " . $conn->error;
-                }
-            } else {
-                echo "Error adding project: " . $stmt->error;
-            }
-
-            $stmt->close();
-            $conn->close();
-        }
-    ?>
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -124,29 +126,19 @@
                 </div>
             </div>
             
-            <!-- Project Card Example 1 -->
-            <div class="project-card">
-                <div class="project-info">
-                    <h3 class="project-name">CAMSUR</h3>
-                    <p class="project-code">CODE: CamsurMFS</p>
+            <!-- Dynamically added project cards -->
+            <?php while($row = $result->fetch_assoc()): ?>
+                <div class="project-card">
+                    <div class="project-info">
+                        <h3 class="project-name"><?= htmlspecialchars($row['project_name']) ?></h3>
+                        <p class="project-code">CODE: <?= htmlspecialchars($row['project_id']) ?></p>
+                    </div>
+                    <div class="project-actions">
+                        <a href="ms_records_template.html" class="btn-records">RECORDS</a>
+                        <a href="ms_analytics_template.html" class="btn-analytics">📈</a>
+                    </div>
                 </div>
-                <div class="project-actions">
-                    <a href="ms_records_template.html" class="btn-records">RECORDS</a>
-                    <a href="ms_analytics_template.html" class="btn-analytics">📈</a>
-                </div>
-            </div>
-            
-            <!-- Project Card Example 2 -->
-            <div class="project-card">
-                <div class="project-info">
-                    <h3 class="project-name">MONTENEGRO</h3>
-                    <p class="project-code">CODE: MONTEG</p>
-                </div>
-                <div class="project-actions">
-                    <button class="btn-records">RECORDS</button>
-                    <button class="btn-analytics">📈</button>
-                </div>
-            </div>
+            <?php endwhile; ?>
         </div>
     </div>
 
@@ -177,8 +169,8 @@
                     </div>
 
                     <div class="form-group">
-                        <label for="description">Company</label>
-                        <input type="text" name="Company" id="Company" placeholder="Company Name" required>
+                        <label for="companyName">Company</label>
+                        <input type="text" name="companyName" id="companyName" placeholder="Company Name" required>
                     </div>
 
                     <div class="form-group">
@@ -222,38 +214,40 @@
 
             // Handle form submission
             projectForm.addEventListener("submit", function (event) {
-                event.preventDefault(); // Prevent page refresh
+                event.preventDefault();
 
-                // Get form values
-                const name = document.getElementById("projectName").value;
-                const code = document.getElementById("projectCode").value;
-                const firstName = document.getElementById("clientFirstName").value;
-                const lastName = document.getElementById("clientLastName").value;
-                const description = document.getElementById("description").value;
+                const formData = new FormData(projectForm);
 
-                // Create a new project card
-                const projectCard = document.createElement("div");
-                projectCard.classList.add("project-card");
-                projectCard.innerHTML = `
-                    <div class="project-info">
-                        <h3 class="project-name">${name}</h3>
-                        <p class="project-code">CODE: ${code}</p>
-                        <p class="client-name">${firstName} ${lastName}</p>
-                    </div>
-                    <div class="project-actions">
-                        <button class="btn-records">RECORDS</button>
-                        <button class="btn-analytics">📈</button>
-                    </div>
-                `;
+                fetch('', {
+                    method: 'POST',
+                    body: formData
+                })
+                .then(res => res.text())
+                .then(data => {
+                    if (data.trim() === "success") {
+                        const name = formData.get("projectName");
+                        const code = formData.get("projectCode").toUpperCase();
 
-                // Add the new project card to the grid
-                projectGrid.appendChild(projectCard);
+                        const projectCard = document.createElement("div");
+                        projectCard.classList.add("project-card");
+                        projectCard.innerHTML = `
+                            <div class="project-info">
+                                <h3 class="project-name">${name}</h3>
+                                <p class="project-code">CODE: ${code}</p>
+                            </div>
+                            <div class="project-actions">
+                                <a href="ms_records_template.html" class="btn-records">RECORDS</a>
+                                <a href="ms_analytics_template.html" class="btn-analytics">📈</a>
+                            </div>
+                        `;
 
-                // Clear form inputs
-                projectForm.reset();
-
-                // Close the modal
-                modal.style.display = "none";
+                        projectGrid.appendChild(projectCard);
+                        projectForm.reset();
+                        modal.style.display = "none";
+                    } else {
+                        alert(data); // Show error message
+                    }
+                });
             });
         });
     </script>
