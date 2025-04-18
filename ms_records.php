@@ -32,6 +32,34 @@
         $stmt->close();
     }
 
+    if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['add_record'])) {
+        $category = $_POST['category'];
+        $record_date = $_POST['record_date'];
+        $budget = $_POST['budget'];
+        $actual = $_POST['actual'];
+        $description = $_POST['description'];
+        $remarks = $_POST['remarks'];
+    
+        $variance = $budget - $actual;
+        $tax = 0;
+        $creation_date = date('Y-m-d');
+    
+        $stmt = $conn->prepare("INSERT INTO project_expense 
+            (project_id, category, description, budget, actual, variance, tax, remarks, record_date, creation_date) 
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
+        $stmt->bind_param("sssiiissss", 
+            $project_code, $category, $description, $budget, $actual, $variance, $tax, $remarks, $record_date, $creation_date);
+    
+        if ($stmt->execute()) {
+            // Refresh to show the new record
+            header("Location: ms_projects_record.php?projectCode=" . $project_code);
+            exit();
+        } else {
+            echo "<script>alert('Error adding record: " . $stmt->error . "');</script>";
+        }
+        $stmt->close();
+    }
+
     $conn->close();
 ?>
 
@@ -102,6 +130,49 @@
             </div>
         </div>
 
+        <!-- ADD RECORD MODAL -->
+        <div id="addRecordModal" class="modal" style="display:none;">
+            <div class="modal-content">
+                <h4>ADD RECORD</h4>
+                <form method="POST" action="ms_projects_record.php?projectCode=<?= $project_code ?>">
+                    <div class="form-row">
+                        <label>Category</label>
+                        <select name="category" required>
+                            <option value="">-- SELECT --</option>
+                            <option value="Category 1">Category 1</option>
+                            <option value="Category 2">Category 2</option>
+                        </select>
+
+                        <label>Date</label>
+                        <input type="date" name="record_date" value="<?= date('Y-m-d') ?>">
+                    </div>
+
+                    <div class="form-row">
+                        <label>Budget</label>
+                        <input type="number" name="budget" value="0" step="0.01">
+
+                        <label>Amount</label>
+                        <input type="number" name="actual" step="0.01" required>
+                    </div>
+
+                    <div class="form-row">
+                        <label>Description</label>
+                        <input type="text" name="description" required>
+                    </div>
+
+                    <div class="form-row">
+                        <label>Remarks</label>
+                        <textarea name="remarks" rows="2"></textarea>
+                    </div>
+
+                    <div class="form-actions">
+                        <button type="submit" name="add_record" class="btn btn-success">ADD</button>
+                        <button type="button" onclick="closeModal()" class="btn btn-secondary">CANCEL</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
         <!-- Table of records -->
         <div class="records-table-container">
             <table class="table">
@@ -169,6 +240,24 @@
             document.querySelector('.records-table-container').style.display = 'none';
             document.querySelector('.analytics-view').style.display = 'block';
         });
+
+        //Add Record Modal
+        const modal = document.getElementById("addRecordModal");
+        const openBtn = document.querySelector(".add-record-btn");
+
+        openBtn.addEventListener("click", () => {
+            modal.style.display = "block";
+        });
+
+        function closeModal() {
+            modal.style.display = "none";
+        }
+
+        window.onclick = function(event) {
+            if (event.target === modal) {
+                modal.style.display = "none";
+            }
+        }
     </script>
 </body>
 </html>
@@ -179,10 +268,17 @@ NOTES:
     TO BE WORKED ON:
     - modify project summary layout to have them match the initial design
     - expand search bar later
-    - add functionality to "add record" button
+    - add functionality to "add record" button [done]
 
-    - NOT YET FUNCTIONAL:
-    -   sort by and filter   
-    -   add record button
+    NOT YET FUNCTIONAL:
+    - sort by and filter   
+    - add record button
 
+    04-13-25
+    CHANGES:
+    - added php, modal, and script for add record block
+
+    TO BE WORKED ON:
+    - fix add record form later
+    - test adding and showing records in the page
 -->

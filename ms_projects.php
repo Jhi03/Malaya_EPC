@@ -255,8 +255,7 @@ NOTES:
     - project cards are updated to dynamically display existing projects
 
     TO BE WORKED ON:
-    - records button in project card works except analytics button
-    - 
+    - records button in project card works except analytics button [not started]
 
     NOT YET FUNCTIONAL:
     - search bar, sort by and filter   
