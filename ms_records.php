@@ -32,11 +32,13 @@
         $stmt->close();
     }
 
+    //Add record
     if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['add_record'])) {
         $category = $_POST['category'];
         $record_date = $_POST['record_date'];
         $budget = $_POST['budget'];
         $actual = $_POST['actual'];
+        $payee = $_POST['payee'];
         $description = $_POST['description'];
         $remarks = $_POST['remarks'];
     
@@ -45,20 +47,61 @@
         $creation_date = date('Y-m-d');
     
         $stmt = $conn->prepare("INSERT INTO project_expense 
-            (project_id, category, description, budget, actual, variance, tax, remarks, record_date, creation_date) 
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
-        $stmt->bind_param("sssiiissss", 
-            $project_code, $category, $description, $budget, $actual, $variance, $tax, $remarks, $record_date, $creation_date);
+            (project_id, category, description, budget, actual, payee, variance, tax, remarks, record_date, creation_date) 
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
+        $stmt->bind_param("sssiisissss", 
+            $project_code, $category, $description, $budget, $actual, $payee, $variance, $tax, $remarks, $record_date, $creation_date);
     
         if ($stmt->execute()) {
             // Refresh to show the new record
-            header("Location: ms_projects_record.php?projectCode=" . $project_code);
+            header("Location: ms_records.php?projectCode=" . $project_code);
             exit();
         } else {
             echo "<script>alert('Error adding record: " . $stmt->error . "');</script>";
         }
         $stmt->close();
     }
+
+    // Update or Delete record
+    if (isset($_POST['save_edit'])) {
+        $edit_id = $_POST['edit_id'];
+        $category = $_POST['category'];
+        $record_date = $_POST['record_date'];
+        $budget = $_POST['budget'];
+        $actual = $_POST['actual'];
+        $payee = $_POST['payee'];
+        $description = $_POST['description'];
+        $remarks = $_POST['remarks'];
+    
+        // Calculate variance (budget - actual)
+        $variance = $budget - $actual;
+    
+        $stmt = $conn->prepare("UPDATE project_expense SET 
+            category = ?, record_date = ?, budget = ?, actual = ?, variance = ?, tax = ?, payee = ?, description = ?, remarks = ?
+            WHERE record_id = ?");
+    
+        $stmt->bind_param("ssddddsssi", $category, $record_date, $budget, $actual, $variance, $tax, $payee, $description, $remarks, $edit_id);
+    
+        if ($stmt->execute()) {
+            echo "<script>window.location.href = 'ms_records.php?projectCode=$project_code';</script>";
+            exit();
+        } else {
+            echo "Error updating record: " . $conn->error;
+        }
+    }
+
+    // Delete record
+    if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['delete_record'])) {
+        $id = $_POST['record_id'];
+    
+        $stmt = $conn->prepare("DELETE FROM project_expense WHERE record_id = ?");
+        $stmt->bind_param("i", $id);
+        $stmt->execute();
+        $stmt->close();
+    
+        header("Location: ms_records.php?projectCode=" . $project_code);
+        exit();
+    }    
 
     $conn->close();
 ?>
@@ -131,43 +174,58 @@
         </div>
 
         <!-- ADD RECORD MODAL -->
-        <div id="addRecordModal" class="modal" style="display:none;">
-            <div class="modal-content">
-                <h4>ADD RECORD</h4>
-                <form method="POST" action="ms_projects_record.php?projectCode=<?= $project_code ?>">
-                    <div class="form-row">
-                        <label>Category</label>
-                        <select name="category" required>
-                            <option value="">-- SELECT --</option>
-                            <option value="Category 1">Category 1</option>
-                            <option value="Category 2">Category 2</option>
-                        </select>
+        <div id="addRecordModal" class="custom-modal-overlay">
+            <div class="custom-modal">
+                <div class="modal-header">
+                    <h5>ADD RECORD</h5>
+                </div>
+                <form method="POST" action="ms_records.php?projectCode=<?= $project_code ?>">
+                    <div class="modal-body">
+                        <div class="input-row">
+                            <div class="form-group">
+                                <label>Category</label>
+                                <select name="category" required>
+                                    <option value="">-- SELECT --</option>
+                                    <option value="OPEX">OPEX</option>
+                                    <option value="CAPEX">CAPEX</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label>Date</label>
+                                <input type="date" name="record_date" value="<?= date('Y-m-d') ?>">
+                            </div>
+                        </div>
 
-                        <label>Date</label>
-                        <input type="date" name="record_date" value="<?= date('Y-m-d') ?>">
+                        <div class="input-row">
+                            <div class="form-group">
+                                <label>Budget</label>
+                                <input type="number" name="budget" value="0" step="0.01">
+                            </div>
+                            <div class="form-group">
+                                <label>Amount</label>
+                                <input type="number" name="actual" step="0.01" required>
+                            </div>
+                        </div>
+
+                        <div class="form-group full-width">
+                            <label>Payee</label>
+                            <input type="text" name="payee" maxlength="50" required>
+                        </div>
+
+                        <div class="form-group full-width">
+                            <label>Description</label>
+                            <input type="text" name="description" required> 
+                        </div>
+
+                        <div class="form-group full-width">
+                            <label>Remarks</label>
+                            <textarea name="remarks" rows="3"></textarea>
+                        </div>
                     </div>
 
-                    <div class="form-row">
-                        <label>Budget</label>
-                        <input type="number" name="budget" value="0" step="0.01">
-
-                        <label>Amount</label>
-                        <input type="number" name="actual" step="0.01" required>
-                    </div>
-
-                    <div class="form-row">
-                        <label>Description</label>
-                        <input type="text" name="description" required>
-                    </div>
-
-                    <div class="form-row">
-                        <label>Remarks</label>
-                        <textarea name="remarks" rows="2"></textarea>
-                    </div>
-
-                    <div class="form-actions">
-                        <button type="submit" name="add_record" class="btn btn-success">ADD</button>
-                        <button type="button" onclick="closeModal()" class="btn btn-secondary">CANCEL</button>
+                    <div class="modal-footer">
+                        <button type="submit" name="add_record" class="btn-add">ADD</button>
+                        <button type="button" class="btn-cancel" onclick="closeModal()">CANCEL</button>
                     </div>
                 </form>
             </div>
@@ -183,6 +241,7 @@
                         <th>Description</th>
                         <th>Budget</th>
                         <th>Actual</th>
+                        <th>Payee</th>
                         <th>Variance</th>
                         <th>Tax</th>
                         <th>Remarks</th>
@@ -197,15 +256,38 @@
                             <tr>
                                 <td><?= $i + 1 ?></td>
                                 <td><?= $row['category'] ?></td>
-                                <td><?= $row['description'] ?></td>
+                                <td title="<?= htmlspecialchars($row['description']) ?>">
+                                    <?= htmlspecialchars($row['description']) ?>
+                                </td>
                                 <td><?= number_format($row['budget'], 2) ?></td>
                                 <td><?= number_format($row['actual'], 2) ?></td>
+                                <td title="<?= htmlspecialchars($row['payee']) ?>">
+                                    <?= htmlspecialchars($row['payee']) ?>
+                                </td>
                                 <td><?= number_format($row['variance'], 2) ?></td>
-                                <td><?= $row['tax'] ?></td>
-                                <td><?= $row['remarks'] ?></td>
+                                <td><?= number_format($row['tax'], 2) ?></td>
+                                <td title="<?= htmlspecialchars($row['remarks']) ?>">
+                                    <?= htmlspecialchars($row['remarks']) ?>
+                                </td>
                                 <td><?= date("m-d-Y", strtotime($row['record_date'])) ?></td>
-                                <td><a href="#"><i class="fa fa-pencil"></i></a></td>
-                                <td><a href="#"><i class="fa fa-trash"></i></a></td>
+                                <td>
+                                    <a href="#"  class="edit-btn"
+                                        data-id="<?= $row['record_id'] ?>"
+                                        data-category="<?= $row['category'] ?>"
+                                        data-date="<?= $row['record_date'] ?>"
+                                        data-budget="<?= $row['budget'] ?>"
+                                        data-actual="<?= $row['actual'] ?>"
+                                        data-payee="<?= $row['payee'] ?>"
+                                        data-description="<?= $row['description'] ?>"
+                                        data-remarks="<?= $row['remarks'] ?>">
+                                        <img src="icons/edit.svg" width="18">
+                                    </a>
+                                </td>   
+                                <td>
+                                    <a href="#" class="delete-btn" data-id="<?= htmlspecialchars($row['record_id']) ?>">
+                                        <img src="icons/x-circle.svg" alt="Delete" width="18">
+                                    </a>
+                                </td>
                             </tr>
                         <?php endforeach; ?>
                     <?php else: ?>
@@ -213,6 +295,81 @@
                     <?php endif; ?>
                 </tbody>
             </table>
+        </div>
+
+        <!-- Edit Modal -->
+        <div id="editRecordModal" class="custom-modal-overlay" style="display:none;">
+            <div class="custom-modal">
+                <div class="modal-header">
+                    <h5>EDIT RECORD</h5>
+                </div>
+                <form method="POST" action="ms_records.php?projectCode=<?= $project_code ?>">
+                    <input type="hidden" name="edit_id" id="edit_id">
+                    <div class="modal-body">
+                        <div class="input-row">
+                            <div class="form-group">
+                                <label>Category</label>
+                                <select name="category" required>
+                                    <option value="">-- SELECT --</option>
+                                    <option value="OPEX">OPEX</option>
+                                    <option value="CAPEX">CAPEX</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label>Date</label>
+                                <input type="date" name="record_date">
+                            </div>
+                        </div>
+
+                        <div class="input-row">
+                            <div class="form-group">
+                                <label>Budget</label>
+                                <input type="number" name="budget" step="0.01">
+                            </div>
+                            <div class="form-group">
+                                <label>Amount</label>
+                                <input type="number" name="actual" step="0.01" required>
+                            </div>
+                        </div>
+
+                        <div class="form-group full-width">
+                            <label>Payee</label>
+                            <input type="text" name="payee" maxlength="50" required>
+                        </div>
+
+                        <div class="form-group full-width">
+                            <label>Description</label>
+                            <input type="text" name="description" required>
+                        </div>
+
+                        <div class="form-group full-width">
+                            <label>Remarks</label>
+                            <textarea name="remarks" rows="3"></textarea>
+                        </div>
+                    </div>
+
+                    <div class="modal-footer">
+                        <button type="submit" name="save_edit" class="btn-add">SAVE</button>
+                        <button type="button" class="btn-cancel" onclick="closeEditModal()">CANCEL</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- Delete Confirmation Modal -->
+        <div id="deleteConfirmModal" class="custom-modal-overlay" style="display:none;">
+            <div class="custom-modal">
+                <div class="modal-header">
+                    <h5>Delete Record?</h5>
+                </div>
+                <div class="modal-footer">
+                    <form method="POST" action="ms_records.php?projectCode=<?= $project_code ?>">
+                        <input type="hidden" name="record_id" id="delete_id">
+                        <button type="submit" name="delete_record" class="btn-add">YES</button>
+                        <button type="button" class="btn-cancel" onclick="closeDeleteModal()">NO</button>
+                    </form>
+                </div>
+            </div>
         </div>
 
     <script>
@@ -241,22 +398,78 @@
             document.querySelector('.analytics-view').style.display = 'block';
         });
 
-        //Add Record Modal
+        //ADD Record Modal
         const modal = document.getElementById("addRecordModal");
         const openBtn = document.querySelector(".add-record-btn");
 
         openBtn.addEventListener("click", () => {
-            modal.style.display = "block";
+            modal.style.display = "flex";
         });
 
         function closeModal() {
             modal.style.display = "none";
         }
 
-        window.onclick = function(event) {
-            if (event.target === modal) {
-                modal.style.display = "none";
+        //Closing methods aside from Cancel Button
+            //  Close on outside click
+            window.onclick = function(event) {
+                if (event.target === modal) {
+                    closeModal();
+                }
             }
+
+            //  Close modal on Escape key
+            window.addEventListener("keydown", function(event) {
+                if (event.key === "Escape" && modal.style.display === "flex") {
+                    modal.style.display = "none";
+                }
+            });
+
+        //EDIT and DELETE Modals
+        const editModal = document.getElementById("editRecordModal"); // you'll define this below
+        const deleteModal = document.getElementById("deleteConfirmModal");
+
+        // DELETE
+        document.querySelectorAll(".delete-btn").forEach(btn => {
+            btn.addEventListener("click", e => {
+                e.preventDefault();
+                document.getElementById("delete_id").value = btn.dataset.id;
+                deleteModal.style.display = "flex";
+            });
+        });
+
+        function closeDeleteModal() {
+            deleteModal.style.display = "none";
+        }
+
+        // ESC / Outside for Delete Modal
+        window.addEventListener("click", function(e) {
+            if (e.target === deleteModal) closeDeleteModal();
+        });
+
+        window.addEventListener("keydown", function(e) {
+            if (e.key === "Escape" && deleteModal.style.display === "flex") closeDeleteModal();
+        });
+
+        // EDIT
+        document.querySelectorAll(".edit-btn").forEach(btn => {
+            btn.addEventListener("click", e => {
+                e.preventDefault();
+                document.getElementById("edit_id").value = btn.dataset.id;
+                document.querySelector("#editRecordModal select[name='category']").value = btn.dataset.category;
+                document.querySelector("#editRecordModal input[name='record_date']").value = btn.dataset.date;
+                document.querySelector("#editRecordModal input[name='budget']").value = btn.dataset.budget;
+                document.querySelector("#editRecordModal input[name='actual']").value = btn.dataset.actual;
+                document.querySelector("#editRecordModal input[name='payee']").value = btn.dataset.payee;
+                document.querySelector("#editRecordModal input[name='description']").value = btn.dataset.description;
+                document.querySelector("#editRecordModal textarea[name='remarks']").value = btn.dataset.remarks;
+
+                editModal.style.display = "flex";
+            });
+        });
+
+        function closeEditModal() {
+            editModal.style.display = "none";
         }
     </script>
 </body>
@@ -266,19 +479,26 @@
 NOTES: 
     04-13-25
     TO BE WORKED ON:
-    - modify project summary layout to have them match the initial design
-    - expand search bar later
+    - modify project summary layout to have them match the initial design [in-progress]
+    - expand search bar later [in-progress]
     - add functionality to "add record" button [done]
 
     NOT YET FUNCTIONAL:
     - sort by and filter   
-    - add record button
+    - add record button [done]
 
-    04-13-25
+    04-14-25
     CHANGES:
     - added php, modal, and script for add record block
 
     TO BE WORKED ON:
-    - fix add record form later
-    - test adding and showing records in the page
+    - fix add record form layout later [done]
+    - test adding and showing records in the page [done]
+
+    04-20-25
+    CHANGES:
+    - added edit and delete button - tested and working
+
+    TO BE WORKED ON:
+    - analytics view with existing data
 -->
