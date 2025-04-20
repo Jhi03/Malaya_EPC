@@ -78,7 +78,7 @@
         <button class="create-btn">Create (+)</button>
     </div>
     
-    <div class="content">
+    <div class="content-area">
         <!-- Header Section -->
         <header class="top-bar">
             <button class="hamburger" id="toggleSidebar">☰</button>
@@ -170,8 +170,8 @@
 
     <script>
         //Sidebar Trigger (pullup or collapse sidebar)
-        document.getElementById("toggleSidebar").addEventListener("click", function() {
-            document.getElementById("sidebar").classList.toggle("d-none");
+        document.getElementById("toggleSidebar").addEventListener("click", function () {
+            document.getElementById("sidebar").classList.toggle("collapsed");
         });
         
         //Add Project Form
@@ -271,6 +271,8 @@ NOTES:
     04-20-25
     CHANGES:
     - Added script for the modal to close when thru: button, outside click or "esc" key 
+    - side bar: won't scroll, and animation added
+    - topbar: contents will scroll under it
 
     TO BE WORKED ON:
     - records button in project card works except analytics button [not started]

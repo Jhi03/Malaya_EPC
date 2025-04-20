@@ -133,7 +133,7 @@
         <button class="create-btn">Create (+)</button>
     </div>
     
-    <div class="content">
+    <div class="content-area">
         <!-- Header Section -->
         <header class="top-bar">
             <button class="hamburger" id="toggleSidebar">☰</button>
@@ -170,64 +170,6 @@
             <div class="view-toggle">
                 <button class="toggle-btn active" id="view-records">RECORD</button>
                 <button class="toggle-btn" id="view-analytics">ANALYTICS</button>
-            </div>
-        </div>
-
-        <!-- ADD RECORD MODAL -->
-        <div id="addRecordModal" class="custom-modal-overlay">
-            <div class="custom-modal">
-                <div class="modal-header">
-                    <h5>ADD RECORD</h5>
-                </div>
-                <form method="POST" action="ms_records.php?projectCode=<?= $project_code ?>">
-                    <div class="modal-body">
-                        <div class="input-row">
-                            <div class="form-group">
-                                <label>Category</label>
-                                <select name="category" required>
-                                    <option value="">-- SELECT --</option>
-                                    <option value="OPEX">OPEX</option>
-                                    <option value="CAPEX">CAPEX</option>
-                                </select>
-                            </div>
-                            <div class="form-group">
-                                <label>Date</label>
-                                <input type="date" name="record_date" value="<?= date('Y-m-d') ?>">
-                            </div>
-                        </div>
-
-                        <div class="input-row">
-                            <div class="form-group">
-                                <label>Budget</label>
-                                <input type="number" name="budget" value="0" step="0.01">
-                            </div>
-                            <div class="form-group">
-                                <label>Amount</label>
-                                <input type="number" name="actual" step="0.01" required>
-                            </div>
-                        </div>
-
-                        <div class="form-group full-width">
-                            <label>Payee</label>
-                            <input type="text" name="payee" maxlength="50" required>
-                        </div>
-
-                        <div class="form-group full-width">
-                            <label>Description</label>
-                            <input type="text" name="description" required> 
-                        </div>
-
-                        <div class="form-group full-width">
-                            <label>Remarks</label>
-                            <textarea name="remarks" rows="3"></textarea>
-                        </div>
-                    </div>
-
-                    <div class="modal-footer">
-                        <button type="submit" name="add_record" class="btn-add">ADD</button>
-                        <button type="button" class="btn-cancel" onclick="closeModal()">CANCEL</button>
-                    </div>
-                </form>
             </div>
         </div>
 
@@ -296,86 +238,145 @@
                 </tbody>
             </table>
         </div>
+    </div>
 
-        <!-- Edit Modal -->
-        <div id="editRecordModal" class="custom-modal-overlay" style="display:none;">
-            <div class="custom-modal">
-                <div class="modal-header">
-                    <h5>EDIT RECORD</h5>
+    <!-- ADD RECORD MODAL -->
+    <div id="addRecordModal" class="custom-modal-overlay">
+        <div class="custom-modal">
+            <div class="modal-header">
+                <h5>ADD RECORD</h5>
+            </div>
+            <form method="POST" action="ms_records.php?projectCode=<?= $project_code ?>">
+                <div class="modal-body">
+                    <div class="input-row">
+                        <div class="form-group">
+                            <label>Category</label>
+                            <select name="category" required>
+                                <option value="">-- SELECT --</option>
+                                <option value="OPEX">OPEX</option>
+                                <option value="CAPEX">CAPEX</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>Date</label>
+                            <input type="date" name="record_date" value="<?= date('Y-m-d') ?>">
+                        </div>
+                    </div>
+
+                    <div class="input-row">
+                        <div class="form-group">
+                            <label>Budget</label>
+                            <input type="number" name="budget" value="0" step="0.01">
+                        </div>
+                        <div class="form-group">
+                            <label>Amount</label>
+                            <input type="number" name="actual" step="0.01" required>
+                        </div>
+                    </div>
+
+                    <div class="form-group full-width">
+                        <label>Payee</label>
+                        <input type="text" name="payee" maxlength="50" required>
+                    </div>
+
+                    <div class="form-group full-width">
+                        <label>Description</label>
+                        <input type="text" name="description" required> 
+                    </div>
+
+                    <div class="form-group full-width">
+                        <label>Remarks</label>
+                        <textarea name="remarks" rows="3"></textarea>
+                    </div>
                 </div>
+
+                <div class="modal-footer">
+                    <button type="submit" name="add_record" class="btn-add">ADD</button>
+                    <button type="button" class="btn-cancel" onclick="closeModal()">CANCEL</button>
+                </div>
+            </form>
+        </div>
+    </div>
+    
+    <!-- Edit Modal -->
+    <div id="editRecordModal" class="custom-modal-overlay" style="display:none;">
+        <div class="custom-modal">
+            <div class="modal-header">
+                <h5>EDIT RECORD</h5>
+            </div>
+            <form method="POST" action="ms_records.php?projectCode=<?= $project_code ?>">
+                <input type="hidden" name="edit_id" id="edit_id">
+                <div class="modal-body">
+                    <div class="input-row">
+                        <div class="form-group">
+                            <label>Category</label>
+                            <select name="category" required>
+                                <option value="">-- SELECT --</option>
+                                <option value="OPEX">OPEX</option>
+                                <option value="CAPEX">CAPEX</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>Date</label>
+                            <input type="date" name="record_date">
+                        </div>
+                    </div>
+
+                    <div class="input-row">
+                        <div class="form-group">
+                            <label>Budget</label>
+                            <input type="number" name="budget" step="0.01">
+                        </div>
+                        <div class="form-group">
+                            <label>Amount</label>
+                            <input type="number" name="actual" step="0.01" required>
+                        </div>
+                    </div>
+
+                    <div class="form-group full-width">
+                        <label>Payee</label>
+                        <input type="text" name="payee" maxlength="50" required>
+                    </div>
+
+                    <div class="form-group full-width">
+                        <label>Description</label>
+                        <input type="text" name="description" required>
+                    </div>
+
+                    <div class="form-group full-width">
+                        <label>Remarks</label>
+                        <textarea name="remarks" rows="3"></textarea>
+                    </div>
+                </div>
+
+                <div class="modal-footer">
+                    <button type="submit" name="save_edit" class="btn-add">SAVE</button>
+                    <button type="button" class="btn-cancel" onclick="closeEditModal()">CANCEL</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Delete Confirmation Modal -->
+    <div id="deleteConfirmModal" class="custom-modal-overlay" style="display:none;">
+        <div class="custom-modal">
+            <div class="modal-header">
+                <h5>Delete Record?</h5>
+            </div>
+            <div class="modal-footer">
                 <form method="POST" action="ms_records.php?projectCode=<?= $project_code ?>">
-                    <input type="hidden" name="edit_id" id="edit_id">
-                    <div class="modal-body">
-                        <div class="input-row">
-                            <div class="form-group">
-                                <label>Category</label>
-                                <select name="category" required>
-                                    <option value="">-- SELECT --</option>
-                                    <option value="OPEX">OPEX</option>
-                                    <option value="CAPEX">CAPEX</option>
-                                </select>
-                            </div>
-                            <div class="form-group">
-                                <label>Date</label>
-                                <input type="date" name="record_date">
-                            </div>
-                        </div>
-
-                        <div class="input-row">
-                            <div class="form-group">
-                                <label>Budget</label>
-                                <input type="number" name="budget" step="0.01">
-                            </div>
-                            <div class="form-group">
-                                <label>Amount</label>
-                                <input type="number" name="actual" step="0.01" required>
-                            </div>
-                        </div>
-
-                        <div class="form-group full-width">
-                            <label>Payee</label>
-                            <input type="text" name="payee" maxlength="50" required>
-                        </div>
-
-                        <div class="form-group full-width">
-                            <label>Description</label>
-                            <input type="text" name="description" required>
-                        </div>
-
-                        <div class="form-group full-width">
-                            <label>Remarks</label>
-                            <textarea name="remarks" rows="3"></textarea>
-                        </div>
-                    </div>
-
-                    <div class="modal-footer">
-                        <button type="submit" name="save_edit" class="btn-add">SAVE</button>
-                        <button type="button" class="btn-cancel" onclick="closeEditModal()">CANCEL</button>
-                    </div>
+                    <input type="hidden" name="record_id" id="delete_id">
+                    <button type="submit" name="delete_record" class="btn-add">YES</button>
+                    <button type="button" class="btn-cancel" onclick="closeDeleteModal()">NO</button>
                 </form>
             </div>
         </div>
-
-        <!-- Delete Confirmation Modal -->
-        <div id="deleteConfirmModal" class="custom-modal-overlay" style="display:none;">
-            <div class="custom-modal">
-                <div class="modal-header">
-                    <h5>Delete Record?</h5>
-                </div>
-                <div class="modal-footer">
-                    <form method="POST" action="ms_records.php?projectCode=<?= $project_code ?>">
-                        <input type="hidden" name="record_id" id="delete_id">
-                        <button type="submit" name="delete_record" class="btn-add">YES</button>
-                        <button type="button" class="btn-cancel" onclick="closeDeleteModal()">NO</button>
-                    </form>
-                </div>
-            </div>
-        </div>
+    </div>
 
     <script>
         //Sidebar Trigger (pullup or collapse sidebar)
-        document.getElementById("toggleSidebar").addEventListener("click", function() {
-            document.getElementById("sidebar").classList.toggle("d-none");
+        document.getElementById("toggleSidebar").addEventListener("click", function () {
+            document.getElementById("sidebar").classList.toggle("collapsed");
         });
 
         //Toggles
@@ -497,7 +498,9 @@ NOTES:
 
     04-20-25
     CHANGES:
-    - added edit and delete button - tested and working
+    - edit and delete button: added - tested and working
+    - side bar: won't scroll, and animation added
+    - topbar: contents will scroll under it
 
     TO BE WORKED ON:
     - analytics view with existing data

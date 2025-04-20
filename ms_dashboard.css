@@ -2,8 +2,11 @@ body {
     font-family: 'Atkinson Hyperlegible', sans-serif;
     margin: 0;
     display: flex;
+    height: 100vh; /* Full viewport height */
+    overflow: hidden; /* Prevent overall page scroll */
 }
 
+/* Sidebar styles */
 .sidebar {
     width: 210px;
     background-color: #333;
@@ -13,6 +16,33 @@ body {
     display: flex;
     flex-direction: column;
     justify-content: flex-start;
+    position: fixed;
+    top: 0;
+    left: 0;
+    z-index: 1000;
+    transform: translateX(0); /* visible by default */
+    transition: transform 0.3s ease-in-out;
+}
+
+/* Slide sidebar out to the left */
+.sidebar.collapsed {
+    transform: translateX(-100%);
+}
+
+/* Content area shifts accordingly */
+.content-area {
+    margin-left: 210px;
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    overflow-y: auto;
+    height: 100vh;
+    transition: margin-left 0.3s ease-in-out;
+}
+
+/* When sidebar is collapsed, content takes full width */
+.sidebar.collapsed ~ .content-area {
+    margin-left: 0;
 }
 
 .logo {
@@ -78,13 +108,15 @@ body {
 
 /* Header */
 .top-bar {
+    position: sticky;
+    top: 0;
+    background-color: #fff; /* or match your theme */
+    z-index: 900; /* below sidebar (1000), but above content */
+    padding: 10px 20px;
     display: flex;
     align-items: center;
     justify-content: space-between;
-    height: 45px;
-    background: white;
-    border-bottom: 2px solid #333;
-    padding: 0 20px;
+    border-bottom: 1px solid #ddd;
 }
 
 .hamburger {
@@ -119,3 +151,11 @@ body {
     border-bottom: 1px solid #ccc;
     padding: 20px;
 }
+
+/* 
+NOTES:
+    04-20-25
+    CHANGES:
+    - side bar: animations added along with content pane
+    - top bar: contents scroll under it
+*/

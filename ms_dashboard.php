@@ -6,7 +6,7 @@
     <title>Dashboard</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible&display=swap" rel="stylesheet">
-    <link href="ms_dashboard.css" rel="stylesheet">
+    <link href="ms_project_expense.css" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 </head>
 <body>
@@ -23,9 +23,9 @@
             <a href="ms_reports.html"><button>Reports</button></a>
         </div>
         <button class="create-btn">Create (+)</button>
-    </div>    
+    </div>
     
-    <div class="content">
+    <div class="content-area">
         <!-- Header Section -->
         <header class="top-bar">
             <button class="hamburger" id="toggleSidebar">☰</button>
@@ -48,3 +48,14 @@
     </script>
 </body>
 </html>
+
+<!-- 
+NOTES:
+    04-20-25
+    CHANGES:
+    - side bar: won't scroll, and animation added
+    - topbar: contents will scroll under it
+
+    TO BE WORKED ON:
+    - dashboard layout
+-->
