@@ -350,7 +350,7 @@
                 </div>
 
                 <div class="modal-footer">
-                    <button type="submit" name="save_edit" class="btn-add">SAVE</button>
+                    <button type="submit" name="save_edit" class="btn-edit-delete">SAVE</button>
                     <button type="button" class="btn-cancel" onclick="closeEditModal()">CANCEL</button>
                 </div>
             </form>
@@ -366,7 +366,7 @@
             <div class="modal-footer">
                 <form method="POST" action="ms_records.php?projectCode=<?= $project_code ?>">
                     <input type="hidden" name="record_id" id="delete_id">
-                    <button type="submit" name="delete_record" class="btn-add">YES</button>
+                    <button type="submit" name="delete_record" class="btn-edit-delete">YES</button>
                     <button type="button" class="btn-cancel" onclick="closeDeleteModal()">NO</button>
                 </form>
             </div>

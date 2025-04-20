@@ -424,7 +424,16 @@ textarea {
 }
 
 .btn-add {
-    background-color: #76e36b;
+    background-color: #7ed957;
+    color: white;
+    border: none;
+    padding: 10px 25px;
+    border-radius: 8px;
+    cursor: pointer;
+}
+
+.btn-edit-delete {
+    background-color: #ff5757;
     color: white;
     border: none;
     padding: 10px 25px;

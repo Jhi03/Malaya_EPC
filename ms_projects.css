@@ -349,18 +349,20 @@ textarea {
 }
 
 .btn-add {
-    background: #5cb85c;
+    background-color: #7ed957;
     color: white;
     border: none;
     padding: 10px 25px;
+    border-radius: 8px;
     cursor: pointer;
 }
 
 .btn-cancel {
-    background: #444;
+    background-color: #444;
     color: white;
     border: none;
-    padding: 10px 13px 10px 15px;
+    padding: 10px 15px;
+    border-radius: 8px;
     cursor: pointer;
 }
 
