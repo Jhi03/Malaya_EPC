@@ -168,7 +168,6 @@
         </div>
     </div>
 
-
     <script>
         //Sidebar Trigger (pullup or collapse sidebar)
         document.getElementById("toggleSidebar").addEventListener("click", function() {
@@ -217,7 +216,7 @@
                                 <p class="project-code">CODE: ${code}</p>
                             </div>
                             <div class="project-actions">
-                                <a href="ms_records_template.html" class="btn-records">RECORDS</a>
+                                <a href="ms_records.php?projectCode=${code}" class="btn-records">RECORDS</a>
                                 <a href="ms_analytics_template.html" class="btn-analytics">📈</a>
                             </div>
                         `;
@@ -230,6 +229,21 @@
                     }
                 });
             });
+
+            //Closing methods aside from Cancel Button
+                //  Close on outside click
+                window.addEventListener("click", function(event) {
+                    if (event.target === modal) {
+                        modal.style.display = "none";
+                    }
+                });
+
+                //  Close modal on Escape key
+                window.addEventListener("keydown", function(event) {
+                    if (event.key === "Escape" && modal.style.display === "flex") {
+                        modal.style.display = "none";
+                    }
+                });
         });
     </script>
 </body>
@@ -253,6 +267,10 @@ NOTES:
     -   consider removing trim for project name ; only project code is important to be trimmed to avoid query issues (filtering) later
     - form will not continue with creation if fields are not filled out 
     - project cards are updated to dynamically display existing projects
+
+    04-20-25
+    CHANGES:
+    - Added script for the modal to close when thru: button, outside click or "esc" key 
 
     TO BE WORKED ON:
     - records button in project card works except analytics button [not started]

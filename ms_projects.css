@@ -320,10 +320,7 @@ textarea {
     background: #5cb85c;
     color: white;
     border: none;
-    padding-right: 25px;
-    padding-left: 25px;
-    margin-right: 10px;
-    border-radius: 8px;
+    padding: 10px 25px;
     cursor: pointer;
 }
 
@@ -331,9 +328,12 @@ textarea {
     background: #444;
     color: white;
     border: none;
-    padding: 10px;
-    padding-right: 13px;
-    padding-left: 15px;
-    border-radius: 8px;
+    padding: 10px 13px 10px 15px;
     cursor: pointer;
 }
+
+/* 
+NOTES:
+    CHANGES:
+    - simplified padding for buttons in the modal
+*/
