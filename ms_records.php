@@ -143,11 +143,15 @@
 
         <!-- Project Summary -->
         <div class="project-summary">
-            <p><strong>PROJECT:</strong> <?= $project['project_name'] ?></p>
-            <p><strong>CODE:</strong> <?= $project['project_id'] ?></p>
-            <p><strong>CLIENT:</strong> <?= $project['first_name'] ?> <?= $project['last_name'] ?></p>
-            <p><strong>CREATION DATE:</strong> <?= date('m-d-Y', strtotime($project['creation_date'])) ?></p>
-            <p><strong>DESCRIPTION:</strong> <?= $project['description'] ?></p>
+            <div class="summary-left">
+                <p><strong>PROJECT:</strong> <?= $project['project_name'] ?></p>
+                <p><strong>CODE:</strong> <?= $project['project_id'] ?></p>
+                <p><strong>CLIENT:</strong> <?= $project['first_name'] ?> <?= $project['last_name'] ?></p>
+            </div>
+            <div class="summary-right">
+                <p><strong>CREATION DATE:</strong> <?= date('m-d-Y', strtotime($project['creation_date'])) ?></p>
+                <p><strong>DESCRIPTION:</strong> <?= $project['description'] ?></p>
+            </div>
         </div>
 
         <!-- Add Records, Search, Filter, and Toggle Bar -->
@@ -480,7 +484,7 @@
 NOTES: 
     04-13-25
     TO BE WORKED ON:
-    - modify project summary layout to have them match the initial design [in-progress]
+    - modify project summary layout to have them match the initial design [done]
     - expand search bar later [in-progress]
     - add functionality to "add record" button [done]
 
@@ -501,6 +505,7 @@ NOTES:
     - edit and delete button: added - tested and working
     - side bar: won't scroll, and animation added
     - topbar: contents will scroll under it
+    - project summary: layout updated
 
     TO BE WORKED ON:
     - analytics view with existing data

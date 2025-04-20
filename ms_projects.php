@@ -159,7 +159,7 @@
                         <textarea name="description" id="description" placeholder="Project Description" required></textarea>
                     </div>
 
-                    <div class="form-actions">
+                    <div class="modal-footer">
                         <button type="submit" class="btn-add">ADD</button>
                         <button type="button" class="btn-cancel" id="closeModal">CANCEL</button>
                     </div>
@@ -256,7 +256,7 @@ NOTES:
     - PHP: Filled out form will display "project card" in Projects page [done]
     - PHP: Selecting "Records" or "Anlytics" will take project id( ? | refer to database later ) to open a Records/Analytics Page [in progress]
 
-    - added href for CamSur "record" and "analytics" to create template for records and analytics page 
+    - added href for CamSur "record" and "analytics" to create template for records and analytics page [removed]
 
     04-13-25
     CHANGES:

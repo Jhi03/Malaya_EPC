@@ -343,9 +343,12 @@ textarea {
     min-height: 80px;
 }
 
-.form-actions {
+.modal-footer {
     display: flex;
-    justify-content: flex-start;
+    justify-content: flex-end;
+    gap: 10px;
+    margin-top: 10px;
+    padding: 0px;
 }
 
 .btn-add {
