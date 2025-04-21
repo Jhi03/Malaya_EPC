@@ -275,7 +275,9 @@ NOTES:
     - topbar: contents will scroll under it
 
     TO BE WORKED ON:
-    - records button in project card works except analytics button [not started]
+    - project card: analytics button not yet working [not started]
+        - redirect user to analytics view when analytics button is selected
+    - analytics button: update its icon to svg file [not started]
 
     NOT YET FUNCTIONAL:
     - search bar, sort by and filter   

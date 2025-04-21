@@ -32,6 +32,20 @@
         $stmt->close();
     }
 
+    //Analytics Chart
+    $category_totals = [];
+    $monthly_totals = [];
+
+    foreach ($records as $record) {
+        // Category totals
+        $cat = $record['category'];
+        $category_totals[$cat] = ($category_totals[$cat] ?? 0) + $record['actual'];
+
+        // Monthly totals
+        $month = date('F Y', strtotime($record['record_date']));
+        $monthly_totals[$month] = ($monthly_totals[$month] ?? 0) + $record['actual'];
+    }
+
     //Add record
     if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['add_record'])) {
         $category = $_POST['category'];
@@ -116,6 +130,10 @@
     <link href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible&display=swap" rel="stylesheet">
     <link href="ms_project_expense.css" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    
+    <!-- External JavaScript Libraries -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 </head>
 <body>
     <div class="sidebar" id="sidebar">
@@ -177,6 +195,7 @@
             </div>
         </div>
 
+        <!-- RECORDS VIEW -->
         <!-- Table of records -->
         <div class="records-table-container">
             <table class="table">
@@ -237,10 +256,78 @@
                             </tr>
                         <?php endforeach; ?>
                     <?php else: ?>
-                        <tr><td colspan="11" class="text-center">No records available for this project.</td></tr>
+                        <tr><td colspan="12" class="text-center">No records available for this project.</td></tr>
                     <?php endif; ?>
                 </tbody>
             </table>
+        </div>
+
+        <!--ANALYTICS VIEW -->
+        
+        <div class="analytics-view container py-4" style="display: none;">
+            <div class="mb-4">
+                <h2 class="text-center mb-3">Project Overview</h2>
+                <div class="row text-center">
+                    <div class="col-md-3">
+                        <div class="card shadow rounded-4 p-3">
+                            <h6>Total Budget</h6>
+                            <p class="fs-5 fw-bold text-primary">₱<?= number_format(array_sum(array_column($records, 'budget')), 2) ?></p>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="card shadow rounded-4 p-3">
+                            <h6>Total Actual</h6>
+                            <p class="fs-5 fw-bold text-success">₱<?= number_format(array_sum(array_column($records, 'actual')), 2) ?></p>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="card shadow rounded-4 p-3">
+                            <h6>Total Variance</h6>
+                            <p class="fs-5 fw-bold text-warning">₱<?= number_format(array_sum(array_column($records, 'budget')) - array_sum(array_column($records, 'actual')), 2) ?></p>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="card shadow rounded-4 p-3">
+                            <h6>Total Tax</h6>
+                            <p class="fs-5 fw-bold text-danger">₱<?= number_format(array_sum(array_column($records, 'tax')), 2) ?></p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="row g-4">
+                <div class="col-md-6">
+                    <div class="card shadow rounded-4 p-3">
+                        <h6 class="text-center">Actual by Category</h6>
+                        <canvas id="categoryChart"></canvas>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="card shadow rounded-4 p-3">
+                        <h6 class="text-center">Monthly Actual Spending</h6>
+                        <canvas id="monthlyChart"></canvas>
+                    </div>
+                </div>
+            </div>
+
+            <div class="row mt-4">
+                <div class="col-md-6">
+                    <div class="card shadow rounded-4 p-3">
+                        <h6 class="text-center">Expense Distribution</h6>
+                        <canvas id="pieChart"></canvas>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="card shadow rounded-4 p-3">
+                        <h6 class="text-center">Variance Over Time</h6>
+                        <canvas id="varianceChart"></canvas>
+                    </div>
+                </div>
+            </div>
+
+            <div class="text-end mt-4">
+                <button id="downloadReport" class="btn btn-outline-secondary">📄 Download Report (PDF)</button>
+            </div>
         </div>
     </div>
 
@@ -280,7 +367,7 @@
 
                     <div class="form-group full-width">
                         <label>Payee</label>
-                        <input type="text" name="payee" maxlength="50" required>
+                        <input type="text" name="payee" required>
                     </div>
 
                     <div class="form-group full-width">
@@ -339,7 +426,7 @@
 
                     <div class="form-group full-width">
                         <label>Payee</label>
-                        <input type="text" name="payee" maxlength="50" required>
+                        <input type="text" name="payee" required>
                     </div>
 
                     <div class="form-group full-width">
@@ -477,6 +564,86 @@
             editModal.style.display = "none";
         }
     </script>
+
+    <script> //ANALYTICS VIEW
+        const categoryChartCtx = document.getElementById('categoryChart').getContext('2d');
+        const monthlyChartCtx = document.getElementById('monthlyChart').getContext('2d');
+        
+        const categoryData = <?= json_encode($category_totals) ?>;
+        const monthlyData = <?= json_encode($monthly_totals) ?>;
+
+        const pieLabels = Object.keys(categoryData);
+        const pieValues = Object.values(categoryData);
+
+        const categoryChart = new Chart(categoryChartCtx, {
+            type: 'bar',
+            data: {
+                labels: <?= json_encode(array_keys($category_totals)) ?>,
+                datasets: [{
+                    label: 'Actual by Category',
+                    data: <?= json_encode(array_values($category_totals)) ?>,
+                    backgroundColor: 'rgba(75, 192, 192, 0.7)',
+                    borderColor: 'rgba(75, 192, 192, 1)',
+                    borderWidth: 1
+                }]
+            }
+        });
+
+        const monthlyChart = new Chart(monthlyChartCtx, {
+            type: 'line',
+            data: {
+                labels: <?= json_encode(array_keys($monthly_totals)) ?>,
+                datasets: [{
+                    label: 'Monthly Actual Spending',
+                    data: <?= json_encode(array_values($monthly_totals)) ?>,
+                    fill: false,
+                    borderColor: 'rgba(153, 102, 255, 1)',
+                    tension: 0.3
+                }]
+            }
+        });
+
+        const pieChart = new Chart(document.getElementById('pieChart'), {
+            type: 'pie',
+            data: {
+                labels: pieLabels,
+                datasets: [{
+                    label: 'Category Distribution',
+                    data: pieValues,
+                    backgroundColor: pieLabels.map(() => `hsl(${Math.random()*360}, 70%, 70%)`)
+                }]
+            }
+        });
+
+        const varianceLabels = <?= json_encode(array_column($records, 'record_date')) ?>;
+        const varianceData = <?= json_encode(array_map(fn($r) => $r['budget'] - $r['actual'], $records)) ?>;
+
+        const varianceChart = new Chart(document.getElementById('varianceChart'), {
+            type: 'line',
+            data: {
+                labels: varianceLabels,
+                datasets: [{
+                    label: 'Variance Over Time',
+                    data: varianceData,
+                    borderColor: 'rgba(255, 159, 64, 1)',
+                    tension: 0.3
+                }]
+            }
+        });
+
+        // PDF Report Export
+        document.getElementById('downloadReport').addEventListener('click', () => {
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF();
+            doc.text("Project Analytics Report", 10, 10);
+            doc.text("Project: <?= addslashes($project['project_name']) ?>", 10, 20);
+            doc.text("Total Budget: ₱<?= number_format(array_sum(array_column($records, 'budget')), 2) ?>", 10, 30);
+            doc.text("Total Actual: ₱<?= number_format(array_sum(array_column($records, 'actual')), 2) ?>", 10, 40);
+            doc.text("Total Variance: ₱<?= number_format(array_sum(array_column($records, 'budget')) - array_sum(array_column($records, 'actual')), 2) ?>", 10, 50);
+            doc.text("Total Tax: ₱<?= number_format(array_sum(array_column($records, 'tax')), 2) ?>", 10, 60);
+            doc.save("analytics_report_<?= $project_code ?>.pdf");
+        });
+    </script>
 </body>
 </html>
 
@@ -508,5 +675,15 @@ NOTES:
     - project summary: layout updated
 
     TO BE WORKED ON:
-    - analytics view with existing data
+    - analytics view with existing data [done]
+    
+    04-21-25
+    CHANGES:
+    - analytics view: added
+
+    TO BE WORKED ON:
+    - analytics: tweak layout and data to be presented
+    - add record: amount value is fixed to .00
+        - input won't accept other decimal values e.g .98
+    - download PDF button
 -->

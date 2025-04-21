@@ -42,8 +42,9 @@
     </div>
 
     <script>
-        document.getElementById("toggleSidebar").addEventListener("click", function() {
-            document.getElementById("sidebar").classList.toggle("d-none");
+        //Sidebar Trigger (pullup or collapse sidebar)
+        document.getElementById("toggleSidebar").addEventListener("click", function () {
+            document.getElementById("sidebar").classList.toggle("collapsed");
         });
     </script>
 </body>
