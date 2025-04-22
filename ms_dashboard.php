@@ -30,7 +30,9 @@
         <header class="top-bar">
             <button class="hamburger" id="toggleSidebar">☰</button>
             <h2 class="page-title">DASHBOARD</h2>
-            <button class="user-icon">👤</button>
+            <button class="user-icon">
+                <img src="icons/circle-user-round.svg" alt="UserIcon" width="30">
+            </button>
         </header>
 
         <!-- Sections inside Content Pane -->

@@ -154,9 +154,13 @@
     <div class="content-area">
         <!-- Header Section -->
         <header class="top-bar">
-            <button class="hamburger" id="toggleSidebar">☰</button>
+            <button class="hamburger" id="toggleSidebar">
+                <img src="icons/menu.svg" alt="SortIcon" width="25">
+            </button>
             <h2 class="page-title">PROJECTS > Record</h2>
-            <button class="user-icon">👤</button>
+            <button class="user-icon">
+                <img src="icons/circle-user-round.svg" alt="UserIcon" width="30">
+            </button>
         </header>
 
         <!-- Project Summary -->
@@ -183,8 +187,12 @@
                 </div>
 
                 <div class="filter-options">
-                    <button class="sort-btn">⇅ Sort By</button>
-                    <button class="filter-btn">⧉ Filter</button>
+                <button class="sort-btn">
+                    <img src="icons/arrow-down-up.svg" alt="SortIcon" width="16"> Sort By
+                </button>                    
+                <button class="filter-btn">
+                    <img src="icons/filter.svg" alt="FilterIcon" width="16"> Filter
+                </button>
                 </div>
             </div>
 
