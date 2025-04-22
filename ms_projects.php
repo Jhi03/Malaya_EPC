@@ -124,7 +124,9 @@
                     </div>
                     <div class="project-actions">
                     <a href="ms_records.php?projectCode=<?= urlencode($row['project_id']) ?>" class="btn-records">RECORDS</a>
-                    <a href="ms_analytics_template.html" class="btn-analytics">📈</a>
+                    <a href="ms_records.php?projectCode=<?= urlencode($row['project_id']) ?>&view=analytics" class="btn-analytics">
+                        <img src="icons/chart-no-axes-column.svg" alt="AnalyticsIcon" width="16">
+                    </a>
                     </div>
                 </div>
             <?php endwhile; ?>
@@ -225,7 +227,9 @@
                             </div>
                             <div class="project-actions">
                                 <a href="ms_records.php?projectCode=${code}" class="btn-records">RECORDS</a>
-                                <a href="ms_analytics_template.html" class="btn-analytics">📈</a>
+                                <a href="ms_records.php?projectCode=${code}&view=analytics" class="btn-analytics">
+                                    <img src="icons/chart-no-axes-column.svg" alt="AnalyticsIcon" width="16">
+                                </a>
                             </div>
                         `;
 

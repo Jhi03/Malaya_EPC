@@ -498,6 +498,14 @@
             document.querySelector('.analytics-view').style.display = 'block';
         });
 
+        // Handle ?view=analytics parameter
+        const urlParams = new URLSearchParams(window.location.search);
+        const defaultView = urlParams.get('view');
+
+        if (defaultView === 'analytics') {
+            btnAnalytics.click(); // simulate button click
+        }
+
         //ADD Record Modal
         const modal = document.getElementById("addRecordModal");
         const openBtn = document.querySelector(".add-record-btn");
