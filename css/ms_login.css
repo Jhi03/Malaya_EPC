@@ -1,0 +1,158 @@
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+  font-family: 'Atkinson Hyperlegible', sans-serif;
+}
+
+html, body {
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
+  background-color: #2e2e2e;
+  height: 100%;
+  width: 100%;
+}
+
+.container {
+  display: flex;
+  height: 100vh;
+  width: 100vw;
+}
+
+.left-panel {
+  width: 25%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  background-color: #2e2e2e;
+}
+
+.right-panel {
+  width: 75%;
+  position: relative;
+}
+
+.image-overlay {
+  width: 100%;
+  height: 100%;
+  position: relative;
+}
+
+.image-overlay img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  opacity: 0.6;
+}
+
+.welcome-text {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  font-size: 3rem;
+  color: white;
+  font-weight: 300;
+}
+
+/*Login Form Section*/
+.logo {
+  width: 60px;
+  margin-bottom: 20px;
+}
+
+form {
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+}
+
+input[type="text"], input[type="password"] {
+  padding: 10px 35px;
+  border-radius: 20px;
+  border: 1px solid #333;
+  text-align: center;
+}
+
+.forgot-wrapper {
+  width: 100%;
+  display: flex;
+  justify-content: flex-end;
+}
+
+.forgot {
+  font-size: 0.75rem;
+  color: #000;
+  text-decoration: none;
+  margin-bottom: 10px;
+}
+
+.container {
+  display: flex;
+  height: 100vh;
+  width: 100vw;
+  position: relative; /* important for absolute login box */
+}
+
+/* Remove login-box from left-panel */
+.left-panel,
+.right-panel {
+  height: 100%;
+}
+
+.login-box {
+  position: absolute;
+  top: 50%;
+  left: 25%;
+  transform: translate(-50%, -50%);
+  background-color: #f6f6f6;
+  border-radius: 30px;
+  padding: 40px 30px;
+  height: 550px;
+  width: 350px;
+  z-index: 10;
+
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 50px;  
+  align-items: center;
+}
+
+.login-top {
+  width: 100%; /* force full width */
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.login-top hr {
+  width: 100%; /* fills the login-box now */
+  margin-top: 20px;
+  border: 0.5px solid grey;
+}
+
+.login-middle form {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 15px;
+}
+
+.login-middle form button {
+  margin-top: 40px;
+  padding: 10px 30px;
+  background-color: #f6d757;
+  color: #000;
+  font-weight: bold;
+  border: none;
+  border-radius: 20px;
+  cursor: pointer;
+  transition: background 0.3s ease;
+}
+
+
+.login-middle form button:hover {
+  background-color: #eac843;
+}

@@ -1,4 +1,11 @@
 <?php
+    session_start();
+
+    // Check if user is logged in
+    if (!isset($_SESSION['username'])) {
+        header("Location: ms_login.php");
+        exit();
+    }
     $host = 'localhost';
     $user = 'root';
     $password = '';
@@ -128,7 +135,7 @@
     <title>Malaya Sol Projects Layout</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible&display=swap" rel="stylesheet">
-    <link href="ms_project_expense.css" rel="stylesheet">
+    <link href="css/ms_project_expense.css" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     
     <!-- External JavaScript Libraries -->
@@ -136,16 +143,17 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 </head>
 <body>
-    <div class="sidebar" id="sidebar">
+<div class="sidebar" id="sidebar">
         <div class="logo">
             <img src="Malaya_Logo.png" alt="Logo"> Malaya Sol <br>Accounting System
         </div>
         <div class="nav-buttons">
             <a href="ms_dashboard.php"><button>Dashboard</button></a>
-            <a class="active" href="ms_projects.php"><button>Projects <span>▼</span></button></a>
+            <a class="active" href="ms_projects.php"><button>Projects</button></a>
             <a href="ms_assets.html"><button>Assets</button></a>
             <a href="ms_expenses.html"><button>Expenses</button></a>
-            <a href="ms_payroll.html"><button>Payroll <span>▼</span></button></a>
+            <a href="ms_payroll.html"><button>Payroll</button></a>
+            <a href="ms_payroll.html"><button>Vendor</button></a>
             <a href="ms_reports.html"><button>Reports</button></a>
         </div>
         <button class="create-btn">Create (+)</button>
@@ -154,13 +162,18 @@
     <div class="content-area">
         <!-- Header Section -->
         <header class="top-bar">
-            <button class="hamburger" id="toggleSidebar">
-                <img src="icons/menu.svg" alt="SortIcon" width="25">
-            </button>
-            <h2 class="page-title">PROJECTS > Record</h2>
-            <button class="user-icon">
-                <img src="icons/circle-user-round.svg" alt="UserIcon" width="30">
-            </button>
+            <button class="hamburger" id="toggleSidebar">☰</button>
+            <h2 class="page-title">DASHBOARD</h2>
+            
+            <div class="user-dropdown">
+                <button class="user-icon" id="userDropdownBtn">
+                    <img src="icons/circle-user-round.svg" alt="UserIcon" width="30">
+                </button>
+                <div class="dropdown-menu" id="userDropdownMenu">
+                    <a href="#" class="dropdown-item">Settings</a>
+                    <a href="ms_logout.php" class="dropdown-item logout-btn">Logout</a>
+                </div>
+            </div>
         </header>
 
         <!-- Project Summary -->
@@ -478,7 +491,19 @@
             document.getElementById("sidebar").classList.toggle("collapsed");
         });
 
-        //Toggles
+        //User Menu dropdown
+        document.getElementById("userDropdownBtn").addEventListener("click", function (event) {
+            event.stopPropagation(); // prevent body click from closing immediately
+            const dropdown = document.getElementById("userDropdownMenu");
+            dropdown.style.display = (dropdown.style.display === "block") ? "none" : "block";
+        });
+
+        // Close dropdown if clicking outside
+        document.addEventListener("click", function () {
+            document.getElementById("userDropdownMenu").style.display = "none";
+        });
+        
+        //Records/Analytics View Toggles
         const btnRecords = document.getElementById('view-records');
         const btnAnalytics = document.getElementById('view-analytics');
 
@@ -668,11 +693,10 @@ NOTES:
     04-13-25
     TO BE WORKED ON:
     - modify project summary layout to have them match the initial design [done]
-    - expand search bar later [in-progress]
+    - expand search bar later [done]
     - add functionality to "add record" button [done]
 
     NOT YET FUNCTIONAL:
-    - sort by and filter   
     - add record button [done]
 
     04-14-25
@@ -698,8 +722,18 @@ NOTES:
     - analytics view: added
 
     TO BE WORKED ON:
+    - sort by and filter 
     - analytics: tweak layout and data to be presented
     - add record: amount value is fixed to .00
         - input won't accept other decimal values e.g .98
     - download PDF button
+
+    04-24-25
+    CHANGES:
+    - login page: login and session tracking added
+    - user menu: added settings and logout button
+    - search bar: width expanded
+
+    NO FUNCTION:
+    - settings: from user menu
 -->

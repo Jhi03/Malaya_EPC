@@ -1,4 +1,11 @@
 <?php
+    session_start();
+
+    // Check if user is logged in
+    if (!isset($_SESSION['username'])) {
+        header("Location: ms_login.php");
+        exit();
+    }
     // Database connection
     $host = 'localhost';
     $user = 'root';
@@ -59,7 +66,7 @@
     <title>Malaya Sol Projects Layout</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible&display=swap" rel="stylesheet">
-    <link href="ms_projects.css" rel="stylesheet">
+    <link href="css/ms_projects.css" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 </head>
 <body>
@@ -69,10 +76,11 @@
         </div>
         <div class="nav-buttons">
             <a href="ms_dashboard.php"><button>Dashboard</button></a>
-            <a class="active" href="ms_projects.html"><button>Projects <span>▼</span></button></a>
+            <a class="active" href="ms_projects.php"><button>Projects</button></a>
             <a href="ms_assets.html"><button>Assets</button></a>
             <a href="ms_expenses.html"><button>Expenses</button></a>
-            <a href="ms_payroll.html"><button>Payroll <span>▼</span></button></a>
+            <a href="ms_payroll.html"><button>Payroll</button></a>
+            <a href="ms_payroll.html"><button>Vendor</button></a>
             <a href="ms_reports.html"><button>Reports</button></a>
         </div>
         <button class="create-btn">Create (+)</button>
@@ -81,13 +89,18 @@
     <div class="content-area">
         <!-- Header Section -->
         <header class="top-bar">
-            <button class="hamburger" id="toggleSidebar">
-                <img src="icons/menu.svg" alt="SortIcon" width="25">
-            </button>
-            <h2 class="page-title">PROJECTS</h2>
-            <button class="user-icon">
-                <img src="icons/circle-user-round.svg" alt="UserIcon" width="30">
-            </button>
+            <button class="hamburger" id="toggleSidebar">☰</button>
+            <h2 class="page-title">DASHBOARD</h2>
+            
+            <div class="user-dropdown">
+                <button class="user-icon" id="userDropdownBtn">
+                    <img src="icons/circle-user-round.svg" alt="UserIcon" width="30">
+                </button>
+                <div class="dropdown-menu" id="userDropdownMenu">
+                    <a href="#" class="dropdown-item">Settings</a>
+                    <a href="ms_logout.php" class="dropdown-item logout-btn">Logout</a>
+                </div>
+            </div>
         </header>
 
         <!-- Search and Filter Bar -->
@@ -184,6 +197,18 @@
             document.getElementById("sidebar").classList.toggle("collapsed");
         });
         
+        //User Menu dropdown
+        document.getElementById("userDropdownBtn").addEventListener("click", function (event) {
+            event.stopPropagation(); // prevent body click from closing immediately
+            const dropdown = document.getElementById("userDropdownMenu");
+            dropdown.style.display = (dropdown.style.display === "block") ? "none" : "block";
+        });
+
+        // Close dropdown if clicking outside
+        document.addEventListener("click", function () {
+            document.getElementById("userDropdownMenu").style.display = "none";
+        });
+
         //Add Project Form
         document.addEventListener("DOMContentLoaded", function () {
             const modal = document.getElementById("addProjectModal");
@@ -266,7 +291,7 @@ NOTES:
     04-05-25
     - Add new project: save projects form inputs in a database [done]
     - PHP: Filled out form will display "project card" in Projects page [done]
-    - PHP: Selecting "Records" or "Anlytics" will take project id( ? | refer to database later ) to open a Records/Analytics Page [in progress]
+    - PHP: Selecting "Records" or "Anlytics" will take project id( ? | refer to database later ) to open a Records/Analytics Page [done]
 
     - added href for CamSur "record" and "analytics" to create template for records and analytics page [removed]
 
@@ -287,13 +312,20 @@ NOTES:
     - topbar: contents will scroll under it
 
     TO BE WORKED ON:
-    - project card: analytics button not yet working [not started]
+    - project card: analytics button not yet working [done]
         - redirect user to analytics view when analytics button is selected
-    - analytics button: update its icon to svg file [not started]
+    - analytics button: update its icon to svg file [done]
 
     NOT YET FUNCTIONAL:
     - search bar, sort by and filter   
     - analytics button in project card
-    - user profile button
+    - user profile button [done]
 
+    04-24-25
+    CHANGES:
+    - login page: login and session tracking added
+    - user menu: added settings and logout button
+
+    NO FUNCTION:
+    - settings: from user menu
 -->
