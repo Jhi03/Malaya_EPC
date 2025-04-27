@@ -25,12 +25,12 @@ if (!isset($_SESSION['username'])) {
             <img src="Malaya_Logo.png" alt="Logo"> Malaya Sol <br>Accounting System
         </div>
         <div class="nav-buttons">
-            <a class="active" href="ms_dashboard.php"><button>Dashboard</button></a>
+            <a href="ms_dashboard.php"><button>Dashboard</button></a>
             <a href="ms_projects.php"><button>Projects</button></a>
             <a href="ms_assets.php"><button>Assets</button></a>
             <a href="ms_expenses.php"><button>Expenses</button></a>
             <a href="ms_workforce.php"><button>Workforce</button></a>
-            <a href="ms_payroll.php"><button>Payroll</button></a>
+            <a class="active" href="ms_payroll.php"><button>Payroll</button></a>
             <a href="ms_vendors.php"><button>Vendors</button></a>
             <a href="ms_reports.php"><button>Reports</button></a>
         </div>
@@ -40,7 +40,7 @@ if (!isset($_SESSION['username'])) {
         <!-- Header Section -->
         <header class="top-bar">
             <button class="hamburger" id="toggleSidebar">☰</button>
-            <h2 class="page-title">DASHBOARD</h2>
+            <h2 class="page-title">PAYROLL</h2>
             
             <div class="user-dropdown">
                 <button class="user-icon" id="userDropdownBtn">
@@ -81,22 +81,3 @@ if (!isset($_SESSION['username'])) {
     </script>
 </body>
 </html>
-
-<!-- 
-NOTES:
-    04-20-25
-    CHANGES:
-    - side bar: won't scroll, and animation added
-    - topbar: contents will scroll under it 
-
-    TO BE WORKED ON:
-    - dashboard layout [not started]
-    
-    04-24-25
-    CHANGES:
-    - login page: login and session tracking added
-    - user menu: added settings and logout button
-
-    NO FUNCTION:
-    - settings: from user menu
--->

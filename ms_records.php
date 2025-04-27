@@ -150,20 +150,20 @@
         <div class="nav-buttons">
             <a href="ms_dashboard.php"><button>Dashboard</button></a>
             <a class="active" href="ms_projects.php"><button>Projects</button></a>
-            <a href="ms_assets.html"><button>Assets</button></a>
-            <a href="ms_expenses.html"><button>Expenses</button></a>
-            <a href="ms_payroll.html"><button>Payroll</button></a>
-            <a href="ms_payroll.html"><button>Vendor</button></a>
-            <a href="ms_reports.html"><button>Reports</button></a>
+            <a href="ms_assets.php"><button>Assets</button></a>
+            <a href="ms_expenses.php"><button>Expenses</button></a>
+            <a href="ms_workforce.php"><button>Workforce</button></a>
+            <a href="ms_payroll.php"><button>Payroll</button></a>
+            <a href="ms_vendors.php"><button>Vendors</button></a>
+            <a href="ms_reports.php"><button>Reports</button></a>
         </div>
-        <button class="create-btn">Create (+)</button>
     </div>
     
     <div class="content-area">
         <!-- Header Section -->
         <header class="top-bar">
             <button class="hamburger" id="toggleSidebar">☰</button>
-            <h2 class="page-title">DASHBOARD</h2>
+            <h2 class="page-title">PROJECTS</h2>
             
             <div class="user-dropdown">
                 <button class="user-icon" id="userDropdownBtn">
