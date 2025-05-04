@@ -21,58 +21,67 @@ if ($conn->connect_error) {
     die("Connection failed: " . $conn->connect_error);
 }
 
-// Check if an AJAX request is made to add an asset
-if (isset($_POST['add_asset'])) {
-    // Capture form data
-    $category = $_POST['category'];
-    $purchase_date = $_POST['purchase_date'];
-    $asset_description = $_POST['asset_description'];
-    $value = $_POST['value'];
-    $rental_rate = $_POST['rental_rate'];
-    $tax = $_POST['tax'];
-    $remarks = $_POST['remarks'];
-    
-    // Handling image upload
-    if ($_FILES['asset_image']['name']) {
-        $imageName = $_FILES['asset_image']['name'];
-        $imageTmpName = $_FILES['asset_image']['tmp_name'];
-        $uploadDirectory = "assets/images/";
-        $imagePath = $uploadDirectory . basename($imageName);
-        
-        // Move the uploaded image
-        move_uploaded_file($imageTmpName, $imagePath);
+// For Categories dropdown
+$categoryOptions = '';
+$categoryQuery = "SELECT project_id FROM projects";
+$categoryResult = $conn->query($categoryQuery);
+if ($categoryResult->num_rows > 0) {
+    while ($cat = $categoryResult->fetch_assoc()) {
+        $categoryOptions .= '<option value="' . htmlspecialchars($cat['project_id']) . '">' . htmlspecialchars($cat['project_id']) . '</option>';
+    }
+}
+
+// ADD or EDIT Modal
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    if (isset($_POST['delete_assets'])) {
+        // Handle deletion logic
+        if (isset($_POST['asset_ids']) && !empty($_POST['asset_ids'])) {
+            $asset_ids = explode(',', $_POST['asset_ids']);  // Convert comma-separated string to array
+            foreach ($asset_ids as $asset_id) {
+                $stmt = $conn->prepare("DELETE FROM assets WHERE asset_id = ?");
+                $stmt->bind_param("i", $asset_id);
+                $stmt->execute();
+            }
+            // Redirect after deletion
+            echo "<script>window.location = 'ms_assets.php';</script>";
+            exit();
+        }
     } else {
-        $imagePath = null; // Default to null if no image is uploaded
-    }
+        // Handle add/edit asset logic
+        $asset_id = $_POST['asset_id'];
+        $category = $_POST['category'];
+        $description = $_POST['asset_description'];
+        $value = $_POST['value'];
+        $purchase_date = $_POST['purchase_date'] ?: date('Y-m-d');
+        $rental_rate = $_POST['rental_rate'] ?: 0.00;
+        $tax = $_POST['tax'] ?: 0.00;
+        $remarks = $_POST['remarks'];
 
-    // Database connection
-    $conn = new mysqli($servername, $username, $password, $dbname);
-    if ($conn->connect_error) {
-        die("Connection failed: " . $conn->connect_error);
-    }
+        $imagePath = null;
+        if (!empty($_FILES['asset_image']['name'])) {
+            $targetDir = "uploads/";
+            if (!is_dir($targetDir)) mkdir($targetDir);
+            $imagePath = $targetDir . basename($_FILES["asset_image"]["name"]);
+            move_uploaded_file($_FILES["asset_image"]["tmp_name"], $imagePath);
+        }
 
-    // Insert new asset into the database
-    $query = "INSERT INTO assets (category, purchase_date, asset_description, value, rental_rate, tax, remarks, asset_image) 
-              VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
-    $stmt = $conn->prepare($query);
-    $stmt->bind_param("ssssssss", $category, $purchase_date, $asset_description, $value, $rental_rate, $tax, $remarks, $imagePath);
-    
-    if ($stmt->execute()) {
-        // Return the new asset in JSON format for AJAX
-        $newAsset = [
-            'asset_id' => $stmt->insert_id,
-            'asset_description' => $asset_description,
-            'category' => $category,
-            'value' => number_format($value, 2),
-            'asset_image' => $imagePath ? $imagePath : 'No Image'
-        ];
-        echo json_encode(['status' => 'success', 'asset' => $newAsset]);
-    } else {
-        echo json_encode(['status' => 'error', 'message' => 'Failed to add asset.']);
-    }
+        if ($asset_id) {
+            // Update asset
+            $stmt = $conn->prepare("UPDATE assets SET category=?, asset_description=?, value=?, purchase_date=?, rental_rate=?, tax=?, remarks=?, asset_image=? WHERE asset_id=?");
+            $stmt->bind_param("ssdsddssi", $category, $description, $value, $purchase_date, $rental_rate, $tax, $remarks, $imagePath, $asset_id);
+        } else {
+            // Insert new asset
+            $stmt = $conn->prepare("INSERT INTO assets (category, asset_description, value, purchase_date, rental_rate, tax, remarks, asset_image) VALUES (?, ?, ?, ?, ?, ?, ?, ?)");
+            $stmt->bind_param("ssdsddss", $category, $description, $value, $purchase_date, $rental_rate, $tax, $remarks, $imagePath);
+        }
 
-    $conn->close();
-    exit(); // End the script to prevent page reload
+        if ($stmt->execute()) {
+            echo "<script>window.location = 'ms_assets.php';</script>";
+            exit();
+        } else {
+            echo "Error: " . $stmt->error;
+        }
+    }
 }
 ?>
 
@@ -158,23 +167,38 @@ if (isset($_POST['add_asset'])) {
 
                 if (mysqli_num_rows($result) > 0):
                     $counter = 1;
-                    echo "<table class='table'>";
-                    echo "<thead><tr><th>#</th><th>Description</th><th>Category</th><th>Value</th></tr></thead><tbody>";
-                    while ($row = mysqli_fetch_assoc($result)):
                 ?>
-                    <tr onclick='showAssetDetails(<?= htmlspecialchars(json_encode($row)) ?>)'>
-                        <td><?= $counter++ ?></td>
-                        <td><?= htmlspecialchars($row['asset_description']) ?></td>
-                        <td><?= htmlspecialchars($row['category']) ?></td>
-                        <td>₱<?= number_format($row['value'], 2) ?></td>
-                    </tr>
-                <?php
-                    endwhile;
-                    echo "</tbody></table>";
-                else:
-                    echo "<p style='padding: 20px;'>There are no existing assets.</p>";
-                endif;
-                ?>
+                    <div class="asset-list-table-container">
+                        <table class="table">
+                            <thead>
+                                <tr>
+                                    <th>#</th>
+                                    <th>Description</th>
+                                    <th>Category</th>
+                                    <th>Value</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <?php while ($row = mysqli_fetch_assoc($result)): ?>
+                                    <tr data-id="<?= $row['asset_id'] ?>" data-json='<?= json_encode($row) ?>'>
+                                        <td class="row-index-cell">
+                                            <span class="row-number"><?= $counter++ ?></span>
+                                            <input type="checkbox" class="row-checkbox" style="display: none;">
+                                        </td>
+                                        <td><?= htmlspecialchars($row['asset_description']) ?></td>
+                                        <td><?= htmlspecialchars($row['category']) ?></td>
+                                        <td>₱<?= number_format($row['value'], 2) ?></td>
+                                    </tr>
+                                <?php endwhile; ?>
+                                </tbody>
+                        </table>
+                        <button class="delete-selected-btn" style="display: none;">
+                            <img src="icons/trash.svg" alt="TrashIcon" width="20">
+                        </button>
+                    </div>
+                <?php else: ?>
+                    <p style='padding: 20px;'>There are no existing assets.</p>
+                <?php endif; ?>
             </div>
 
             <!-- Right Section: Asset Details -->
@@ -201,9 +225,10 @@ if (isset($_POST['add_asset'])) {
                         <p><strong>Remarks:</strong> <span id="assetRemarks"></span></p>
                     </div>
 
-                    <div class="edit-button">
-                        <button class="btn btn-primary">
-                            Edit<img src="icons/edit.svg" width="20">
+                    <!-- Edit Button -->
+                    <div class="edit-button" id="editButton" style="display: none;">
+                        <button class="btn btn-primary" onclick="openEditAssetModal()">
+                            Edit <img src="icons/edit.svg" width="20">
                         </button>
                     </div>
                 </div>
@@ -211,61 +236,86 @@ if (isset($_POST['add_asset'])) {
         </div>
     </div>
 
-    <!-- ADD ASSET MODAL -->
+    <!-- Deletion Modal -->
+    <div id="deleteModal" class="custom-modal-overlay">
+        <div class="custom-modal">
+            <div class="modal-header">
+                <h5>Confirm Deletion</h5>
+            </div>
+            <div class="modal-body">
+                <p id="deleteMessage"></p>
+            </div>
+            <div class="modal-footer">
+                <button id="confirmDeleteBtn" class="btn-add">YES</button>
+                <button class="btn-cancel" onclick="closeDeleteModal()">Cancel</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Hidden form for deleting assets -->
+    <form id="deleteAssetsForm" method="POST" action="ms_assets.php" style="display:none;">
+        <input type="hidden" name="delete_assets" value="1">
+        <input type="hidden" id="delete-asset-ids" name="asset_ids" value="">
+    </form>
+
+    <!-- ADD/EDIT ASSET MODAL -->
     <div id="addAssetModal" class="custom-modal-overlay">
         <div class="custom-modal">
             <div class="modal-header">
-                <h5>ADD ASSET</h5>
+                <h5 id="modalTitle">ADD ASSET</h5>
             </div>
-            <form method="POST" id="addAssetForm" enctype="multipart/form-data">
+            <form id="assetForm" method="POST" enctype="multipart/form-data">
+            <input type="hidden" name="asset_id" id="asset_id">
                 <div class="modal-body">
-                    
                     <div class="input-row">
                         <div class="form-group">
                             <label>Category</label>
-                            <input type="text" name="category" required>
+                            <select name="category" id="category" required>
+                                <option value="">-- Select Project ID --</option>
+                                <?= $categoryOptions ?>
+                            </select>
                         </div>
                         <div class="form-group">
                             <label>Date of Purchase</label>
-                            <input type="date" name="purchase_date" value="<?= date('Y-m-d') ?>">
+                            <input type="date" name="purchase_date" id="purchase_date">
                         </div>
                     </div>
 
                     <div class="input-row">
                         <div class="form-group">
                             <label>Description</label>
-                            <input type="text" name="asset_description" required>
+                            <input type="text" name="asset_description" id="asset_description" required>
                         </div>
                         <div class="form-group">
                             <label>Value</label>
-                            <input type="number" name="value" placeholder="0.00" step="0.01" required>
+                            <input type="number" name="value" id="value" placeholder="0.00" step="0.01" required>
                         </div>
                     </div>
 
                     <div class="input-row">
                         <div class="form-group">
                             <label>Rental Rate</label>
-                            <input type="number" name="rental_rate" placeholder="0.00" step="0.01">
+                            <input type="number" name="rental_rate" id="rental_rate" placeholder="0.00" step="0.01">
                         </div>
                         <div class="form-group">
                             <label>Tax</label>
-                            <input type="number" name="tax" placeholder="0.00" step="0.01">
+                            <input type="number" name="tax" id="tax" placeholder="0.00" step="0.01">
                         </div>
                     </div>
 
                     <div class="form-group full-width">
                         <label>Remarks</label>
-                        <textarea name="remarks" rows="3" maxlength="500"></textarea>
+                        <textarea name="remarks" id="remarks" rows="3" maxlength="500"></textarea>
                     </div>
 
                     <div class="form-group full-width">
                         <label>Upload Image</label>
-                        <input type="file" name="asset_image" accept="image/*">
+                        <input type="file" name="asset_image" id="asset_image" accept="image/*">
                     </div>
                 </div>
 
                 <div class="modal-footer">
-                    <button type="submit" name="add_asset" class="btn-add">ADD</button>
+                    <button type="submit" class="btn-add" id="submitAssetBtn">ADD</button>
                     <button type="button" class="btn-cancel" onclick="closeModal()">CANCEL</button>
                 </div>
             </form>
@@ -273,88 +323,226 @@ if (isset($_POST['add_asset'])) {
     </div>
     
     <script>
-        //Sidebar Trigger (pullup or collapse sidebar)
+        // Sidebar Toggle
         document.getElementById("toggleSidebar").addEventListener("click", function () {
             document.getElementById("sidebar").classList.toggle("collapsed");
         });
 
-        //User Menu dropdown
+        // User Dropdown
         document.getElementById("userDropdownBtn").addEventListener("click", function (event) {
-            event.stopPropagation(); // prevent body click from closing immediately
+            event.stopPropagation();
             const dropdown = document.getElementById("userDropdownMenu");
             dropdown.style.display = (dropdown.style.display === "block") ? "none" : "block";
         });
 
-        // Close dropdown if clicking outside
         document.addEventListener("click", function () {
             document.getElementById("userDropdownMenu").style.display = "none";
         });
 
+        // Store the currently selected asset
+        let currentAsset = null;
+
+        // Show Asset Details
         function showAssetDetails(asset) {
-            // Hide placeholder
+            currentAsset = asset;
+
             document.getElementById('assetPlaceholder').style.display = 'none';
-            
-            // Show asset info
             document.getElementById('assetInfo').style.display = 'block';
 
-            // Set the header
             document.getElementById('assetHeader').textContent = asset.asset_description || '';
-
-            // Fill in other details
             document.getElementById('assetCategory').textContent = asset.category || '';
             document.getElementById('assetValue').textContent = asset.value ? Number(asset.value).toFixed(2) : '0.00';
             document.getElementById('assetTax').textContent = asset.tax ? Number(asset.tax).toFixed(2) : '0.00';
             document.getElementById('assetRentalRate').textContent = asset.rental_rate ? Number(asset.rental_rate).toFixed(2) : '0.00';
             document.getElementById('assetPurchaseDate').textContent = asset.purchase_date || '';
             document.getElementById('assetRemarks').textContent = asset.remarks || '';
+
+            const imageContainer = document.getElementById("assetImageContainer");
+            if (asset.asset_image && asset.asset_image !== "No Image") {
+                imageContainer.innerHTML = `<img src="${asset.asset_image}" alt="Asset Image" style="max-width: 100%; max-height: 200px;">`;
+            } else {
+                imageContainer.textContent = "No Image.";
+            }
+
+            document.getElementById('editButton').style.display = 'block';
         }
 
-        document.getElementById("addAssetBtn").addEventListener("click", function() {
-            // Show the Add Asset modal when the button is clicked
-            document.getElementById("addAssetModal").style.display = "flex";
-        });
-
-        // Function to close the modal
-        function closeModal() {
-            document.getElementById("addAssetModal").style.display = "none";
-        }
-
-        // Handle Add Asset form submission
-        document.querySelector('form').addEventListener('submit', function(event) {
-            event.preventDefault(); // Prevent the form from submitting normally
-            
-            const formData = new FormData(this); // Create a FormData object to handle form data
-            
-            // Send AJAX request
-            fetch('ms_assets.php', {
-                method: 'POST',
-                body: formData
-            })
-            .then(response => response.json()) // Parse JSON response
-            .then(data => {
-                if (data.status === 'success') {
-                    // Append the new asset to the asset list
-                    const asset = data.asset;
-                    const assetRow = document.createElement('tr');
-                    assetRow.innerHTML = `
-                        <td>${document.querySelectorAll('.asset-list tbody tr').length + 1}</td>
-                        <td>${asset.asset_description}</td>
-                        <td>${asset.category}</td>
-                        <td>₱${asset.value}</td>
-                    `;
-                    document.querySelector('.asset-list tbody').appendChild(assetRow);
-                    
-                    // Optionally, reset the form or close the modal
-                    document.querySelector('form').reset();
-                    closeModal(); // Close the modal after adding asset
-                } else {
-                    alert('Error: ' + data.message); // Display error if any
+        document.querySelectorAll('.asset-list tbody tr').forEach(row => {
+            row.addEventListener('click', function (e) {
+                // If the click target is a checkbox, ignore asset detail display
+                if (e.target && e.target.matches('input[type="checkbox"]')) {
+                    return;
                 }
-            })
-            .catch(error => {
-                alert('Error: ' + error);
+
+                const assetData = JSON.parse(this.dataset.json);
+                showAssetDetails(assetData);
             });
         });
+
+        //ADD or EDIT Modals
+        const modal = document.getElementById('addAssetModal');
+        const modalTitle = document.getElementById('modalTitle');
+        const submitBtn = document.getElementById('submitAssetBtn');
+        const form = document.getElementById('assetForm');
+
+        // Open Add Modal
+        document.getElementById('addAssetBtn').addEventListener('click', () => {
+            modal.style.display = 'flex';
+            modalTitle.textContent = 'ADD ASSET';
+            submitBtn.textContent = 'ADD';
+            form.reset();
+            document.getElementById('asset_id').value = '';
+        });
+
+        // Open Edit Modal
+        function openEditAssetModal() {
+            if (!currentAsset) return;
+
+            modal.style.display = 'flex';
+            modalTitle.textContent = 'EDIT ASSET';
+            submitBtn.textContent = 'SAVE';
+
+            // Fill form with currentAsset
+            document.getElementById('asset_id').value = currentAsset.asset_id;
+            document.getElementById('category').value = currentAsset.category;
+            document.getElementById('purchase_date').value = currentAsset.purchase_date;
+            document.getElementById('asset_description').value = currentAsset.asset_description;
+            document.getElementById('value').value = currentAsset.value;
+            document.getElementById('rental_rate').value = currentAsset.rental_rate;
+            document.getElementById('tax').value = currentAsset.tax;
+            document.getElementById('remarks').value = currentAsset.remarks;
+        }
+
+        // Close Modal
+        function closeModal() {
+            modal.style.display = 'none';
+        }
+
+        // Close on outside click
+        window.addEventListener('click', function (e) {
+            if (e.target === modal) {
+                closeModal();
+            }
+        });
+
+        // DELETION Function
+        let selectMode = false;
+        const selectBtn = document.querySelector('.select-btn');
+        const deleteBtn = document.querySelector('.delete-selected-btn');
+        const rows = document.querySelectorAll('.asset-list tbody tr');
+        const deleteModal = document.getElementById('deleteModal');
+        const deleteAssetIdsInput = document.getElementById('delete-asset-ids');
+
+        // Toggle Select Mode
+        function toggleSelectMode(enable) {
+            selectMode = enable;
+            selectBtn.textContent = enable ? 'CANCEL' : 'SELECT';
+            deleteBtn.style.display = 'none';
+
+            rows.forEach(row => {
+                const checkbox = row.querySelector('.row-checkbox');
+                const number = row.querySelector('.row-number');
+
+                if (enable) {
+                    checkbox.style.display = 'inline-block';
+                    number.style.display = 'none';
+                } else {
+                    checkbox.checked = false;
+                    checkbox.style.display = 'none';
+                    number.style.display = 'inline-block';
+                }
+            });
+
+            // Bind click event to show asset details only when select mode is not enabled
+            rows.forEach(row => {
+                row.onclick = enable
+                    ? e => e.stopPropagation() // Prevent asset details display in select mode
+                    : () => showAssetDetails(JSON.parse(row.dataset.json)); // Display asset details
+            });
+        }
+
+        // Toggle button
+        selectBtn.addEventListener('click', () => toggleSelectMode(!selectMode));
+
+        // ESC key support
+        document.addEventListener('keydown', e => {
+            if (e.key === 'Escape' && selectMode) {
+                toggleSelectMode(false);
+            }
+        });
+
+        // Checkbox change
+        rows.forEach(row => {
+            row.onclick = enable
+                ? e => e.stopPropagation() // Prevent asset details display in select mode
+                : e => {
+                    // Prevent opening asset details if the click is on a modal-triggering element (e.g., edit/delete buttons)
+                    const target = e.target;
+                    if (
+                        target.closest('.edit-btn') || 
+                        target.closest('.delete-btn') || 
+                        target.closest('.row-checkbox')
+                    ) {
+                        return; // Do nothing if clicking on buttons or checkbox
+                    }
+
+                    showAssetDetails(JSON.parse(row.dataset.json));
+                };
+        });
+
+        // Delete action
+        deleteBtn.addEventListener('click', () => {
+            const selected = [...document.querySelectorAll('.row-checkbox')]
+                .filter(cb => cb.checked)
+                .map(cb => cb.closest('tr').dataset.id);
+
+            if (selected.length === 0) return;
+
+            const confirmMsg = selected.length === 1
+                ? 'Are you sure you want to delete this record?'
+                : 'Are you sure you want to delete these records?';
+
+            // Update message in the modal
+            document.getElementById('deleteMessage').textContent = confirmMsg;
+
+            // Pass selected IDs to the hidden input
+            deleteAssetIdsInput.value = selected.join(',');
+
+            // Show the modal
+            deleteModal.style.display = 'block';
+        });
+
+        // Confirm deletion and submit the form
+        document.getElementById('confirmDeleteBtn').addEventListener('click', function() {
+            // Trigger form submission
+            document.getElementById('deleteAssetsForm').submit();
+        });
+
+        // Close Modal
+        function closeDeleteModal() {
+            deleteModal.style.display = 'none';
+        }
+
+        // Close modal if user clicks outside
+        window.onclick = function(event) {
+            if (event.target == deleteModal) {
+                closeDeleteModal();
+            }
+        };
     </script>
 </body>
 </html>
+
+<!--
+NOTES: 
+    05-04-25
+    CHANGES:
+    - add asset: working
+    - select: working
+    - delete: working
+    - edit: working
+
+    TO BE WORKED ON:
+    - add and edit functions: taxes 
+
+-->

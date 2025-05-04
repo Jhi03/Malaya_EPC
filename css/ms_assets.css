@@ -277,40 +277,36 @@ body {
 }
 
 /* Left Section - List of Assets */
+/* Container for the asset list */
 .asset-list {
     flex: 1;
     background: #ffffff;
     margin: 0px 0px 0px 20px;
-    border-radius: 0; /* No rounded corners */
-    box-shadow: none; /* No shadow */
-    display: flex;
-    flex-direction: column;
-}
-
-/* Top bar for Assets Label */
-.asset-list-header {
-    background-color: #d9d9d9;
-    border-radius: 20px;
-    color: black;
-    text-align: center;
-    font-weight: bold;
-    font-size: 16px;
-    height: 30px;
-    line-height: 30px;
-    width: 100%;
-}/* Left Section - List of Assets */
-.asset-list {
-    flex: 1;
-    background: #ffffff;
-    margin: 0px 0px 0px 20px;
-    border-radius: 0; /* No rounded corners */
-    box-shadow: none; /* No shadow */
+    border-radius: 0;
+    box-shadow: none;
     display: flex;
     flex-direction: column;
     padding: 10px;
+    max-height: 80vh; /* Flexible height based on viewport size */
+    overflow: hidden; /* Prevent the page from scrolling */
 }
 
-/* Top bar for Assets Label */
+/* Top bar for the asset list header */
+/* Container for the asset list */
+.asset-list {
+    flex: 1;
+    background: #ffffff;
+    margin: 0px 0px 0px 20px;
+    border-radius: 0;
+    box-shadow: none;
+    display: flex;
+    flex-direction: column;
+    padding: 10px;
+    max-height: 80vh; /* Flexible height based on viewport size */
+    overflow: hidden; /* Prevent the page from scrolling */
+}
+
+/* Top bar for the asset list header */
 .asset-list-header {
     background-color: #d9d9d9;
     border-radius: 20px;
@@ -332,14 +328,25 @@ body {
     border-collapse: collapse;
 }
 
+/* Header row that stays fixed */
 .asset-list table thead th {
     background-color: #f1f1f1;
     font-weight: bold;
     padding: 10px;
     text-align: left;
     border-bottom: 2px solid #ddd;
+    position: sticky;
+    top: 0; /* Keep the header at the top of the container */
+    z-index: 1; /* Ensure the header is above the scrollable rows */
 }
 
+/* Wrapper container for scrollable table body */
+.asset-list-table-container {
+    overflow-y: auto;  /* Enable vertical scrolling */
+    max-height: calc(80vh - 55px); /* 80% of the viewport height minus the header and padding */
+}
+
+/* Table rows */
 .asset-list table tbody tr {
     cursor: pointer;
     transition: background-color 0.2s;
@@ -353,15 +360,6 @@ body {
     padding: 12px;
     text-align: left;
     border-bottom: 1px solid #eee;
-}
-
-/* Even spacing and alignment for table data */
-.asset-list table td:nth-child(1),
-.asset-list table td:nth-child(2),
-.asset-list table td:nth-child(3),
-.asset-list table td:nth-child(4) {
-    padding: 12px 15px;
-    text-align: left;
 }
 
 /* Optional: Adjust the width of columns if needed */
@@ -405,6 +403,64 @@ body {
 
 .asset-cost-tax p, .asset-rental-date p {
     flex: 1;
+}
+
+/* Row number / checkbox cell */
+.row-index-cell {
+    width: 40px;
+    text-align: center;
+}
+
+.row-index-cell .row-number {
+    display: inline-block;
+}
+
+.row-index-cell .row-checkbox {
+    margin: 0;
+    transform: scale(1.2);
+    cursor: pointer;
+}
+
+/* Floating delete button inside asset list */
+.asset-list {
+    position: relative;
+}
+
+/* Floating delete button inside asset list */
+.delete-selected-btn {
+    position: absolute;
+    bottom: 20px;
+    right: 20px;
+    background-color: #dc3545;
+    color: white;
+    border: none;
+    padding: 12px;
+    border-radius: 8px;  /* Rounded square */
+    display: none;  /* Hidden initially */
+    z-index: 10;
+    box-shadow: 0px 2px 8px rgba(0,0,0,0.2);
+    cursor: pointer;
+}
+
+/* Hide checkbox spacing initially */
+.asset-list input.row-checkbox {
+    margin-right: 10px;
+    vertical-align: middle;
+}
+
+/* Floating delete button */
+.delete-selected-btn {
+    position: absolute;
+    bottom: 20px;
+    right: 30px;
+    background-color: #dc3545;
+    color: white;
+    border: none;
+    padding: 10px 14px;
+    border-radius: 50%;
+    cursor: pointer;
+    z-index: 10;
+    box-shadow: 0px 0px 8px rgba(0,0,0,0.2);
 }
 
 /* Edit Button */
