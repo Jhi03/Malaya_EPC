@@ -1,16 +1,33 @@
 <?php
     session_start();
 
-    // Check if user is logged in
-    if (!isset($_SESSION['username'])) {
-        header("Location: ms_login.php");
-        exit();
-    }
+    // Database connection
     $host = 'localhost';
     $user = 'root';
     $password = '';
     $database = 'malayasol';
     $conn = new mysqli($host, $user, $password, $database);
+    
+    // Check connection
+    if ($conn->connect_error) {
+        die("Connection failed: " . $conn->connect_error);
+    }
+    
+    // Check if user is logged in
+    if (!isset($_SESSION['user_id'])) {
+        header("Location: ms_login.php");
+        exit();
+    }
+    
+    // Fetch logged-in user info
+    $user_id = $_SESSION['user_id'];
+    $user_query = $conn->prepare("SELECT first_name, last_name FROM users WHERE user_id = ?");
+    $user_query->bind_param("s", $user_id);
+    $user_query->execute();
+    $user_result = $user_query->get_result();
+    $user = $user_result->fetch_assoc();
+    $created_by = $user['first_name'] . ' ' . $user['last_name'];
+    $user_query->close();       
 
     if ($conn->connect_error) {
         die("Connection failed: " . $conn->connect_error);
@@ -53,7 +70,7 @@
         $monthly_totals[$month] = ($monthly_totals[$month] ?? 0) + $record['actual'];
     }
 
-    //Add record
+    // Add record
     if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['add_record'])) {
         $category = $_POST['category'];
         $record_date = $_POST['record_date'];
@@ -62,19 +79,19 @@
         $payee = $_POST['payee'];
         $description = $_POST['description'];
         $remarks = $_POST['remarks'];
-    
+
         $variance = $budget - $actual;
         $tax = 0;
         $creation_date = date('Y-m-d');
-    
+
         $stmt = $conn->prepare("INSERT INTO project_expense 
-            (project_id, category, description, budget, actual, payee, variance, tax, remarks, record_date, creation_date) 
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
-        $stmt->bind_param("sssiisissss", 
-            $project_code, $category, $description, $budget, $actual, $payee, $variance, $tax, $remarks, $record_date, $creation_date);
-    
+            (project_id, category, description, budget, actual, payee, variance, tax, remarks, record_date, creation_date, created_by) 
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
+
+        $stmt->bind_param("sssddsddssss", 
+            $project_code, $category, $description, $budget, $actual, $payee, $variance, $tax, $remarks, $record_date, $creation_date, $created_by);
+
         if ($stmt->execute()) {
-            // Refresh to show the new record
             header("Location: ms_records.php?projectCode=" . $project_code);
             exit();
         } else {
@@ -83,7 +100,7 @@
         $stmt->close();
     }
 
-    // Update or Delete record
+    // Edit record
     if (isset($_POST['save_edit'])) {
         $edit_id = $_POST['edit_id'];
         $category = $_POST['category'];
@@ -93,16 +110,18 @@
         $payee = $_POST['payee'];
         $description = $_POST['description'];
         $remarks = $_POST['remarks'];
-    
-        // Calculate variance (budget - actual)
+
         $variance = $budget - $actual;
-    
+        $tax = 0;
+        $edit_date = date('Y-m-d');
+        $edited_by = $created_by;
+
         $stmt = $conn->prepare("UPDATE project_expense SET 
-            category = ?, record_date = ?, budget = ?, actual = ?, variance = ?, tax = ?, payee = ?, description = ?, remarks = ?
+            category = ?, record_date = ?, budget = ?, actual = ?, variance = ?, tax = ?, payee = ?, description = ?, remarks = ?, edit_date = ?, edited_by = ?
             WHERE record_id = ?");
-    
-        $stmt->bind_param("ssddddsssi", $category, $record_date, $budget, $actual, $variance, $tax, $payee, $description, $remarks, $edit_id);
-    
+
+        $stmt->bind_param("ssddddsssssi", $category, $record_date, $budget, $actual, $variance, $tax, $payee, $description, $remarks, $edit_date, $edited_by, $edit_id);
+
         if ($stmt->execute()) {
             echo "<script>window.location.href = 'ms_records.php?projectCode=$project_code';</script>";
             exit();
@@ -193,7 +212,7 @@
         <div class="search-filter-bar">
             <!-- Left group: Add, Search, Filter -->
             <div class="left-controls">
-                <button class="add-record-btn">ADD RECORD</button>
+                <button onclick="openRecordModal('add')" class="add-record-btn">ADD RECORD</button>
 
                 <div class="search-container">
                     <input type="text" class="search-input" placeholder="SEARCH">
@@ -265,7 +284,11 @@
                                         data-actual="<?= $row['actual'] ?>"
                                         data-payee="<?= $row['payee'] ?>"
                                         data-description="<?= $row['description'] ?>"
-                                        data-remarks="<?= $row['remarks'] ?>">
+                                        data-remarks="<?= $row['remarks'] ?>"
+                                        data-created_by="<?= $row['created_by'] ?>"
+                                        data-creation_date="<?= $row['creation_date'] ?>"
+                                        data-edited_by="<?= $row['edited_by'] ?>"
+                                        data-edit_date="<?= $row['edit_date'] ?>">
                                         <img src="icons/edit.svg" width="18">
                                     </a>
                                 </td>   
@@ -352,69 +375,11 @@
         </div>
     </div>
 
-    <!-- ADD RECORD MODAL -->
-    <div id="addRecordModal" class="custom-modal-overlay">
+    <!-- ADD/EDIT RECORD MODAL -->
+    <div id="recordModal" class="custom-modal-overlay" style="display:none;">
         <div class="custom-modal">
             <div class="modal-header">
-                <h5>ADD RECORD</h5>
-            </div>
-            <form method="POST" action="ms_records.php?projectCode=<?= $project_code ?>">
-                <div class="modal-body">
-                    <div class="input-row">
-                        <div class="form-group">
-                            <label>Category</label>
-                            <select name="category" required>
-                                <option value="">-- SELECT --</option>
-                                <option value="OPEX">OPEX</option>
-                                <option value="CAPEX">CAPEX</option>
-                            </select>
-                        </div>
-                        <div class="form-group">
-                            <label>Date</label>
-                            <input type="date" name="record_date" value="<?= date('Y-m-d') ?>">
-                        </div>
-                    </div>
-
-                    <div class="input-row">
-                        <div class="form-group">
-                            <label>Budget</label>
-                            <input type="number" name="budget" value="0" step="0.01">
-                        </div>
-                        <div class="form-group">
-                            <label>Amount</label>
-                            <input type="number" name="actual" step="0.01" required>
-                        </div>
-                    </div>
-
-                    <div class="form-group full-width">
-                        <label>Payee</label>
-                        <input type="text" name="payee" required>
-                    </div>
-
-                    <div class="form-group full-width">
-                        <label>Description</label>
-                        <input type="text" name="description" required> 
-                    </div>
-
-                    <div class="form-group full-width">
-                        <label>Remarks</label>
-                        <textarea name="remarks" rows="3"></textarea>
-                    </div>
-                </div>
-
-                <div class="modal-footer">
-                    <button type="submit" name="add_record" class="btn-add">ADD</button>
-                    <button type="button" class="btn-cancel" onclick="closeModal()">CANCEL</button>
-                </div>
-            </form>
-        </div>
-    </div>
-    
-    <!-- Edit Modal -->
-    <div id="editRecordModal" class="custom-modal-overlay" style="display:none;">
-        <div class="custom-modal">
-            <div class="modal-header">
-                <h5>EDIT RECORD</h5>
+                <h5 id="recordModalHeader">ADD RECORD</h5>
             </div>
             <form method="POST" action="ms_records.php?projectCode=<?= $project_code ?>">
                 <input type="hidden" name="edit_id" id="edit_id">
@@ -422,7 +387,7 @@
                     <div class="input-row">
                         <div class="form-group">
                             <label>Category</label>
-                            <select name="category" required>
+                            <select name="category" id="category" required>
                                 <option value="">-- SELECT --</option>
                                 <option value="OPEX">OPEX</option>
                                 <option value="CAPEX">CAPEX</option>
@@ -430,40 +395,54 @@
                         </div>
                         <div class="form-group">
                             <label>Date</label>
-                            <input type="date" name="record_date">
+                            <input type="date" name="record_date" id="record_date" value="<?= date('Y-m-d') ?>">
                         </div>
                     </div>
 
                     <div class="input-row">
                         <div class="form-group">
                             <label>Budget</label>
-                            <input type="number" name="budget" step="0.01">
+                            <input type="number" name="budget" id="budget" value="0" step="0.01">
                         </div>
                         <div class="form-group">
                             <label>Amount</label>
-                            <input type="number" name="actual" step="0.01" required>
+                            <input type="number" name="actual" id="actual" step="0.01" required>
                         </div>
                     </div>
 
                     <div class="form-group full-width">
                         <label>Payee</label>
-                        <input type="text" name="payee" required>
+                        <input type="text" name="payee" id="payee" required>
                     </div>
 
                     <div class="form-group full-width">
                         <label>Description</label>
-                        <input type="text" name="description" required>
+                        <input type="text" name="description" id="description" required> 
                     </div>
 
                     <div class="form-group full-width">
                         <label>Remarks</label>
-                        <textarea name="remarks" rows="3"></textarea>
+                        <textarea name="remarks" id="remarks" rows="3"></textarea>
+                    </div>
+                </div>
+
+                <!-- Display metadata (added/edited info) -->
+                <div id="recordMeta" class="record-meta" style="display: none;">
+                    <div style="display: inline-flex; gap: 20px; width: 100%;">
+                        <div class="meta-left">
+                            <div>Added by: <strong id="createdBy"></strong></div>
+                            <div>Edited by: <strong id="editedBy"></strong></div>
+                        </div>
+                        <div class="meta-right">
+                            <div>Added on: <strong id="createdDate"></strong></div>
+                            <div>Edited on: <strong id="editedDate"></strong></div>
+                        </div>
                     </div>
                 </div>
 
                 <div class="modal-footer">
-                    <button type="submit" name="save_edit" class="btn-edit-delete">SAVE</button>
-                    <button type="button" class="btn-cancel" onclick="closeEditModal()">CANCEL</button>
+                    <button type="submit" name="form_mode" id="recordSubmitBtn" class="btn-add">ADD</button>
+                    <button type="button" class="btn-cancel" onclick="closeModal()">CANCEL</button>
                 </div>
             </form>
         </div>
@@ -478,7 +457,7 @@
             <div class="modal-footer">
                 <form method="POST" action="ms_records.php?projectCode=<?= $project_code ?>">
                     <input type="hidden" name="record_id" id="delete_id">
-                    <button type="submit" name="delete_record" class="btn-edit-delete">YES</button>
+                    <button type="submit" name="delete_record" class="btn-save-delete">YES</button>
                     <button type="button" class="btn-cancel" onclick="closeDeleteModal()">NO</button>
                 </form>
             </div>
@@ -531,17 +510,81 @@
             btnAnalytics.click(); // simulate button click
         }
 
-        //ADD Record Modal
-        const modal = document.getElementById("addRecordModal");
-        const openBtn = document.querySelector(".add-record-btn");
+        //ADD and EDIT Record Modal
+        function openRecordModal(mode, data = {}) {
+            const modal = document.getElementById('recordModal');
+            const header = document.getElementById('recordModalHeader');
+            const submitBtn = document.getElementById('recordSubmitBtn');
+            const editIdField = document.getElementById('edit_id');
 
-        openBtn.addEventListener("click", () => {
-            modal.style.display = "flex";
-        });
+            // Reset all form fields
+            document.querySelector('#recordModal form').reset();
+
+            // Set form based on mode
+            if (mode === 'add') {
+                header.textContent = 'ADD RECORD';
+                submitBtn.textContent = 'ADD';
+                submitBtn.className = 'btn-add';
+                submitBtn.name = 'add_record';
+                editIdField.value = '';
+
+                document.getElementById('recordMeta').style.display = 'none';
+            } else if (mode === 'edit') {
+                header.textContent = 'EDIT RECORD';
+                submitBtn.textContent = 'SAVE';
+                submitBtn.className = 'btn-save-delete';
+                submitBtn.name = 'save_edit';
+                editIdField.value = data.id;
+
+                document.getElementById('category').value = data.category;
+                document.getElementById('record_date').value = data.date;
+                document.getElementById('budget').value = data.budget;
+                document.getElementById('actual').value = data.actual;
+                document.getElementById('payee').value = data.payee;
+                document.getElementById('description').value = data.description;
+                document.getElementById('remarks').value = data.remarks;
+
+                // Fill metadata
+                document.getElementById('recordMeta').style.display = 'block';
+                document.getElementById('createdBy').textContent = data.created_by || 'N/A';
+                document.getElementById('createdDate').textContent = data.creation_date ? formatDate(data.creation_date) : 'N/A';
+                document.getElementById('editedBy').textContent = data.edited_by || '—';
+                document.getElementById('editedDate').textContent = data.edit_date ? formatDate(data.edit_date) : '—';
+            }
+
+            modal.style.display = 'flex';
+        }
+
+        function formatDate(dateStr) {
+            const date = new Date(dateStr);
+            return (date.getMonth()+1).toString().padStart(2, '0') + '/' + date.getDate().toString().padStart(2, '0') + '/' + date.getFullYear();
+        }
 
         function closeModal() {
-            modal.style.display = "none";
+            document.getElementById('recordModal').style.display = 'none';
         }
+
+        // Trigger edit modal
+        document.querySelectorAll('.edit-btn').forEach(btn => {
+            btn.addEventListener('click', function(e) {
+                e.preventDefault();
+                const data = {
+                    id: this.dataset.id,
+                    category: this.dataset.category,
+                    date: this.dataset.date,
+                    budget: this.dataset.budget,
+                    actual: this.dataset.actual,
+                    payee: this.dataset.payee,
+                    description: this.dataset.description,
+                    remarks: this.dataset.remarks,
+                    created_by: this.dataset.created_by,
+                    creation_date: this.dataset.creation_date,
+                    edited_by: this.dataset.edited_by,
+                    edit_date: this.dataset.edit_date
+                };
+                openRecordModal('edit', data);
+            });
+        });
 
         //Closing methods aside from Cancel Button
             //  Close on outside click
@@ -555,14 +598,13 @@
             window.addEventListener("keydown", function(event) {
                 if (event.key === "Escape" && modal.style.display === "flex") {
                     modal.style.display = "none";
+                    closeModal();
                 }
             });
 
-        //EDIT and DELETE Modals
-        const editModal = document.getElementById("editRecordModal"); // you'll define this below
-        const deleteModal = document.getElementById("deleteConfirmModal");
-
         // DELETE
+        const deleteModal = document.getElementById("deleteConfirmModal");
+        
         document.querySelectorAll(".delete-btn").forEach(btn => {
             btn.addEventListener("click", e => {
                 e.preventDefault();
@@ -583,27 +625,6 @@
         window.addEventListener("keydown", function(e) {
             if (e.key === "Escape" && deleteModal.style.display === "flex") closeDeleteModal();
         });
-
-        // EDIT
-        document.querySelectorAll(".edit-btn").forEach(btn => {
-            btn.addEventListener("click", e => {
-                e.preventDefault();
-                document.getElementById("edit_id").value = btn.dataset.id;
-                document.querySelector("#editRecordModal select[name='category']").value = btn.dataset.category;
-                document.querySelector("#editRecordModal input[name='record_date']").value = btn.dataset.date;
-                document.querySelector("#editRecordModal input[name='budget']").value = btn.dataset.budget;
-                document.querySelector("#editRecordModal input[name='actual']").value = btn.dataset.actual;
-                document.querySelector("#editRecordModal input[name='payee']").value = btn.dataset.payee;
-                document.querySelector("#editRecordModal input[name='description']").value = btn.dataset.description;
-                document.querySelector("#editRecordModal textarea[name='remarks']").value = btn.dataset.remarks;
-
-                editModal.style.display = "flex";
-            });
-        });
-
-        function closeEditModal() {
-            editModal.style.display = "none";
-        }
     </script>
 
     <script> //ANALYTICS VIEW
