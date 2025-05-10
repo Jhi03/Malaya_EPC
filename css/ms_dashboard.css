@@ -58,45 +58,6 @@ body {
     margin-right: 10px;
 }
 
-.nav-buttons a {
-    text-decoration: none; /* Removes the underline */
-}
-
-.nav-buttons button {
-    background: none;
-    border: none;
-    color: white;
-    text-align: left;
-    font-size: 12px;
-    padding: 10px;
-    width: 100%;
-    display: flex;
-    justify-content: space-between;
-    cursor: pointer;
-}
-
-.nav-buttons a.active button {
-    color: #f4c542;
-    font-weight: bold;
-}
-
-
-.create-btn {
-    background: none;
-    border: 1px solid white;
-    color: white;
-    padding: 10px;
-    width: 100%;
-    font-size: 16px;
-    cursor: pointer;
-    border-radius: 5px;
-    margin-top: 20px;
-}
-
-.create-btn:hover {
-    background-color: white;
-    color: #333;
-}
 
 /* Content Pane */
 .content-area {
@@ -105,11 +66,11 @@ body {
     overflow-x: hidden;
 }
 
-/* Header */
+
 .top-bar {
     position: sticky;
     top: 0;
-    background-color: #fff; /* or match your theme */
+    background-color: #ffc107; /* or match your theme */
     z-index: 900; /* below sidebar (1000), but above content */
     padding: 10px 20px;
     display: flex;

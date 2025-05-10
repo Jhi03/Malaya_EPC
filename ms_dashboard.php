@@ -17,23 +17,13 @@ if (!isset($_SESSION['username'])) {
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible&display=swap" rel="stylesheet">
     <link href="css/ms_dashboard.css" rel="stylesheet">
+    <link href="css/ms_sidebar.css" rel="stylesheet">
+    <link href="css/ms_header.css" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 </head>
 <body>
     <div class="sidebar" id="sidebar">
-        <div class="logo">
-            <img src="Malaya_Logo.png" alt="Logo"> Malaya Sol <br>Accounting System
-        </div>
-        <div class="nav-buttons">
-            <a class="active" href="ms_dashboard.php"><button>Dashboard</button></a>
-            <a href="ms_projects.php"><button>Projects</button></a>
-            <a href="ms_assets.php"><button>Assets</button></a>
-            <a href="ms_expenses.php"><button>Expenses</button></a>
-            <a href="ms_workforce.php"><button>Workforce</button></a>
-            <a href="ms_payroll.php"><button>Payroll</button></a>
-            <a href="ms_vendors.php"><button>Vendors</button></a>
-            <a href="ms_reports.php"><button>Reports</button></a>
-        </div>
+        <?php include 'sidebar.php'; ?>
     </div>
     
     <div class="content-area">
@@ -60,6 +50,9 @@ if (!isset($_SESSION['username'])) {
             <div class="section">Section 3</div>
         </div>
     </div>
+
+    <script src="js/sidebar.js"></script>
+    <script src="js/header.js"></script>
 
     <script>
         //Sidebar Trigger (pullup or collapse sidebar)

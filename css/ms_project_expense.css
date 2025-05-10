@@ -465,25 +465,6 @@ textarea {
     min-height: 60px;
 }
 
-.record-meta {
-    display: flex;
-    gap: 20px; /* Reduce to fit better */
-    font-size: 0.9em;
-    margin-top: 1rem;
-    background-color: #f9f9f9;
-    padding: 8px 12px;
-    border-radius: 4px;
-    color: #444;
-    flex-wrap: nowrap; /* Prevent wrapping unless really needed */
-}
-
-.meta-left, .meta-right {
-    display: flex;
-    flex-direction: column;
-    gap: 4px;
-    flex: 1; /* This makes each meta section take up 50% of the width */
-}
-
 /* Footer Buttons */
 .modal-footer {
     display: flex;
@@ -496,26 +477,27 @@ textarea {
     background-color: #7ed957;
     color: white;
     border: none;
-    padding: 10px 20px;
-    border-radius: 6px;
-    font-weight: bold;
+    padding: 10px 25px;
+    border-radius: 8px;
+    cursor: pointer;
 }
 
-.btn-save-delete {
+.btn-edit-delete {
     background-color: #ff5757;
     color: white;
     border: none;
-    padding: 10px 20px;
-    border-radius: 6px;
-    font-weight: bold;
+    padding: 10px 25px;
+    border-radius: 8px;
+    cursor: pointer;
 }
 
 .btn-cancel {
     background-color: #444;
     color: white;
     border: none;
-    padding: 10px 20px;
-    border-radius: 6px;
+    padding: 10px 15px;
+    border-radius: 8px;
+    cursor: pointer;
 }
 
 /* 

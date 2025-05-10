@@ -389,8 +389,14 @@
                             <label>Category</label>
                             <select name="category" id="category" required>
                                 <option value="">-- SELECT --</option>
-                                <option value="OPEX">OPEX</option>
-                                <option value="CAPEX">CAPEX</option>
+                                <option value="CAPEX">CAPEX: Materials</option>
+                                <option value="CAPEX">CAPEX: Labors</option>
+                                <option value="CAPEX">CAPEX: Purchase</option>
+                                <option value="OPEX">OPEX: Gas</option>
+                                <option value="OPEX">OPEX: Food</option>
+                                <option value="OPEX">OPEX: Toll</option>
+                                <option value="OPEX">OPEX: Parking</option>
+                                <option value="OPEX">OPEX: Salary</option>
                             </select>
                         </div>
                         <div class="form-group">

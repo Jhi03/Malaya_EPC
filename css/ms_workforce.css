@@ -1,161 +1,195 @@
 body {
     font-family: 'Atkinson Hyperlegible', sans-serif;
     margin: 0;
-    display: flex;
-    height: 100vh; /* Full viewport height */
-    overflow: hidden; /* Prevent overall page scroll */
+    padding: 0;
+    background-color: #f5f5f5;
 }
 
-/* Sidebar styles */
-.sidebar {
-    width: 210px;
-    background-color: #333;
-    color: white;
-    height: 100vh;
-    padding: 15px;
-    display: flex;
-    flex-direction: column;
-    justify-content: flex-start;
-    position: fixed;
-    top: 0;
-    left: 0;
-    z-index: 1000;
-    transform: translateX(0); /* visible by default */
-    transition: transform 0.3s ease-in-out;
-}
-
-/* Slide sidebar out to the left */
-.sidebar.collapsed {
-    transform: translateX(-100%);
-}
-
-/* Content area shifts accordingly */
+/* Fix header placement */
 .content-area {
     margin-left: 210px;
     flex: 1;
     display: flex;
     flex-direction: column;
     overflow-y: auto;
-    height: 100vh;
+    height: 120vh;
     transition: margin-left 0.3s ease-in-out;
 }
 
-/* When sidebar is collapsed, content takes full width */
-.sidebar.collapsed ~ .content-area {
-    margin-left: 0;
+.container {
+    max-width: 1000px;
+    background-color: hsl(0, 0%, 87%);
+    padding: 20px;
+    border-radius: 8px;
+    box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    margin: 0 auto;
 }
 
-.logo {
-    display: flex;
-    align-items: center;
-    font-size: 14px;
-    font-weight: bold;
+h1 {
+    color: #2c3e50;
     margin-bottom: 20px;
 }
 
-.logo img {
-    width: 40px;
-    margin-right: 10px;
-}
-
-.nav-buttons a {
-    text-decoration: none; /* Removes the underline */
-}
-
-.nav-buttons button {
-    background: none;
-    border: none;
-    color: white;
-    text-align: left;
-    font-size: 12px;
-    padding: 10px;
-    width: 100%;
+.controls {
     display: flex;
     justify-content: space-between;
+    align-items: center;
+    width: 80%;          /* Matches the table width */
+    margin: 0 auto 20px; /* Centers it and adds spacing below */
+    gap: 10px;
+}
+
+.search-box {
+    padding: 8px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    width: 250px;
+}
+
+.add-btn {
+    background-color: #3498db;
+    color: white;
+    border: none;
+    padding: 10px 15px;
+    border-radius: 4px;
     cursor: pointer;
 }
 
-.nav-buttons a.active button {
-    color: #f4c542;
-    font-weight: bold;
+table {
+    width: 100%;
+    border-collapse: collapse;
 }
 
-/* Content Pane */
-.content-area {
-    margin-left: 210px; /* equal to sidebar width */
-    flex: 1;
-    overflow-x: hidden;
-}
-
-/* Header */
-.top-bar {
-    position: sticky;
-    top: 0;
-    background-color: #fff; /* or match your theme */
-    z-index: 900; /* below sidebar (1000), but above content */
-    padding: 10px 20px;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
+th, td {
+    padding: 12px;
+    text-align: left;
     border-bottom: 1px solid #ddd;
 }
 
-.hamburger {
-    background: none;
-    border: none;
-    font-size: 24px;
-    cursor: pointer;
-}
-
-.page-title {
-    font-size: 16px;
-    font-weight: bold;
-    margin: 0;
-}
-
-/*User Menu*/
-.user-icon {
-    background: none;
-    border: none;
-    font-size: 24px;
-    cursor: pointer;
-}
-
-.user-dropdown {
-    position: relative;
-    display: inline-block;
-}
-  
-.dropdown-menu {
-    display: none;
-    position: absolute;
-    right: 0;
-    background-color: #fff;
-    border-radius: 10px;
-    box-shadow: 0 8px 16px rgba(0,0,0,0.2);
-    min-width: 150px;
-    z-index: 100;
-    margin-top: 10px;
-    overflow: hidden;
-}
-
-.dropdown-item {
-    display: block;
-    padding: 10px 20px;
+th {
+    background-color: #f2f2f2;
     color: #333;
-    text-decoration: none;
-    font-size: 0.9rem;
 }
 
-.dropdown-item:hover {
-    background-color: #f6f6f6;
+tr:hover {
+    background-color: #f9f9f9;
 }
 
-.logout-btn {
+/* Status colors */
+.status-active {
+    color: green;
+    font-weight: bold;
+}
+
+.status-resigned {
     color: red;
     font-weight: bold;
 }
 
-.logout-btn:hover {
-    color: darkred;
+.status-leave {
+    color: orange;
+    font-weight: bold;
+}
+
+.action-btn {
+    margin-right: 5px;
+    padding: 5px 10px;
+    border: none;
+    border-radius: 3px;
+    cursor: pointer;
+}
+
+.edit-btn {
+    background-color: #f39c12;
+    color: white;
+}
+
+.delete-btn {
+    background-color: #e74c3c;
+    color: white;
+}
+
+/* Modal styles */
+.modal {
+    display: none;
+    position: fixed;
+    z-index: 1000;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    overflow: auto;
+    background-color: rgba(0,0,0,0.4);
+}
+
+.modal-content {
+    background-color: white;
+    margin: 10% auto;
+    padding: 20px;
+    border-radius: 5px;
+    max-width: 500px;
+    box-shadow: 0 5px 8px rgba(0,0,0,0.2);
+}
+
+.close {
+    color: #aaa;
+    float: right;
+    font-size: 28px;
+    font-weight: bold;
+    cursor: pointer;
+}
+
+.close:hover {
+    color: black;
+}
+
+.form-group {
+    margin-bottom: 15px;
+}
+
+.form-group label {
+    display: block;
+    margin-bottom: 5px;
+}
+
+.form-group input, .form-group select {
+    width: 100%;
+    padding: 8px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    box-sizing: border-box;
+}
+
+.submit-btn {
+    background-color: #2ecc71;
+    color: white;
+    border: none;
+    padding: 10px 15px;
+    border-radius: 4px;
+    cursor: pointer;
+    width: 100%;
+}
+
+.pagination {
+    margin-top: 20px;
+    text-align: center;
+}
+
+.pagination a {
+    color: black;
+    padding: 8px 16px;
+    text-decoration: none;
+    transition: background-color .3s;
+    border: 1px solid #ddd;
+    margin: 0 4px;
+}
+
+.pagination a.active {
+    background-color: #3498db;
+    color: white;
+    border: 1px solid #3498db;
+}
+
+.pagination a:hover:not(.active) {
+    background-color: #ddd;
 }
