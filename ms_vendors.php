@@ -1,11 +1,14 @@
 <?php
 session_start();
 
+
 // Check if user is logged in
 if (!isset($_SESSION['username'])) {
     header("Location: ms_login.php");
     exit();
 }
+
+$page_title = "VENDORS";
 
 // DATABASE CONNECTION
 $servername = "localhost";  

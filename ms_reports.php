@@ -6,6 +6,8 @@ if (!isset($_SESSION['username'])) {
     header("Location: ms_login.php");
     exit();
 }
+
+$page_title = "REPORTS";
 ?>
 
 <!DOCTYPE html>

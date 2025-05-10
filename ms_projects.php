@@ -6,6 +6,9 @@
         header("Location: ms_login.php");
         exit();
     }
+
+    $page_title = "PROJECTS";
+
     // Database connection
     $host = 'localhost';
     $user = 'root';

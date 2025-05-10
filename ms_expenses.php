@@ -17,6 +17,8 @@ if ($conn->connect_error) {
     die("Connection failed: " . $conn->connect_error);
 }
 
+$page_title = "EXPENSES";
+
 //Use fixed project code for corporate tracker
 $project_code = 'Corporate';
 

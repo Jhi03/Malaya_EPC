@@ -1,505 +1,170 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <title>MalayaSol Employee Management</title>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible&display=swap" rel="stylesheet">
-    <link rel="icon" href="images/Malaya_Logo.png" type="image/png">
-    <link href="css/ms_sidebar.css" rel="stylesheet">
-    <link href="css/ms_workforce.css" rel="stylesheet">
-    <style>
-        body {
-            font-family: 'Atkinson Hyperlegible', sans-serif;
-            margin: 0;
-            padding: 0;
-            color: black;
-            background-color: #f5f5f5;
-        }
-
-        /* Fix header placement */
-        .content-area {
-            margin-left: 210px;
-    flex: 1;
-    display: flex;
-    flex-direction: column;
-    overflow-y: auto;
-    height: 120vh;
-    transition: margin-left 0.3s ease-in-out;
-        }
-        
-        .container {
-    max-width: 900px; /* or try 960px */
-    background-color: #f4f6f8;
-    padding: 20px;
-    border-radius: 8px;
-    box-shadow: 0 0 10px rgba(0,0,0,0.1);
-    margin: 0 auto;
-}
-        h1 {
-            color: black;
-            margin-bottom: 20px;
-            font-family: 'Atkinson Hyperlegible', sans-serif;
-
-        }
-        
-        .controls {
-            display: flex;
-    justify-content: space-between;
-    align-items: center;
-    width: 85%;          /* Matches the table width */
-    margin: 0 auto 20px; /* Centers it and adds spacing below */
-    gap: 10px; ;
-    font-family: 'Atkinson Hyperlegible', sans-serif;
-
-        }
-        
-        .search-box {
-            padding: 8px;
-    border: 1px solid #ddd;
-    border-radius: 4px;
-    width: 250px;
-        }
-        .search-btn {
-    padding: 8px 12px;
-    background-color: #eee;
-    border: 1px solid #ccc;
-    border-radius: 4px;
-    cursor: pointer;
-}
-.add-btn {
-    background-color: #3498db;
-    color: white;
-    border: none;
-    padding: 10px 18px;
-    border-radius: 6px;
-    font-weight: 500;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-    transition: background-color 0.3s ease;
-}
-
-.add-btn:hover {
-    background-color: #2980b9;
-}
-        
-        table {
-    width: 85%;
-    margin: 0 auto; /* ✅ This centers the table */
-    border-collapse: separate;
-    border-spacing: 0 12px; /* spacing between rows */
-    background-color: transparent;
-    font-family: 'Atkinson Hyperlegible', sans-serif;
-}
-th {
-    background-color: #ecf0f1;
-    padding: 14px 16px;
-    color: #2c3e50;
-    font-weight: 600;
-    text-align: left;
-    border: none;
-}
-
-td {
-    background-color: white;
-    padding: 14px 16px;
-    border: none;
-    vertical-align: middle;
-    box-shadow: 0 1px 3px rgba(0,0,0,0.06);
-    border-radius: 6px;
-}
-
-/* Round only outer sides of rows */
-td:first-child {
-    border-top-left-radius: 6px;
-    border-bottom-left-radius: 6px;
-}
-
-td:last-child {
-    border-top-right-radius: 6px;
-    border-bottom-right-radius: 6px;
-}
-thead th {
-    background-color: #ecf0f1;
-    color: #2c3e50;
-    font-weight: 600;
-    text-align: left;
-    padding: 14px 16px;
-    border: none;
-    border-bottom: 2px solid #bdc3c7;
-    border-radius: 6px;
-
-}
-
-tbody tr {
-    background-color: #fff;
-    border-radius: 8px;
-    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.05);
-    transition: box-shadow 0.2s ease;
-}
-
-tbody tr:hover {
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-}
-
-tbody td {
-    padding: 14px 16px;
-    border: none;
-    vertical-align: middle;
-}
-
-tbody tr td:first-child {
-    border-top-left-radius: 8px;
-    border-bottom-left-radius: 8px;
-}
-
-tbody tr td:last-child {
-    border-top-right-radius: 8px;
-    border-bottom-right-radius: 8px;
-}
-        
-        /* Status colors */
-        .status-active {
-            color: green;
-            font-weight: bold;
-        }
-        
-        .status-resigned {
-            color: red;
-            font-weight: bold;
-        }
-        
-        .status-leave {
-            color: orange;
-            font-weight: bold;
-        }
-        
-        .action-btn {
-            margin-right: 5px;
-            padding: 5px 10px;
-            border: none;
-            border-radius: 3px;
-            cursor: pointer;
-        }
-        
-        .edit-btn {
-    background-color: #f39c12;
-    color: white;
-}
-
-.delete-btn {
-    background-color: #e74c3c;
-    color: white;
-}
-        /* Modal styles */
-        .modal {
-            display: none;
-            position: fixed;
-            z-index: 1000;
-            left: 0;
-            top: 0;
-            width: 100%;
-            height: 100%;
-            overflow: auto;
-            background-color: rgba(0,0,0,0.4);
-        }
-        
-        .modal-content {
-            background-color: white;
-            margin: 10% auto;
-            padding: 20px;
-            border-radius: 5px;
-            max-width: 500px;
-            box-shadow: 0 5px 8px rgba(0,0,0,0.2);
-        }
-        
-        .close {
-            color: #aaa;
-            float: right;
-            font-size: 28px;
-            font-weight: bold;
-            cursor: pointer;
-        }
-        
-        .close:hover {
-            color: black;
-        }
-        
-        .form-group {
-            margin-bottom: 15px;
-        }
-        
-        .form-group label {
-            display: block;
-            margin-bottom: 5px;
-        }
-        
-        .form-group input, .form-group select {
-            width: 100%;
-            padding: 8px;
-            border: 1px solid #ddd;
-            border-radius: 4px;
-            box-sizing: border-box;
-        }
-        
-        .submit-btn {
-            background-color: #2ecc71;
-            color: white;
-            border: none;
-            padding: 10px 15px;
-            border-radius: 4px;
-            cursor: pointer;
-            width: 100%;
-        }
-        
-        .pagination {
-            margin-top: 20px;
-            text-align: center;
-        }
-        
-        .pagination a {
-            color: black;
-            padding: 8px 16px;
-            text-decoration: none;
-            transition: background-color .3s;
-            border: 1px solid #ddd;
-            margin: 0 4px;
-        }
-        
-        .pagination a.active {
-            background-color: #3498db;
-            color: white;
-            border: 1px solid #3498db;
-        }
-        
-        .pagination a:hover:not(.active) {
-            background-color: #ddd;
-        }
-        
-        /* Message Modal Styles */
-        #messageModal {
-            display: none;
-            position: fixed;
-            z-index: 1500;
-            left: 0;
-            top: 0;
-            width: 100%;
-            height: 100%;
-            background-color: rgba(0,0,0,0.5);
-        }
-
-        #messageModal .modal-content {
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            background-color: #fff;
-            padding: 20px;
-            border-radius: 5px;
-            box-shadow: 0 0 20px rgba(0,0,0,0.2);
-            max-width: 400px;
-            text-align: center;
-        }
-
-        .close-modal {
-            position: absolute;
-            right: 10px;
-            top: 5px;
-            font-size: 24px;
-            font-weight: bold;
-            cursor: pointer;
-        }
-
-        .message-success {
-            color: #28a745;
-            padding: 15px;
-            border-left: 4px solid #28a745;
-            background-color: rgba(40, 167, 69, 0.1);
-        }
-
-        .message-error {
-            color: #dc3545;
-            padding: 15px;
-            border-left: 4px solid #dc3545;
-            background-color: rgba(220, 53, 69, 0.1);
-        }
-
-        .btn-modal {
-            display: inline-block;
-            margin-top: 15px;
-            padding: 8px 20px;
-            background-color: #007bff;
-            color: white;
-            border: none;
-            border-radius: 4px;
-            cursor: pointer;
-            font-weight: bold;
-        }
-
-        .btn-modal:hover {
-            background-color: #0069d9;
-        }
-    </style>
-</head>
-<body>
-
 <?php
 $page_title = "WORKFORCE";
 
-    // Database connection
-    $host = 'localhost';
-    $user = 'root';
-    $password = '';
-    $database = 'malayasol';
-    
-    $conn = new mysqli($host, $user, $password, $database);
-    
-    // Check connection
-    if ($conn->connect_error) {
-        die("Connection failed: " . $conn->connect_error);
-    }
-    
-    // Create personnel table if it doesn't exist
-    $create_table_sql = "CREATE TABLE IF NOT EXISTS personnel (
-        employee_id INT PRIMARY KEY,
-        full_name VARCHAR(100),
-        department VARCHAR(100),
-        position VARCHAR(50),
-        salary DECIMAL(10,2),
-        status VARCHAR(20)
-    )";
-    
-    if (!$conn->query($create_table_sql)) {
-        die("Error creating table: " . $conn->error);
-    }
-    
-    // Initialize message variables
-    $message = "";
-    $message_type = "";
-    
-    // Handle form submissions for adding/editing employees
-    if ($_SERVER["REQUEST_METHOD"] == "POST") {
-        if (isset($_POST['add_employee'])) {
-            $employee_id = $_POST['employee_id'];
-            $full_name = $_POST['full_name'];
-            $department = $_POST['department'];
-            $position = $_POST['position'];
-            $salary = $_POST['salary'];
-            $status = $_POST['status'];
-            
-            $sql = "INSERT INTO personnel (employee_id, full_name, department, position, salary, status) 
-                    VALUES (?, ?, ?, ?, ?, ?)";
-            $stmt = $conn->prepare($sql);
-            $stmt->bind_param("isssds", $employee_id, $full_name, $department, $position, $salary, $status);
-            
-            if ($stmt->execute()) {
-                $message = "Employee added successfully!";
-                $message_type = "success";
-            } else {
-                $message = "Error: " . $stmt->error;
-                $message_type = "error";
-            }
-            $stmt->close();
-        }
+// Database connection
+$host = 'localhost';
+$user = 'root';
+$password = '';
+$database = 'malayasol';
+
+$conn = new mysqli($host, $user, $password, $database);
+
+// Check connection
+if ($conn->connect_error) {
+    die("Connection failed: " . $conn->connect_error);
+}
+
+// Create personnel table if it doesn't exist
+$create_table_sql = "CREATE TABLE IF NOT EXISTS personnel (
+    employee_id INT PRIMARY KEY,
+    full_name VARCHAR(100),
+    department VARCHAR(100),
+    position VARCHAR(50),
+    salary DECIMAL(10,2),
+    status VARCHAR(20)
+)";
+
+if (!$conn->query($create_table_sql)) {
+    die("Error creating table: " . $conn->error);
+}
+
+// Initialize message variables
+$message = "";
+$message_type = "";
+
+// Handle form submissions for adding/editing employees
+if ($_SERVER["REQUEST_METHOD"] == "POST") {
+    if (isset($_POST['add_employee'])) {
+        $employee_id = $_POST['employee_id'];
+        $full_name = $_POST['full_name'];
+        $department = $_POST['department'];
+        $position = $_POST['position'];
+        $salary = $_POST['salary'];
+        $status = $_POST['status'];
         
-        if (isset($_POST['edit_employee'])) {
-            $employee_id = $_POST['employee_id'];
-            $full_name = $_POST['full_name'];
-            $department = $_POST['department'];
-            $position = $_POST['position'];
-            $salary = $_POST['salary'];
-            $status = $_POST['status'];
-            
-            $sql = "UPDATE personnel SET full_name=?, department=?, position=?, salary=?, status=? WHERE employee_id=?";
-            $stmt = $conn->prepare($sql);
-            $stmt->bind_param("sssdsi", $full_name, $department, $position, $salary, $status, $employee_id);
-            
-            if ($stmt->execute()) {
-                $message = "Employee updated successfully!";
-                $message_type = "success";
-            } else {
-                $message = "Error: " . $stmt->error;
-                $message_type = "error";
-            }
-            $stmt->close();
-        }
-    }
-    
-    // Handle delete request
-    if (isset($_GET['delete'])) {
-        $id_to_delete = $_GET['delete'];
-        
-        $sql = "DELETE FROM personnel WHERE employee_id = ?";
+        $sql = "INSERT INTO personnel (employee_id, full_name, department, position, salary, status) 
+                VALUES (?, ?, ?, ?, ?, ?)";
         $stmt = $conn->prepare($sql);
-        $stmt->bind_param("i", $id_to_delete);
+        $stmt->bind_param("isssds", $employee_id, $full_name, $department, $position, $salary, $status);
         
         if ($stmt->execute()) {
-            $message = "Employee deleted successfully!";
+            $message = "Employee added successfully!";
             $message_type = "success";
         } else {
-            $message = "Error deleting record: " . $stmt->error;
+            $message = "Error: " . $stmt->error;
             $message_type = "error";
         }
         $stmt->close();
     }
     
-    // Pagination
-    $records_per_page = 10;
-    if (isset($_GET['page'])) {
-        $page = $_GET['page'];
-    } else {
-        $page = 1;
-    }
-    $start_from = ($page-1) * $records_per_page;
-    
-    // Search functionality
-    $search = "";
-    if (isset($_GET['search'])) {
-        $search = $_GET['search'];
-        $sql = "SELECT * FROM personnel WHERE 
-                full_name LIKE ? OR 
-                department LIKE ? OR 
-                position LIKE ? OR 
-                status LIKE ? 
-                ORDER BY employee_id LIMIT ?, ?";
+    if (isset($_POST['edit_employee'])) {
+        $employee_id = $_POST['employee_id'];
+        $full_name = $_POST['full_name'];
+        $department = $_POST['department'];
+        $position = $_POST['position'];
+        $salary = $_POST['salary'];
+        $status = $_POST['status'];
+        
+        $sql = "UPDATE personnel SET full_name=?, department=?, position=?, salary=?, status=? WHERE employee_id=?";
         $stmt = $conn->prepare($sql);
-        $search_param = "%$search%";
-        $stmt->bind_param("ssssii", $search_param, $search_param, $search_param, $search_param, $start_from, $records_per_page);
-    } else {
-        $sql = "SELECT * FROM personnel ORDER BY employee_id LIMIT ?, ?";
-        $stmt = $conn->prepare($sql);
-        $stmt->bind_param("ii", $start_from, $records_per_page);
+        $stmt->bind_param("sssdsi", $full_name, $department, $position, $salary, $status, $employee_id);
+        
+        if ($stmt->execute()) {
+            $message = "Employee updated successfully!";
+            $message_type = "success";
+        } else {
+            $message = "Error: " . $stmt->error;
+            $message_type = "error";
+        }
+        $stmt->close();
     }
-    
-    $stmt->execute();
-    $result = $stmt->get_result();
-    
-    // Define the allowed departments
-    $allowed_departments = [
-        "Executive & Strategy Office",
-        "Finance & Digital Accounting Department",
-        "IT Infrastructure & Cybersecurity Division",
-        "System Development & Innovation Lab",
-        "Cloud Engineering & Data Services Department",
-        "Operations & Project Management Department",
-        "Technical Support & IT Helpdesk",
-        "HR & Digital Workforce Management",
-        "Sales & Customer Engagement Hub",
-        "Sustainability & Energy Analytics Division"
-    ];
-    ?>
+}
 
-   
+// Handle delete request
+if (isset($_GET['delete'])) {
+    $id_to_delete = $_GET['delete'];
+    
+    $sql = "DELETE FROM personnel WHERE employee_id = ?";
+    $stmt = $conn->prepare($sql);
+    $stmt->bind_param("i", $id_to_delete);
+    
+    if ($stmt->execute()) {
+        $message = "Employee deleted successfully!";
+        $message_type = "success";
+    } else {
+        $message = "Error deleting record: " . $stmt->error;
+        $message_type = "error";
+    }
+    $stmt->close();
+}
+
+// Pagination
+$records_per_page = 10;
+if (isset($_GET['page'])) {
+    $page = $_GET['page'];
+} else {
+    $page = 1;
+}
+$start_from = ($page-1) * $records_per_page;
+
+// Search functionality
+$search = "";
+if (isset($_GET['search'])) {
+    $search = $_GET['search'];
+    $sql = "SELECT * FROM personnel WHERE 
+            full_name LIKE ? OR 
+            department LIKE ? OR 
+            position LIKE ? OR 
+            status LIKE ? 
+            ORDER BY employee_id LIMIT ?, ?";
+    $stmt = $conn->prepare($sql);
+    $search_param = "%$search%";
+    $stmt->bind_param("ssssii", $search_param, $search_param, $search_param, $search_param, $start_from, $records_per_page);
+} else {
+    $sql = "SELECT * FROM personnel ORDER BY employee_id LIMIT ?, ?";
+    $stmt = $conn->prepare($sql);
+    $stmt->bind_param("ii", $start_from, $records_per_page);
+}
+
+$stmt->execute();
+$result = $stmt->get_result();
+
+// Define the allowed departments
+$allowed_departments = [
+    "Executive & Strategy Office",
+    "Finance & Digital Accounting Department",
+    "IT Infrastructure & Cybersecurity Division",
+    "System Development & Innovation Lab",
+    "Cloud Engineering & Data Services Department",
+    "Operations & Project Management Department",
+    "Technical Support & IT Helpdesk",
+    "HR & Digital Workforce Management",
+    "Sales & Customer Engagement Hub",
+    "Sustainability & Energy Analytics Division"
+];
+?>
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Malaya Solar Energies Inc.</title>
+    <link rel="icon" href="images/Malaya_Logo.png" type="image/png">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible&display=swap" rel="stylesheet">
+    <link href="css/ms_workforce.css" rel="stylesheet">
+    <link href="css/ms_sidebar.css" rel="stylesheet">
+    <link href="css/ms_header.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+</head>
+<body>
     <div class="sidebar" id="sidebar">
         <?php include 'sidebar.php'; ?>
     </div>
     
     <div class="content-area">
-        <!-- Header Section - Fixed placement -->
-        <header>
-            <?php include 'header.php'; ?>
-        </header>
+        <?php include 'header.php'; ?>
         
         <div style="padding-top: 50px;"><!-- Space for fixed header -->
         <h1 style="color: black; margin-left: 80px;  margin-bottom: 20px ;">Employee Management</h1>
@@ -705,7 +370,51 @@ $page_title = "WORKFORCE";
         </div>
     </div>
     
+    <script src="js/sidebar.js"></script>
+    <script src="js/header.js"></script>
+
     <script>
+        document.addEventListener("DOMContentLoaded", function () {
+            // Sidebar Toggle
+            const toggleSidebarBtn = document.getElementById("toggleSidebar");
+            const sidebar = document.getElementById("sidebar");
+
+            if (toggleSidebarBtn && sidebar) {
+                toggleSidebarBtn.addEventListener("click", function () {
+                    sidebar.classList.toggle("collapsed");
+
+                    // Optional: Save state
+                    const isCollapsed = sidebar.classList.contains("collapsed");
+                    localStorage.setItem("sidebarCollapsed", isCollapsed);
+                });
+
+                // Restore sidebar state
+                const isCollapsed = localStorage.getItem("sidebarCollapsed") === "true";
+                if (isCollapsed) {
+                    sidebar.classList.add("collapsed");
+                }
+            }
+
+            // User dropdown toggle
+            const dropdownBtn = document.getElementById("userDropdownBtn");
+            const dropdownMenu = document.getElementById("userDropdownMenu");
+
+            if (dropdownBtn && dropdownMenu) {
+                dropdownBtn.addEventListener("click", function (event) {
+                    event.stopPropagation();
+                    dropdownMenu.style.display = (dropdownMenu.style.display === "block") ? "none" : "block";
+                });
+
+                dropdownMenu.addEventListener("click", function (event) {
+                    event.stopPropagation();
+                });
+
+                document.addEventListener("click", function () {
+                    dropdownMenu.style.display = "none";
+                });
+            }
+        });
+
         // Function to open the edit modal with pre-filled data
         function openEditModal(id, name, department, position, salary, status) {
             document.getElementById('edit_employee_id').value = id;
@@ -764,10 +473,5 @@ $page_title = "WORKFORCE";
         </script>";
     }
     ?>
-    
-    <script src="js/sidebar.js"></script>
-    <script src="js/header.js"></script>
-    <script src="js/ms_employees.js"></script>
-
 </body>
 </html>

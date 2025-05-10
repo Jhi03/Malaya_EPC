@@ -7,6 +7,8 @@ if (!isset($_SESSION['username'])) {
     exit();
 }
 
+$page_title = "ASSETS";
+
 // DATABASE CONNECTION
 $servername = "localhost";  
 $username = "root";           
@@ -83,7 +85,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
     }
 }
-$page_title = "ASSETS";
 ?>
 
 <!DOCTYPE html>

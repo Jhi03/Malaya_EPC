@@ -13,6 +13,8 @@
         die("Connection failed: " . $conn->connect_error);
     }
     
+    $page_title = "PROJECTS";
+
     // Check if user is logged in
     if (!isset($_SESSION['user_id'])) {
         header("Location: ms_login.php");
