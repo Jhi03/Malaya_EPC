@@ -25,64 +25,30 @@
 </div>
 <div class="nav-buttons d-flex flex-column gap-2">
     <a class="nav-link-item <?php echo (basename($_SERVER['PHP_SELF']) == 'ms_dashboard.php') ? 'active' : ''; ?>" href="ms_dashboard.php">
-        <i class="fas fa-home me-2"></i><span>Dashboard</span>
+        <img src="icons/sidebar-icons/dashboard.svg" alt="Dashboard Icon" class="me-2" width="24"></i><span>Dashboard</span>
     </a>
     <a class="nav-link-item <?php echo (basename($_SERVER['PHP_SELF']) == 'ms_projects.php') ? 'active' : ''; ?>" href="ms_projects.php">
-        <i class="fas fa-chart-bar me-2"></i><span>Projects</span>
+        <img src="icons/sidebar-icons/projects.svg" alt="Projects Icon" class="me-2" width="24"></i><span>Projects</span>
     </a>
     <a class="nav-link-item <?php echo (basename($_SERVER['PHP_SELF']) == 'ms_assets.php') ? 'active' : ''; ?>" href="ms_assets.php">
-        <i class="fas fa-boxes me-2"></i><span>Assets</span>
+        <img src="icons/sidebar-icons/assets.svg" alt="Assets Icon" class="me-2" width="24"></i><span>Assets</span>
     </a>
     <a class="nav-link-item <?php echo (basename($_SERVER['PHP_SELF']) == 'ms_expenses.php') ? 'active' : ''; ?>" href="ms_expenses.php">
-        <i class="fas fa-receipt me-2"></i><span>Expenses</span>
+        <img src="icons/sidebar-icons/expense.svg" alt="Expense Icon" class="me-2" width="24"></i><span>Expenses</span>
     </a>
     <a class="nav-link-item <?php echo (basename($_SERVER['PHP_SELF']) == 'ms_workforce.php') ? 'active' : ''; ?>" href="ms_workforce.php">
-        <i class="fas fa-users me-2"></i><span>Workforce</span>
+        <img src="icons/sidebar-icons/workforce.svg" alt="Workforce Icon" class="me-2" width="24"></i><span>Workforce</span>
     </a>
     <a class="nav-link-item <?php echo (basename($_SERVER['PHP_SELF']) == 'ms_payroll.php') ? 'active' : ''; ?>" href="ms_payroll.php">
-        <i class="fas fa-wallet me-2"></i><span>Payroll</span>
+        <img src="icons/sidebar-icons/payroll.svg" alt="Payroll Icon" class="me-2" width="24"></i><span>Payroll</span>
     </a>
     <a class="nav-link-item <?php echo (basename($_SERVER['PHP_SELF']) == 'ms_vendors.php') ? 'active' : ''; ?>" href="ms_vendors.php">
-        <i class="fas fa-store me-2"></i><span>Vendors</span>
+        <img src="icons/sidebar-icons/vendors.svg" alt="Vendors Icon" class="me-2" width="24"></i><span>Vendors</span>
     </a>
     <a class="nav-link-item <?php echo (basename($_SERVER['PHP_SELF']) == 'ms_reports.php') ? 'active' : ''; ?>" href="ms_reports.php">
-        <i class="fas fa-file-alt me-2"></i><span>Reports</span>
+        <img src="icons/sidebar-icons/reports.svg" alt="Reports Icon" class="me-2" width="24"></i><span>Reports</span>
     </a>
 </div>
+
 <script src="js/sidebar.js"></script>
-    <script src="js/header.js"></script>
-    <script> // Sidebar Toggle Script
- document.getElementById("toggleSidebar").addEventListener("click", function () {
-    document.getElementById("sidebar").classList.toggle("collapsed");
-    
-    // Optional: Save sidebar state to localStorage
-    const isSidebarCollapsed = document.getElementById("sidebar").classList.contains("collapsed");
-    localStorage.setItem("sidebarCollapsed", isSidebarCollapsed);
-});
-
-// Optional: Restore sidebar state on page load
-document.addEventListener("DOMContentLoaded", function() {
-    const isSidebarCollapsed = localStorage.getItem("sidebarCollapsed") === "true";
-    if (isSidebarCollapsed) {
-        document.getElementById("sidebar").classList.add("collapsed");
-    }
-});
-
-// User Menu dropdown
-const dropdownBtn = document.getElementById("userDropdownBtn");
-const dropdownMenu = document.getElementById("userDropdownMenu");
-
-dropdownBtn.addEventListener("click", function (event) {
-    event.stopPropagation(); // Prevent immediate close
-    dropdownMenu.style.display = (dropdownMenu.style.display === "block") ? "none" : "block";
-});
-
-// Prevent clicks inside the dropdown from closing it
-dropdownMenu.addEventListener("click", function (event) {
-    event.stopPropagation();
-});
-
-// Close dropdown if clicking outside
-document.addEventListener("click", function () {
-    dropdownMenu.style.display = "none";
-});</script>
+<script src="js/header.js"></script>

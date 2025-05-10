@@ -45,6 +45,13 @@ body {
     margin-left: 0;
 }
 
+/* Content Pane */
+.content-area {
+    margin-left: 210px; /* equal to sidebar width */
+    flex: 1;
+    overflow-x: hidden;
+}
+
 .logo {
     display: flex;
     align-items: center;
@@ -58,14 +65,45 @@ body {
     margin-right: 10px;
 }
 
-
-/* Content Pane */
-.content-area {
-    margin-left: 210px; /* equal to sidebar width */
-    flex: 1;
-    overflow-x: hidden;
+.nav-buttons a {
+    text-decoration: none; /* Removes the underline */
 }
 
+.nav-buttons button {
+    background: none;
+    border: none;
+    color: white;
+    text-align: left;
+    font-size: 12px;
+    padding: 10px;
+    width: 100%;
+    display: flex;
+    justify-content: space-between;
+    cursor: pointer;
+}
+
+.nav-buttons a.active button {
+    color: #f4c542;
+    font-weight: bold;
+}
+
+
+.create-btn {
+    background: none;
+    border: 1px solid white;
+    color: white;
+    padding: 10px;
+    width: 100%;
+    font-size: 16px;
+    cursor: pointer;
+    border-radius: 5px;
+    margin-top: 20px;
+}
+
+.create-btn:hover {
+    background-color: white;
+    color: #333;
+}
 
 .top-bar {
     position: sticky;

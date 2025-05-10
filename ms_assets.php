@@ -92,20 +92,20 @@ $page_title = "ASSETS";
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Malaya Solar Energies Inc.</title>
+    <link rel="icon" href="images/Malaya_Logo.png" type="image/png">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible&display=swap" rel="stylesheet">
     <link href="css/ms_assets.css" rel="stylesheet">
+    <link href="css/ms_sidebar.css" rel="stylesheet">
+    <link href="css/ms_header.css" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-    <link rel="icon" href="images/Malaya_Logo.png" type="image/png">
-
 </head>
 <body>
-<div class="sidebar" id="sidebar">
+    <div class="sidebar" id="sidebar">
         <?php include 'sidebar.php'; ?>
     </div>
     
     <div class="content-area">
-        <!-- Header Section -->
         <?php include 'header.php'; ?>
 
         <!-- Add Records, Search, Filter, and Toggle Bar -->
@@ -299,9 +299,52 @@ $page_title = "ASSETS";
             </form>
         </div>
     </div>
+
     <script src="js/sidebar.js"></script>
     <script src="js/header.js"></script>
+
     <script>
+        document.addEventListener("DOMContentLoaded", function () {
+            // Sidebar Toggle
+            const toggleSidebarBtn = document.getElementById("toggleSidebar");
+            const sidebar = document.getElementById("sidebar");
+
+            if (toggleSidebarBtn && sidebar) {
+                toggleSidebarBtn.addEventListener("click", function () {
+                    sidebar.classList.toggle("collapsed");
+
+                    // Optional: Save state
+                    const isCollapsed = sidebar.classList.contains("collapsed");
+                    localStorage.setItem("sidebarCollapsed", isCollapsed);
+                });
+
+                // Restore sidebar state
+                const isCollapsed = localStorage.getItem("sidebarCollapsed") === "true";
+                if (isCollapsed) {
+                    sidebar.classList.add("collapsed");
+                }
+            }
+
+            // User dropdown toggle
+            const dropdownBtn = document.getElementById("userDropdownBtn");
+            const dropdownMenu = document.getElementById("userDropdownMenu");
+
+            if (dropdownBtn && dropdownMenu) {
+                dropdownBtn.addEventListener("click", function (event) {
+                    event.stopPropagation();
+                    dropdownMenu.style.display = (dropdownMenu.style.display === "block") ? "none" : "block";
+                });
+
+                dropdownMenu.addEventListener("click", function (event) {
+                    event.stopPropagation();
+                });
+
+                document.addEventListener("click", function () {
+                    dropdownMenu.style.display = "none";
+                });
+            }
+        });
+
         // Store the currently selected asset
         let currentAsset = null;
 

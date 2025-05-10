@@ -17,12 +17,12 @@ if ($conn->connect_error) {
     die("Connection failed: " . $conn->connect_error);
 }
 
-// ✅ Use fixed project code for corporate tracker
+//Use fixed project code for corporate tracker
 $project_code = 'Corporate';
 
 $records = [];
 
-// ✅ Get records for 'Corporate' project only
+//Get records for 'Corporate' project only
 $stmt = $conn->prepare("SELECT * FROM project_expense WHERE project_id = ?");
 $stmt->bind_param("s", $project_code);
 $stmt->execute();
@@ -65,7 +65,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['add_record'])) {
         $project_code, $category, $description, $budget, $actual, $payee, $variance, $tax, $remarks, $record_date, $creation_date);
 
     if ($stmt->execute()) {
-        header("Location: ms_expenses.php"); // ✅ No more ?projectCode=...
+        header("Location: ms_expenses.php"); // 
         exit();
     } else {
         echo "<script>alert('Error adding record: " . $stmt->error . "');</script>";
@@ -110,7 +110,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['delete_record'])) {
     $stmt->execute();
     $stmt->close();
 
-    header("Location: ms_expenses.php"); // ✅ No more projectCode needed
+    header("Location: ms_expenses.php"); 
     exit();
 }
 
@@ -122,45 +122,22 @@ $conn->close();
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Dashboard</title>
+        <title>Malaya Solar Energies Inc.</title>
+    <link rel="icon" href="images/Malaya_Logo.png" type="image/png">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible&display=swap" rel="stylesheet">
-    <link href="css/ms_expenses.css" rel="stylesheet">
+    <link href="css/ms_project_expense.css" rel="stylesheet">
+    <link href="css/ms_sidebar.css" rel="stylesheet">
+    <link href="css/ms_header.css" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 </head>
 <body>
     <div class="sidebar" id="sidebar">
-        <div class="logo">
-            <img src="Malaya_Logo.png" alt="Logo"> Malaya Solar <br>Accounting System
-        </div>
-        <div class="nav-buttons">
-            <a href="ms_dashboard.php"><button>Dashboard</button></a>
-            <a href="ms_projects.php"><button>Projects</button></a>
-            <a href="ms_assets.php"><button>Assets</button></a>
-            <a class="active" href="ms_expenses.php"><button>Expenses</button></a>
-            <a href="ms_workforce.php"><button>Workforce</button></a>
-            <a href="ms_payroll.php"><button>Payroll</button></a>
-            <a href="ms_vendors.php"><button>Vendors</button></a>
-            <a href="ms_reports.php"><button>Reports</button></a>
-        </div>
+        <?php include 'sidebar.php'; ?>
     </div>
     
     <div class="content-area">
-        <!-- Header Section -->
-        <header class="top-bar">
-            <button class="hamburger" id="toggleSidebar">☰</button>
-            <h2 class="page-title">EXPENSES</h2>
-            
-            <div class="user-dropdown">
-                <button class="user-icon" id="userDropdownBtn">
-                    <img src="icons/circle-user-round.svg" alt="UserIcon" width="30">
-                </button>
-                <div class="dropdown-menu" id="userDropdownMenu">
-                    <a href="#" class="dropdown-item">Settings</a>
-                    <a href="ms_logout.php" class="dropdown-item logout-btn">Logout</a>
-                </div>
-            </div>
-        </header>
+        <?php include 'header.php'; ?>
 
         <!-- Add Records, Search, Filter, and Toggle Bar -->
         <div class="search-filter-bar">
@@ -457,22 +434,49 @@ $conn->close();
         </div>
     </div>
 
+    <script src="js/sidebar.js"></script>
+    <script src="js/header.js"></script>
+
     <script>
-        //Sidebar Trigger (pullup or collapse sidebar)
-        document.getElementById("toggleSidebar").addEventListener("click", function () {
-            document.getElementById("sidebar").classList.toggle("collapsed");
-        });
+        document.addEventListener("DOMContentLoaded", function () {
+            // Sidebar Toggle
+            const toggleSidebarBtn = document.getElementById("toggleSidebar");
+            const sidebar = document.getElementById("sidebar");
 
-        //User Menu dropdown
-        document.getElementById("userDropdownBtn").addEventListener("click", function (event) {
-            event.stopPropagation(); // prevent body click from closing immediately
-            const dropdown = document.getElementById("userDropdownMenu");
-            dropdown.style.display = (dropdown.style.display === "block") ? "none" : "block";
-        });
+            if (toggleSidebarBtn && sidebar) {
+                toggleSidebarBtn.addEventListener("click", function () {
+                    sidebar.classList.toggle("collapsed");
 
-        // Close dropdown if clicking outside
-        document.addEventListener("click", function () {
-            document.getElementById("userDropdownMenu").style.display = "none";
+                    // Optional: Save state
+                    const isCollapsed = sidebar.classList.contains("collapsed");
+                    localStorage.setItem("sidebarCollapsed", isCollapsed);
+                });
+
+                // Restore sidebar state
+                const isCollapsed = localStorage.getItem("sidebarCollapsed") === "true";
+                if (isCollapsed) {
+                    sidebar.classList.add("collapsed");
+                }
+            }
+
+            // User dropdown toggle
+            const dropdownBtn = document.getElementById("userDropdownBtn");
+            const dropdownMenu = document.getElementById("userDropdownMenu");
+
+            if (dropdownBtn && dropdownMenu) {
+                dropdownBtn.addEventListener("click", function (event) {
+                    event.stopPropagation();
+                    dropdownMenu.style.display = (dropdownMenu.style.display === "block") ? "none" : "block";
+                });
+
+                dropdownMenu.addEventListener("click", function (event) {
+                    event.stopPropagation();
+                });
+
+                document.addEventListener("click", function () {
+                    dropdownMenu.style.display = "none";
+                });
+            }
         });
         
         //Records/Analytics View Toggles
