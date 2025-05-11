@@ -1,13 +1,12 @@
 <?php
 session_start();
+$page_title = "REPORTS";
 
 // Check if user is logged in
 if (!isset($_SESSION['username'])) {
     header("Location: ms_login.php");
     exit();
 }
-
-$page_title = "REPORTS";
 ?>
 
 <!DOCTYPE html>
@@ -63,25 +62,6 @@ $page_title = "REPORTS";
                 if (isCollapsed) {
                     sidebar.classList.add("collapsed");
                 }
-            }
-
-            // User dropdown toggle
-            const dropdownBtn = document.getElementById("userDropdownBtn");
-            const dropdownMenu = document.getElementById("userDropdownMenu");
-
-            if (dropdownBtn && dropdownMenu) {
-                dropdownBtn.addEventListener("click", function (event) {
-                    event.stopPropagation();
-                    dropdownMenu.style.display = (dropdownMenu.style.display === "block") ? "none" : "block";
-                });
-
-                dropdownMenu.addEventListener("click", function (event) {
-                    event.stopPropagation();
-                });
-
-                document.addEventListener("click", function () {
-                    dropdownMenu.style.display = "none";
-                });
             }
         });
     </script>

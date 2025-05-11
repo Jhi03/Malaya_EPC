@@ -394,25 +394,6 @@ $allowed_departments = [
                     sidebar.classList.add("collapsed");
                 }
             }
-
-            // User dropdown toggle
-            const dropdownBtn = document.getElementById("userDropdownBtn");
-            const dropdownMenu = document.getElementById("userDropdownMenu");
-
-            if (dropdownBtn && dropdownMenu) {
-                dropdownBtn.addEventListener("click", function (event) {
-                    event.stopPropagation();
-                    dropdownMenu.style.display = (dropdownMenu.style.display === "block") ? "none" : "block";
-                });
-
-                dropdownMenu.addEventListener("click", function (event) {
-                    event.stopPropagation();
-                });
-
-                document.addEventListener("click", function () {
-                    dropdownMenu.style.display = "none";
-                });
-            }
         });
 
         // Function to open the edit modal with pre-filled data

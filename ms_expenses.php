@@ -1,5 +1,6 @@
 <?php
 session_start();
+$page_title = "EXPENSES";
 
 // Check if user is logged in
 if (!isset($_SESSION['username'])) {
@@ -16,8 +17,6 @@ $conn = new mysqli($host, $user, $password, $database);
 if ($conn->connect_error) {
     die("Connection failed: " . $conn->connect_error);
 }
-
-$page_title = "EXPENSES";
 
 //Use fixed project code for corporate tracker
 $project_code = 'Corporate';
@@ -459,25 +458,6 @@ $conn->close();
                 if (isCollapsed) {
                     sidebar.classList.add("collapsed");
                 }
-            }
-
-            // User dropdown toggle
-            const dropdownBtn = document.getElementById("userDropdownBtn");
-            const dropdownMenu = document.getElementById("userDropdownMenu");
-
-            if (dropdownBtn && dropdownMenu) {
-                dropdownBtn.addEventListener("click", function (event) {
-                    event.stopPropagation();
-                    dropdownMenu.style.display = (dropdownMenu.style.display === "block") ? "none" : "block";
-                });
-
-                dropdownMenu.addEventListener("click", function (event) {
-                    event.stopPropagation();
-                });
-
-                document.addEventListener("click", function () {
-                    dropdownMenu.style.display = "none";
-                });
             }
         });
         
