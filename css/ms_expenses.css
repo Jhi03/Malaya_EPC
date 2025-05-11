@@ -6,29 +6,6 @@ body {
     overflow: hidden; /* Prevent overall page scroll */
 }
 
-/* Sidebar styles */
-.sidebar {
-    width: 210px;
-    background-color: #333;
-    color: white;
-    height: 100vh;
-    padding: 15px;
-    display: flex;
-    flex-direction: column;
-    justify-content: flex-start;
-    position: fixed;
-    top: 0;
-    left: 0;
-    z-index: 1000;
-    transform: translateX(0); /* visible by default */
-    transition: transform 0.3s ease-in-out;
-}
-
-/* Slide sidebar out to the left */
-.sidebar.collapsed {
-    transform: translateX(-100%);
-}
-
 /* Content area shifts accordingly */
 .content-area {
     margin-left: 210px;

@@ -1,5 +1,6 @@
 <?php
     session_start();
+    $page_title = "PROJECTS";
 
     // Database connection
     $host = 'localhost';
@@ -12,8 +13,6 @@
     if ($conn->connect_error) {
         die("Connection failed: " . $conn->connect_error);
     }
-    
-    $page_title = "PROJECTS";
 
     // Check if user is logged in
     if (!isset($_SESSION['user_id'])) {
@@ -161,6 +160,7 @@
     <link href="css/ms_sidebar.css" rel="stylesheet">
     <link href="css/ms_header.css" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 <body>
     <div class="sidebar" id="sidebar">
@@ -285,67 +285,50 @@
         
         <div class="analytics-view container py-4" style="display: none;">
             <div class="mb-4">
-                <h2 class="text-center mb-3">Project Overview</h2>
-                <div class="row text-center">
+                <div class="row">
+                    <!-- Left: Summary (25%) -->
                     <div class="col-md-3">
-                        <div class="card shadow rounded-4 p-3">
+                        <div class="card shadow rounded-4 p-3 mb-3">
                             <h6>Total Budget</h6>
-                            <p class="fs-5 fw-bold text-primary">₱<?= number_format(array_sum(array_column($records, 'budget')), 2) ?></p>
+                            <p class="fs-5 fw-bold text-black">₱<?= number_format(array_sum(array_column($records, 'budget')), 2) ?></p>
                         </div>
-                    </div>
-                    <div class="col-md-3">
-                        <div class="card shadow rounded-4 p-3">
+                        <div class="card shadow rounded-4 p-3 mb-3">
                             <h6>Total Actual</h6>
-                            <p class="fs-5 fw-bold text-success">₱<?= number_format(array_sum(array_column($records, 'actual')), 2) ?></p>
+                            <p class="fs-5 fw-bold text-black">₱<?= number_format(array_sum(array_column($records, 'actual')), 2) ?></p>
                         </div>
-                    </div>
-                    <div class="col-md-3">
-                        <div class="card shadow rounded-4 p-3">
+                        <div class="card shadow rounded-4 p-3 mb-3">
                             <h6>Total Variance</h6>
-                            <p class="fs-5 fw-bold text-warning">₱<?= number_format(array_sum(array_column($records, 'budget')) - array_sum(array_column($records, 'actual')), 2) ?></p>
+                            <p class="fs-5 fw-bold text-black">₱<?= number_format(array_sum(array_column($records, 'budget')) - array_sum(array_column($records, 'actual')), 2) ?></p>
                         </div>
-                    </div>
-                    <div class="col-md-3">
                         <div class="card shadow rounded-4 p-3">
                             <h6>Total Tax</h6>
-                            <p class="fs-5 fw-bold text-danger">₱<?= number_format(array_sum(array_column($records, 'tax')), 2) ?></p>
+                            <p class="fs-5 fw-bold text-black">₱<?= number_format(array_sum(array_column($records, 'tax')), 2) ?></p>
+                        </div>
+                    </div>
+
+                    <!-- Right: Charts (65%) -->
+                    <div class="col-md-9">
+                        <div class="row g-4">
+                            <div class="col-md-8">
+                                <div class="card shadow rounded-4 p-3 h-100">
+                                    <h6 class="text-center">Weekly Budget vs Actual</h6>
+                                    <canvas id="weeklyChart" height="200"></canvas>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="card shadow rounded-4 p-3 h-100">
+                                    <h6 class="text-center">Category Breakdown</h6>
+                                    <canvas id="doughnutChart"></canvas>
+                                    <div class="mt-2 small text-center" id="categoryLegend"></div>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>
-            </div>
 
-            <div class="row g-4">
-                <div class="col-md-6">
-                    <div class="card shadow rounded-4 p-3">
-                        <h6 class="text-center">Actual by Category</h6>
-                        <canvas id="categoryChart"></canvas>
-                    </div>
+                <div class="text-end mt-4">
+                    <button id="downloadReport" class="btn btn-outline-secondary">📄 Download Report (PDF)</button>
                 </div>
-                <div class="col-md-6">
-                    <div class="card shadow rounded-4 p-3">
-                        <h6 class="text-center">Monthly Actual Spending</h6>
-                        <canvas id="monthlyChart"></canvas>
-                    </div>
-                </div>
-            </div>
-
-            <div class="row mt-4">
-                <div class="col-md-6">
-                    <div class="card shadow rounded-4 p-3">
-                        <h6 class="text-center">Expense Distribution</h6>
-                        <canvas id="pieChart"></canvas>
-                    </div>
-                </div>
-                <div class="col-md-6">
-                    <div class="card shadow rounded-4 p-3">
-                        <h6 class="text-center">Variance Over Time</h6>
-                        <canvas id="varianceChart"></canvas>
-                    </div>
-                </div>
-            </div>
-
-            <div class="text-end mt-4">
-                <button id="downloadReport" class="btn btn-outline-secondary">📄 Download Report (PDF)</button>
             </div>
         </div>
     </div>
@@ -364,14 +347,14 @@
                             <label>Category</label>
                             <select name="category" id="category" required>
                                 <option value="">-- SELECT --</option>
-                                <option value="CAPEX">CAPEX: Materials</option>
-                                <option value="CAPEX">CAPEX: Labors</option>
-                                <option value="CAPEX">CAPEX: Purchase</option>
-                                <option value="OPEX">OPEX: Gas</option>
-                                <option value="OPEX">OPEX: Food</option>
-                                <option value="OPEX">OPEX: Toll</option>
-                                <option value="OPEX">OPEX: Parking</option>
-                                <option value="OPEX">OPEX: Salary</option>
+                                <option value="CAPEX: Materials">CAPEX: Materials</option>
+                                <option value="CAPEX: Labors">CAPEX: Labors</option>
+                                <option value="CAPEX: Purchase">CAPEX: Purchase</option>
+                                <option value="OPEX: Gas">OPEX: Gas</option>
+                                <option value="OPEX: Food">OPEX: Food</option>
+                                <option value="OPEX: Toll">OPEX: Toll</option>
+                                <option value="OPEX: Parking">OPEX: Parking</option>
+                                <option value="OPEX: Salary">OPEX: Salary</option>
                             </select>
                         </div>
                         <div class="form-group">
@@ -635,73 +618,145 @@
         });
     </script>
 
-    <script> //ANALYTICS VIEW
-        const categoryChartCtx = document.getElementById('categoryChart').getContext('2d');
-        const monthlyChartCtx = document.getElementById('monthlyChart').getContext('2d');
-        
-        const categoryData = <?= json_encode($category_totals) ?>;
-        const monthlyData = <?= json_encode($monthly_totals) ?>;
+    <script>
+        const weeklyCtx = document.getElementById('weeklyChart').getContext('2d');
+        const doughnutCtx = document.getElementById('doughnutChart').getContext('2d');
 
-        const pieLabels = Object.keys(categoryData);
-        const pieValues = Object.values(categoryData);
+        // Weekly Chart Data Grouping
+        const weeklyBuckets = {};
+        const weekRanges = {}; // To store date ranges for each week
 
-        const categoryChart = new Chart(categoryChartCtx, {
+        <?php
+        $week_counter = 1;
+        $week_labels = [];
+        $weekly_budget_data = [];
+        $weekly_actual_data = [];
+
+        $temp_buckets = [];
+
+        foreach ($records as $r) {
+            $timestamp = strtotime($r['record_date']);
+            $week_num = date('W', $timestamp);
+            $year = date('o', $timestamp);
+
+            $key = "$year-W$week_num";
+
+            // Get start and end of the week (Mon-Sun)
+            $start_of_week = date('M d', strtotime($year . "W" . $week_num));
+            $end_of_week = date('M d', strtotime($year . "W" . $week_num . " +6 days"));
+
+            $range = "$start_of_week - $end_of_week";
+            $label = "Week $week_counter\n$range";
+
+            if (!isset($temp_buckets[$key])) {
+                $temp_buckets[$key] = ['budget' => 0, 'actual' => 0, 'label' => $label];
+                $week_counter++;
+            }
+
+            $temp_buckets[$key]['budget'] += $r['budget'];
+            $temp_buckets[$key]['actual'] += $r['actual'];
+        }
+
+        foreach ($temp_buckets as $entry) {
+            $week_labels[] = $entry['label'];
+            $weekly_budget_data[] = $entry['budget'];
+            $weekly_actual_data[] = $entry['actual'];
+        }
+        ?>
+
+        const weekLabels = <?= json_encode($week_labels) ?>;
+        const weeklyBudgetData = <?= json_encode($weekly_budget_data) ?>;
+        const weeklyActualData = <?= json_encode($weekly_actual_data) ?>;
+
+        // Bar Chart
+        new Chart(weeklyCtx, {
             type: 'bar',
             data: {
-                labels: <?= json_encode(array_keys($category_totals)) ?>,
-                datasets: [{
-                    label: 'Actual by Category',
-                    data: <?= json_encode(array_values($category_totals)) ?>,
-                    backgroundColor: 'rgba(75, 192, 192, 0.7)',
-                    borderColor: 'rgba(75, 192, 192, 1)',
-                    borderWidth: 1
-                }]
+                labels: weekLabels,
+                datasets: [
+                    {
+                        label: 'Budget',
+                        data: weeklyBudgetData,
+                        backgroundColor: 'rgba(54, 162, 235, 0.7)'
+                    },
+                    {
+                        label: 'Actual',
+                        data: weeklyActualData,
+                        backgroundColor: 'rgba(255, 99, 132, 0.7)'
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                scales: {
+                    x: {
+                        ticks: {
+                            callback: function(value) {
+                                return this.getLabelForValue(value).split('\n');
+                            },
+                            autoSkip: false,
+                            maxRotation: 0,
+                            minRotation: 0
+                        }
+                    },
+                    y: {
+                        beginAtZero: true,
+                        ticks: {
+                            callback: value => '₱' + value.toLocaleString()
+                        }
+                    }
+                },
+                plugins: {
+                    tooltip: {
+                        callbacks: {
+                            label: ctx => `₱${ctx.raw.toLocaleString()}`
+                        }
+                    },
+                    legend: {
+                        display: true
+                    }
+                }
             }
         });
 
-        const monthlyChart = new Chart(monthlyChartCtx, {
-            type: 'line',
+        // Doughnut Chart
+        const categoryData = <?= json_encode($category_totals) ?>;
+        const catLabels = Object.keys(categoryData);
+        const catValues = Object.values(categoryData);
+        const catTotal = catValues.reduce((a, b) => a + b, 0);
+        const catColors = catLabels.map((_, i) => `hsl(${i * 360 / catLabels.length}, 70%, 60%)`);
+
+        new Chart(doughnutCtx, {
+            type: 'doughnut',
             data: {
-                labels: <?= json_encode(array_keys($monthly_totals)) ?>,
+                labels: catLabels,
                 datasets: [{
-                    label: 'Monthly Actual Spending',
-                    data: <?= json_encode(array_values($monthly_totals)) ?>,
-                    fill: false,
-                    borderColor: 'rgba(153, 102, 255, 1)',
-                    tension: 0.3
+                    data: catValues,
+                    backgroundColor: catColors
                 }]
+            },
+            options: {
+                plugins: {
+                    tooltip: {
+                        callbacks: {
+                            label: (ctx) => {
+                                const amount = ctx.raw;
+                                return `₱${amount.toLocaleString()}`;
+                            }
+                        }
+                    }
+                }
             }
         });
 
-        const pieChart = new Chart(document.getElementById('pieChart'), {
-            type: 'pie',
-            data: {
-                labels: pieLabels,
-                datasets: [{
-                    label: 'Category Distribution',
-                    data: pieValues,
-                    backgroundColor: pieLabels.map(() => `hsl(${Math.random()*360}, 70%, 70%)`)
-                }]
-            }
-        });
+        // Category Legend with % breakdown
+        const legendDiv = document.getElementById('categoryLegend');
+        legendDiv.innerHTML = catLabels.map((label, i) => {
+            const percent = ((catValues[i] / catTotal) * 100).toFixed(1);
+            return `<div><span style="color:${catColors[i]}">●</span> ${label} - ${percent}%</div>`;
+        }).join('');
 
-        const varianceLabels = <?= json_encode(array_column($records, 'record_date')) ?>;
-        const varianceData = <?= json_encode(array_map(fn($r) => $r['budget'] - $r['actual'], $records)) ?>;
-
-        const varianceChart = new Chart(document.getElementById('varianceChart'), {
-            type: 'line',
-            data: {
-                labels: varianceLabels,
-                datasets: [{
-                    label: 'Variance Over Time',
-                    data: varianceData,
-                    borderColor: 'rgba(255, 159, 64, 1)',
-                    tension: 0.3
-                }]
-            }
-        });
-
-        // PDF Report Export
+        // PDF Export
         document.getElementById('downloadReport').addEventListener('click', () => {
             const { jsPDF } = window.jspdf;
             const doc = new jsPDF();
@@ -709,9 +764,9 @@
             doc.text("Project: <?= addslashes($project['project_name']) ?>", 10, 20);
             doc.text("Total Budget: ₱<?= number_format(array_sum(array_column($records, 'budget')), 2) ?>", 10, 30);
             doc.text("Total Actual: ₱<?= number_format(array_sum(array_column($records, 'actual')), 2) ?>", 10, 40);
-            doc.text("Total Variance: ₱<?= number_format(array_sum(array_column($records, 'budget')) - array_sum(array_column($records, 'actual')), 2) ?>", 10, 50);
-            doc.text("Total Tax: ₱<?= number_format(array_sum(array_column($records, 'tax')), 2) ?>", 10, 60);
-            doc.save("analytics_report_<?= $project_code ?>.pdf");
+            doc.text("Variance: ₱<?= number_format(array_sum(array_column($records, 'budget')) - array_sum(array_column($records, 'actual')), 2) ?>", 10, 50);
+            doc.text("Tax: ₱<?= number_format(array_sum(array_column($records, 'tax')), 2) ?>", 10, 60);
+            doc.save("analytics-report.pdf");
         });
     </script>
 </body>
