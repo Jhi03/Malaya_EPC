@@ -1,121 +1,115 @@
 <?php
-session_start();
-$page_title = "EXPENSES";
+    include('validate_login.php');
+    $page_title = "EXPENSES";
 
-// Check if user is logged in
-if (!isset($_SESSION['username'])) {
-    header("Location: ms_login.php");
-    exit();
-}
+    $host = 'localhost';
+    $user = 'root';
+    $password = '';
+    $database = 'malayasol';
+    $conn = new mysqli($host, $user, $password, $database);
 
-$host = 'localhost';
-$user = 'root';
-$password = '';
-$database = 'malayasol';
-$conn = new mysqli($host, $user, $password, $database);
-
-if ($conn->connect_error) {
-    die("Connection failed: " . $conn->connect_error);
-}
-
-//Use fixed project code for corporate tracker
-$project_code = 'Corporate';
-
-$records = [];
-
-//Get records for 'Corporate' project only
-$stmt = $conn->prepare("SELECT * FROM project_expense WHERE project_id = ?");
-$stmt->bind_param("s", $project_code);
-$stmt->execute();
-$result = $stmt->get_result();
-while ($row = $result->fetch_assoc()) {
-    $records[] = $row;
-}
-$stmt->close();
-
-// Analytics Chart
-$category_totals = [];
-$monthly_totals = [];
-
-foreach ($records as $record) {
-    $cat = $record['category'];
-    $category_totals[$cat] = ($category_totals[$cat] ?? 0) + $record['actual'];
-
-    $month = date('F Y', strtotime($record['record_date']));
-    $monthly_totals[$month] = ($monthly_totals[$month] ?? 0) + $record['actual'];
-}
-
-// Add Record
-if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['add_record'])) {
-    $category = $_POST['category'];
-    $record_date = $_POST['record_date'];
-    $budget = $_POST['budget'];
-    $actual = $_POST['actual'];
-    $payee = $_POST['payee'];
-    $description = $_POST['description'];
-    $remarks = $_POST['remarks'];
-
-    $variance = $budget - $actual;
-    $tax = 0;
-    $creation_date = date('Y-m-d');
-
-    $stmt = $conn->prepare("INSERT INTO project_expense 
-        (project_id, category, description, budget, actual, payee, variance, tax, remarks, record_date, creation_date) 
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
-    $stmt->bind_param("sssiisissss", 
-        $project_code, $category, $description, $budget, $actual, $payee, $variance, $tax, $remarks, $record_date, $creation_date);
-
-    if ($stmt->execute()) {
-        header("Location: ms_expenses.php"); // 
-        exit();
-    } else {
-        echo "<script>alert('Error adding record: " . $stmt->error . "');</script>";
+    if ($conn->connect_error) {
+        die("Connection failed: " . $conn->connect_error);
     }
-    $stmt->close();
-}
 
-// Edit Record
-if (isset($_POST['save_edit'])) {
-    $edit_id = $_POST['edit_id'];
-    $category = $_POST['category'];
-    $record_date = $_POST['record_date'];
-    $budget = $_POST['budget'];
-    $actual = $_POST['actual'];
-    $payee = $_POST['payee'];
-    $description = $_POST['description'];
-    $remarks = $_POST['remarks'];
+    //Use fixed project code for corporate tracker
+    $project_code = 'Corporate';
 
-    $variance = $budget - $actual;
-    $tax = 0; // Define tax again
+    $records = [];
 
-    $stmt = $conn->prepare("UPDATE project_expense SET 
-        category = ?, record_date = ?, budget = ?, actual = ?, variance = ?, tax = ?, payee = ?, description = ?, remarks = ?
-        WHERE record_id = ?");
-    $stmt->bind_param("ssddddsssi", 
-        $category, $record_date, $budget, $actual, $variance, $tax, $payee, $description, $remarks, $edit_id);
-
-    if ($stmt->execute()) {
-        echo "<script>window.location.href = 'ms_expenses.php';</script>";
-        exit();
-    } else {
-        echo "Error updating record: " . $conn->error;
-    }
-}
-
-// Delete Record
-if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['delete_record'])) {
-    $id = $_POST['record_id'];
-
-    $stmt = $conn->prepare("DELETE FROM project_expense WHERE record_id = ?");
-    $stmt->bind_param("i", $id);
+    //Get records for 'Corporate' project only
+    $stmt = $conn->prepare("SELECT * FROM project_expense WHERE project_id = ?");
+    $stmt->bind_param("s", $project_code);
     $stmt->execute();
+    $result = $stmt->get_result();
+    while ($row = $result->fetch_assoc()) {
+        $records[] = $row;
+    }
     $stmt->close();
 
-    header("Location: ms_expenses.php"); 
-    exit();
-}
+    // Analytics Chart
+    $category_totals = [];
+    $monthly_totals = [];
 
-$conn->close();
+    foreach ($records as $record) {
+        $cat = $record['category'];
+        $category_totals[$cat] = ($category_totals[$cat] ?? 0) + $record['actual'];
+
+        $month = date('F Y', strtotime($record['record_date']));
+        $monthly_totals[$month] = ($monthly_totals[$month] ?? 0) + $record['actual'];
+    }
+
+    // Add Record
+    if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['add_record'])) {
+        $category = $_POST['category'];
+        $record_date = $_POST['record_date'];
+        $budget = $_POST['budget'];
+        $actual = $_POST['actual'];
+        $payee = $_POST['payee'];
+        $description = $_POST['description'];
+        $remarks = $_POST['remarks'];
+
+        $variance = $budget - $actual;
+        $tax = 0;
+        $creation_date = date('Y-m-d');
+
+        $stmt = $conn->prepare("INSERT INTO project_expense 
+            (project_id, category, description, budget, actual, payee, variance, tax, remarks, record_date, creation_date) 
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
+        $stmt->bind_param("sssiisissss", 
+            $project_code, $category, $description, $budget, $actual, $payee, $variance, $tax, $remarks, $record_date, $creation_date);
+
+        if ($stmt->execute()) {
+            header("Location: ms_expenses.php"); // 
+            exit();
+        } else {
+            echo "<script>alert('Error adding record: " . $stmt->error . "');</script>";
+        }
+        $stmt->close();
+    }
+
+    // Edit Record
+    if (isset($_POST['save_edit'])) {
+        $edit_id = $_POST['edit_id'];
+        $category = $_POST['category'];
+        $record_date = $_POST['record_date'];
+        $budget = $_POST['budget'];
+        $actual = $_POST['actual'];
+        $payee = $_POST['payee'];
+        $description = $_POST['description'];
+        $remarks = $_POST['remarks'];
+
+        $variance = $budget - $actual;
+        $tax = 0; // Define tax again
+
+        $stmt = $conn->prepare("UPDATE project_expense SET 
+            category = ?, record_date = ?, budget = ?, actual = ?, variance = ?, tax = ?, payee = ?, description = ?, remarks = ?
+            WHERE record_id = ?");
+        $stmt->bind_param("ssddddsssi", 
+            $category, $record_date, $budget, $actual, $variance, $tax, $payee, $description, $remarks, $edit_id);
+
+        if ($stmt->execute()) {
+            echo "<script>window.location.href = 'ms_expenses.php';</script>";
+            exit();
+        } else {
+            echo "Error updating record: " . $conn->error;
+        }
+    }
+
+    // Delete Record
+    if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['delete_record'])) {
+        $id = $_POST['record_id'];
+
+        $stmt = $conn->prepare("DELETE FROM project_expense WHERE record_id = ?");
+        $stmt->bind_param("i", $id);
+        $stmt->execute();
+        $stmt->close();
+
+        header("Location: ms_expenses.php"); 
+        exit();
+    }
+
+    $conn->close();
 ?>
 
 <!DOCTYPE html>
@@ -439,28 +433,6 @@ $conn->close();
     <script src="js/header.js"></script>
 
     <script>
-        document.addEventListener("DOMContentLoaded", function () {
-            // Sidebar Toggle
-            const toggleSidebarBtn = document.getElementById("toggleSidebar");
-            const sidebar = document.getElementById("sidebar");
-
-            if (toggleSidebarBtn && sidebar) {
-                toggleSidebarBtn.addEventListener("click", function () {
-                    sidebar.classList.toggle("collapsed");
-
-                    // Optional: Save state
-                    const isCollapsed = sidebar.classList.contains("collapsed");
-                    localStorage.setItem("sidebarCollapsed", isCollapsed);
-                });
-
-                // Restore sidebar state
-                const isCollapsed = localStorage.getItem("sidebarCollapsed") === "true";
-                if (isCollapsed) {
-                    sidebar.classList.add("collapsed");
-                }
-            }
-        });
-        
         //Records/Analytics View Toggles
         const btnRecords = document.getElementById('view-records');
         const btnAnalytics = document.getElementById('view-analytics');

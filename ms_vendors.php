@@ -1,57 +1,51 @@
 <?php
-session_start();
-$page_title = "VENDORS";
+    include('validate_login.php');
+    $page_title = "VENDORS";
 
-// Check if user is logged in
-if (!isset($_SESSION['username'])) {
-    header("Location: ms_login.php");
-    exit();
-}
+    // DATABASE CONNECTION
+    $servername = "localhost";  
+    $username = "root";           
+    $password = "";            
+    $dbname = "malayasol";     
 
-// DATABASE CONNECTION
-$servername = "localhost";  
-$username = "root";           
-$password = "";            
-$dbname = "malayasol";     
+    // Create connection
+    $conn = new mysqli($servername, $username, $password, $dbname);
 
-// Create connection
-$conn = new mysqli($servername, $username, $password, $dbname);
+    // Check connection
+    if ($conn->connect_error) {
+        die("Connection failed: " . $conn->connect_error);
+    }
 
-// Check connection
-if ($conn->connect_error) {
-    die("Connection failed: " . $conn->connect_error);
-}
+    // Handle Add/Edit/Delete
+    if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+        if (isset($_POST['vendor_name'])) {
+            $vendor_id = $_POST['vendor_id'];
+            $vendor_name = $_POST['vendor_name'];
+            $vendor_type = $_POST['vendor_type'];
+            $contact_person = $_POST['contact_person'];
+            $vendor_email = $_POST['vendor_email'];
+            $contact_no = $_POST['contact_no'];
+            $telephone = $_POST['telephone'];
+            $vendor_address = $_POST['vendor_address'];
 
-// Handle Add/Edit/Delete
-if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    if (isset($_POST['vendor_name'])) {
-        $vendor_id = $_POST['vendor_id'];
-        $vendor_name = $_POST['vendor_name'];
-        $vendor_type = $_POST['vendor_type'];
-        $contact_person = $_POST['contact_person'];
-        $vendor_email = $_POST['vendor_email'];
-        $contact_no = $_POST['contact_no'];
-        $telephone = $_POST['telephone'];
-        $vendor_address = $_POST['vendor_address'];
+            if ($vendor_id) {
+                // UPDATE vendor
+                $stmt = $conn->prepare("UPDATE vendors SET vendor_name=?, vendor_type=?, contact_person=?, vendor_email=?, contact_no=?, telephone=?, vendor_address=? WHERE vendor_id=?");
+                $stmt->bind_param("ssssiisi", $vendor_name, $vendor_type, $contact_person, $vendor_email, $contact_no, $telephone, $vendor_address, $vendor_id);
+            } else {
+                // INSERT vendor
+                $stmt = $conn->prepare("INSERT INTO vendors (vendor_name, vendor_type, contact_person, vendor_email, contact_no, telephone, vendor_address) VALUES (?, ?, ?, ?, ?, ?, ?)");
+                $stmt->bind_param("ssssiis", $vendor_name, $vendor_type, $contact_person, $vendor_email, $contact_no, $telephone, $vendor_address);
+            }
 
-        if ($vendor_id) {
-            // UPDATE vendor
-            $stmt = $conn->prepare("UPDATE vendors SET vendor_name=?, vendor_type=?, contact_person=?, vendor_email=?, contact_no=?, telephone=?, vendor_address=? WHERE vendor_id=?");
-            $stmt->bind_param("ssssiisi", $vendor_name, $vendor_type, $contact_person, $vendor_email, $contact_no, $telephone, $vendor_address, $vendor_id);
-        } else {
-            // INSERT vendor
-            $stmt = $conn->prepare("INSERT INTO vendors (vendor_name, vendor_type, contact_person, vendor_email, contact_no, telephone, vendor_address) VALUES (?, ?, ?, ?, ?, ?, ?)");
-            $stmt->bind_param("ssssiis", $vendor_name, $vendor_type, $contact_person, $vendor_email, $contact_no, $telephone, $vendor_address);
-        }
-
-        if ($stmt->execute()) {
-            echo "<script>window.location = 'ms_vendors.php';</script>";
-            exit();
-        } else {
-            echo "Error: " . $stmt->error;
+            if ($stmt->execute()) {
+                echo "<script>window.location = 'ms_vendors.php';</script>";
+                exit();
+            } else {
+                echo "Error: " . $stmt->error;
+            }
         }
     }
-}
 ?>
 
 <!DOCTYPE html>
@@ -254,28 +248,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     <script src="js/header.js"></script>
 
     <script>
-        document.addEventListener("DOMContentLoaded", function () {
-            // Sidebar Toggle
-            const toggleSidebarBtn = document.getElementById("toggleSidebar");
-            const sidebar = document.getElementById("sidebar");
-
-            if (toggleSidebarBtn && sidebar) {
-                toggleSidebarBtn.addEventListener("click", function () {
-                    sidebar.classList.toggle("collapsed");
-
-                    // Optional: Save state
-                    const isCollapsed = sidebar.classList.contains("collapsed");
-                    localStorage.setItem("sidebarCollapsed", isCollapsed);
-                });
-
-                // Restore sidebar state
-                const isCollapsed = localStorage.getItem("sidebarCollapsed") === "true";
-                if (isCollapsed) {
-                    sidebar.classList.add("collapsed");
-                }
-            }
-        });
-
         // Store currently selected vendor
         let currentVendor = null;
 

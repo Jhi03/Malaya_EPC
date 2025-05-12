@@ -1,147 +1,148 @@
 <?php
-$page_title = "WORKFORCE";
+    include('validate_login.php');
+    $page_title = "WORKFORCE";
 
-// Database connection
-$host = 'localhost';
-$user = 'root';
-$password = '';
-$database = 'malayasol';
+    // Database connection
+    $host = 'localhost';
+    $user = 'root';
+    $password = '';
+    $database = 'malayasol';
 
-$conn = new mysqli($host, $user, $password, $database);
+    $conn = new mysqli($host, $user, $password, $database);
 
-// Check connection
-if ($conn->connect_error) {
-    die("Connection failed: " . $conn->connect_error);
-}
+    // Check connection
+    if ($conn->connect_error) {
+        die("Connection failed: " . $conn->connect_error);
+    }
 
-// Create personnel table if it doesn't exist
-$create_table_sql = "CREATE TABLE IF NOT EXISTS personnel (
-    employee_id INT PRIMARY KEY,
-    full_name VARCHAR(100),
-    department VARCHAR(100),
-    position VARCHAR(50),
-    salary DECIMAL(10,2),
-    status VARCHAR(20)
-)";
+    // Create personnel table if it doesn't exist
+    $create_table_sql = "CREATE TABLE IF NOT EXISTS personnel (
+        employee_id INT PRIMARY KEY,
+        full_name VARCHAR(100),
+        department VARCHAR(100),
+        position VARCHAR(50),
+        salary DECIMAL(10,2),
+        status VARCHAR(20)
+    )";
 
-if (!$conn->query($create_table_sql)) {
-    die("Error creating table: " . $conn->error);
-}
+    if (!$conn->query($create_table_sql)) {
+        die("Error creating table: " . $conn->error);
+    }
 
-// Initialize message variables
-$message = "";
-$message_type = "";
+    // Initialize message variables
+    $message = "";
+    $message_type = "";
 
-// Handle form submissions for adding/editing employees
-if ($_SERVER["REQUEST_METHOD"] == "POST") {
-    if (isset($_POST['add_employee'])) {
-        $employee_id = $_POST['employee_id'];
-        $full_name = $_POST['full_name'];
-        $department = $_POST['department'];
-        $position = $_POST['position'];
-        $salary = $_POST['salary'];
-        $status = $_POST['status'];
+    // Handle form submissions for adding/editing employees
+    if ($_SERVER["REQUEST_METHOD"] == "POST") {
+        if (isset($_POST['add_employee'])) {
+            $employee_id = $_POST['employee_id'];
+            $full_name = $_POST['full_name'];
+            $department = $_POST['department'];
+            $position = $_POST['position'];
+            $salary = $_POST['salary'];
+            $status = $_POST['status'];
+            
+            $sql = "INSERT INTO personnel (employee_id, full_name, department, position, salary, status) 
+                    VALUES (?, ?, ?, ?, ?, ?)";
+            $stmt = $conn->prepare($sql);
+            $stmt->bind_param("isssds", $employee_id, $full_name, $department, $position, $salary, $status);
+            
+            if ($stmt->execute()) {
+                $message = "Employee added successfully!";
+                $message_type = "success";
+            } else {
+                $message = "Error: " . $stmt->error;
+                $message_type = "error";
+            }
+            $stmt->close();
+        }
         
-        $sql = "INSERT INTO personnel (employee_id, full_name, department, position, salary, status) 
-                VALUES (?, ?, ?, ?, ?, ?)";
+        if (isset($_POST['edit_employee'])) {
+            $employee_id = $_POST['employee_id'];
+            $full_name = $_POST['full_name'];
+            $department = $_POST['department'];
+            $position = $_POST['position'];
+            $salary = $_POST['salary'];
+            $status = $_POST['status'];
+            
+            $sql = "UPDATE personnel SET full_name=?, department=?, position=?, salary=?, status=? WHERE employee_id=?";
+            $stmt = $conn->prepare($sql);
+            $stmt->bind_param("sssdsi", $full_name, $department, $position, $salary, $status, $employee_id);
+            
+            if ($stmt->execute()) {
+                $message = "Employee updated successfully!";
+                $message_type = "success";
+            } else {
+                $message = "Error: " . $stmt->error;
+                $message_type = "error";
+            }
+            $stmt->close();
+        }
+    }
+
+    // Handle delete request
+    if (isset($_GET['delete'])) {
+        $id_to_delete = $_GET['delete'];
+        
+        $sql = "DELETE FROM personnel WHERE employee_id = ?";
         $stmt = $conn->prepare($sql);
-        $stmt->bind_param("isssds", $employee_id, $full_name, $department, $position, $salary, $status);
+        $stmt->bind_param("i", $id_to_delete);
         
         if ($stmt->execute()) {
-            $message = "Employee added successfully!";
+            $message = "Employee deleted successfully!";
             $message_type = "success";
         } else {
-            $message = "Error: " . $stmt->error;
+            $message = "Error deleting record: " . $stmt->error;
             $message_type = "error";
         }
         $stmt->close();
     }
-    
-    if (isset($_POST['edit_employee'])) {
-        $employee_id = $_POST['employee_id'];
-        $full_name = $_POST['full_name'];
-        $department = $_POST['department'];
-        $position = $_POST['position'];
-        $salary = $_POST['salary'];
-        $status = $_POST['status'];
-        
-        $sql = "UPDATE personnel SET full_name=?, department=?, position=?, salary=?, status=? WHERE employee_id=?";
-        $stmt = $conn->prepare($sql);
-        $stmt->bind_param("sssdsi", $full_name, $department, $position, $salary, $status, $employee_id);
-        
-        if ($stmt->execute()) {
-            $message = "Employee updated successfully!";
-            $message_type = "success";
-        } else {
-            $message = "Error: " . $stmt->error;
-            $message_type = "error";
-        }
-        $stmt->close();
-    }
-}
 
-// Handle delete request
-if (isset($_GET['delete'])) {
-    $id_to_delete = $_GET['delete'];
-    
-    $sql = "DELETE FROM personnel WHERE employee_id = ?";
-    $stmt = $conn->prepare($sql);
-    $stmt->bind_param("i", $id_to_delete);
-    
-    if ($stmt->execute()) {
-        $message = "Employee deleted successfully!";
-        $message_type = "success";
+    // Pagination
+    $records_per_page = 10;
+    if (isset($_GET['page'])) {
+        $page = $_GET['page'];
     } else {
-        $message = "Error deleting record: " . $stmt->error;
-        $message_type = "error";
+        $page = 1;
     }
-    $stmt->close();
-}
+    $start_from = ($page-1) * $records_per_page;
 
-// Pagination
-$records_per_page = 10;
-if (isset($_GET['page'])) {
-    $page = $_GET['page'];
-} else {
-    $page = 1;
-}
-$start_from = ($page-1) * $records_per_page;
+    // Search functionality
+    $search = "";
+    if (isset($_GET['search'])) {
+        $search = $_GET['search'];
+        $sql = "SELECT * FROM personnel WHERE 
+                full_name LIKE ? OR 
+                department LIKE ? OR 
+                position LIKE ? OR 
+                status LIKE ? 
+                ORDER BY employee_id LIMIT ?, ?";
+        $stmt = $conn->prepare($sql);
+        $search_param = "%$search%";
+        $stmt->bind_param("ssssii", $search_param, $search_param, $search_param, $search_param, $start_from, $records_per_page);
+    } else {
+        $sql = "SELECT * FROM personnel ORDER BY employee_id LIMIT ?, ?";
+        $stmt = $conn->prepare($sql);
+        $stmt->bind_param("ii", $start_from, $records_per_page);
+    }
 
-// Search functionality
-$search = "";
-if (isset($_GET['search'])) {
-    $search = $_GET['search'];
-    $sql = "SELECT * FROM personnel WHERE 
-            full_name LIKE ? OR 
-            department LIKE ? OR 
-            position LIKE ? OR 
-            status LIKE ? 
-            ORDER BY employee_id LIMIT ?, ?";
-    $stmt = $conn->prepare($sql);
-    $search_param = "%$search%";
-    $stmt->bind_param("ssssii", $search_param, $search_param, $search_param, $search_param, $start_from, $records_per_page);
-} else {
-    $sql = "SELECT * FROM personnel ORDER BY employee_id LIMIT ?, ?";
-    $stmt = $conn->prepare($sql);
-    $stmt->bind_param("ii", $start_from, $records_per_page);
-}
+    $stmt->execute();
+    $result = $stmt->get_result();
 
-$stmt->execute();
-$result = $stmt->get_result();
-
-// Define the allowed departments
-$allowed_departments = [
-    "Executive & Strategy Office",
-    "Finance & Digital Accounting Department",
-    "IT Infrastructure & Cybersecurity Division",
-    "System Development & Innovation Lab",
-    "Cloud Engineering & Data Services Department",
-    "Operations & Project Management Department",
-    "Technical Support & IT Helpdesk",
-    "HR & Digital Workforce Management",
-    "Sales & Customer Engagement Hub",
-    "Sustainability & Energy Analytics Division"
-];
+    // Define the allowed departments
+    $allowed_departments = [
+        "Executive & Strategy Office",
+        "Finance & Digital Accounting Department",
+        "IT Infrastructure & Cybersecurity Division",
+        "System Development & Innovation Lab",
+        "Cloud Engineering & Data Services Department",
+        "Operations & Project Management Department",
+        "Technical Support & IT Helpdesk",
+        "HR & Digital Workforce Management",
+        "Sales & Customer Engagement Hub",
+        "Sustainability & Energy Analytics Division"
+    ];
 ?>
 
 <!DOCTYPE html>
@@ -374,28 +375,6 @@ $allowed_departments = [
     <script src="js/header.js"></script>
 
     <script>
-        document.addEventListener("DOMContentLoaded", function () {
-            // Sidebar Toggle
-            const toggleSidebarBtn = document.getElementById("toggleSidebar");
-            const sidebar = document.getElementById("sidebar");
-
-            if (toggleSidebarBtn && sidebar) {
-                toggleSidebarBtn.addEventListener("click", function () {
-                    sidebar.classList.toggle("collapsed");
-
-                    // Optional: Save state
-                    const isCollapsed = sidebar.classList.contains("collapsed");
-                    localStorage.setItem("sidebarCollapsed", isCollapsed);
-                });
-
-                // Restore sidebar state
-                const isCollapsed = localStorage.getItem("sidebarCollapsed") === "true";
-                if (isCollapsed) {
-                    sidebar.classList.add("collapsed");
-                }
-            }
-        });
-
         // Function to open the edit modal with pre-filled data
         function openEditModal(id, name, department, position, salary, status) {
             document.getElementById('edit_employee_id').value = id;

@@ -1,5 +1,5 @@
 <?php
-    session_start();
+    include('validate_login.php');
     $page_title = "PROJECTS";
 
     // Database connection
@@ -21,9 +21,9 @@
     }
     
     // Fetch logged-in user info
-    $user_id = $_SESSION['user_id'];
-    $user_query = $conn->prepare("SELECT first_name, last_name FROM users WHERE user_id = ?");
-    $user_query->bind_param("s", $user_id);
+    $employee_id = $_SESSION['employee_id'];
+    $user_query = $conn->prepare("SELECT first_name, last_name FROM users WHERE employee_id = ?");
+    $user_query->bind_param("s", $employee_id);
     $user_query->execute();
     $user_result = $user_query->get_result();
     $user = $user_result->fetch_assoc();
@@ -432,28 +432,6 @@
     <script src="js/header.js"></script>
 
     <script>
-        document.addEventListener("DOMContentLoaded", function () {
-            // Sidebar Toggle
-            const toggleSidebarBtn = document.getElementById("toggleSidebar");
-            const sidebar = document.getElementById("sidebar");
-
-            if (toggleSidebarBtn && sidebar) {
-                toggleSidebarBtn.addEventListener("click", function () {
-                    sidebar.classList.toggle("collapsed");
-
-                    // Optional: Save state
-                    const isCollapsed = sidebar.classList.contains("collapsed");
-                    localStorage.setItem("sidebarCollapsed", isCollapsed);
-                });
-
-                // Restore sidebar state
-                const isCollapsed = localStorage.getItem("sidebarCollapsed") === "true";
-                if (isCollapsed) {
-                    sidebar.classList.add("collapsed");
-                }
-            }
-        });
-        
         //Records/Analytics View Toggles
         const btnRecords = document.getElementById('view-records');
         const btnAnalytics = document.getElementById('view-analytics');

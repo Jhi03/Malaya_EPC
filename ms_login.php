@@ -13,7 +13,13 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
     $username = $_POST['username'];
     $password = $_POST['password'];
 
-    $stmt = $conn->prepare("SELECT * FROM users WHERE username = ? AND password = ?");
+    // SQL query to check user credentials and employee status
+    $stmt = $conn->prepare("
+        SELECT u.*, e.status
+        FROM users u
+        LEFT JOIN employee e ON u.employee_id = e.employee_id
+        WHERE u.username = ? AND u.password = ?
+    ");
     $stmt->bind_param("ss", $username, $password);
     $stmt->execute();
     $result = $stmt->get_result();
@@ -21,14 +27,23 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
     if ($result && $result->num_rows == 1) {
         $user = $result->fetch_assoc();
 
-        $_SESSION['user_id'] = $user['user_id'];
-        $_SESSION['username'] = $user['username'];
-        $_SESSION['role'] = $user['role'];
+        // Check if employee status is active
+        if ($user['status'] == 'active') {
+            // User is active, proceed with login
+            $_SESSION['user_id'] = $user['user_id'];
+            $_SESSION['username'] = $user['username'];
+            $_SESSION['role'] = $user['role'];
 
-        header("Location: ms_dashboard.php");
-        exit();
+            // Redirect to dashboard
+            header("Location: ms_dashboard.php");
+            exit();
+        } else {
+            // Employee is not active
+            $error = "Your account is not active. Please contact your administrator.";
+        }
     } else {
-        $error = "Invalid username or password";
+        // Invalid username or password
+        $error = "Invalid username or password.";
     }
 
     $stmt->close();
@@ -55,7 +70,6 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
                     </div>
 
                     <div class="login-middle">
-                        <!-- Add the form action here -->
                         <form action="ms_login.php" method="POST" id="login-form">
                             <input type="text" name="username" placeholder="username" required>
                             <input type="password" name="password" placeholder="password" required>

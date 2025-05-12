@@ -1,183 +1,177 @@
 <?php
-session_start();
-$page_title = "PAYROLL MANAGEMENT";
+    include('validate_login.php');
+    $page_title = "PAYROLL MANAGEMENT";
 
-// Check if user is logged in
-if (!isset($_SESSION['username'])) {
-    header("Location: ms_login.php");
-    exit();
-}
+    $conn = new mysqli("localhost", "root", "", "malayasol");
 
-$conn = new mysqli("localhost", "root", "", "malayasol");
-
-if ($conn->connect_error) {
-    die("Connection failed: " . $conn->connect_error);
-}
-
-// Create payroll table if it doesn't exist
-$conn->query("DROP TABLE IF EXISTS payroll");
-$conn->query("CREATE TABLE IF NOT EXISTS payroll (
-    id INT AUTO_INCREMENT PRIMARY KEY,
-    employee_id INT NOT NULL,
-    period_start DATE NOT NULL,
-    period_end DATE NOT NULL,
-    gross_pay DECIMAL(10,2) NOT NULL,
-    basic_pay DECIMAL(10,2) NOT NULL,
-    overtime_pay DECIMAL(10,2) DEFAULT 0,
-    allowances DECIMAL(10,2) DEFAULT 0,
-    bonus DECIMAL(10,2) DEFAULT 0,
-    sss DECIMAL(10,2) NOT NULL,
-    philhealth DECIMAL(10,2) NOT NULL,
-    pagibig DECIMAL(10,2) NOT NULL,
-    loans DECIMAL(10,2) DEFAULT 0,
-    other_deductions DECIMAL(10,2) DEFAULT 0,
-    total_deductions DECIMAL(10,2) NOT NULL,
-    tax DECIMAL(10,2) NOT NULL,
-    net_pay DECIMAL(10,2) NOT NULL,
-    payment_method VARCHAR(50) DEFAULT 'Bank Transfer',
-    remarks TEXT,
-    date_generated TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-)");
-
-// Process payroll generation
-if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST["generate_payroll"])) {
-    $employee_id = $_POST["employee_id"];
-    $start = $_POST["period_start"];
-    $end = $_POST["period_end"];
-
-    // Get basic employee information
-    $emp = $conn->query("SELECT salary FROM personnel WHERE employee_id = $employee_id")->fetch_assoc();
-    $basic_pay = $emp['salary'];
-    
-    // Calculate additional earnings
-    $overtime_hours = isset($_POST["overtime_hours"]) ? floatval($_POST["overtime_hours"]) : 0;
-    $overtime_rate = isset($_POST["overtime_rate"]) ? floatval($_POST["overtime_rate"]) : 1.5;
-    $overtime_pay = ($basic_pay / 22 / 8) * $overtime_hours * $overtime_rate;
-    
-    $allowances = isset($_POST["allowances"]) ? floatval($_POST["allowances"]) : 0;
-    $bonus = isset($_POST["bonus"]) ? floatval($_POST["bonus"]) : 0;
-    
-    // Calculate gross pay
-    $gross_pay = $basic_pay + $overtime_pay + $allowances + $bonus;
-    
-    // Calculate deductions
-    $sss = min($gross_pay * 0.045, 1125); // 4.5% SSS with cap at 25,000 salary
-    $philhealth = min($gross_pay * 0.035, 875); // 3.5% PhilHealth with cap at 25,000
-    $pagibig = min($gross_pay * 0.02, 100); // 2% Pag-IBIG up to max of 100
-    
-    $loans = isset($_POST["loans"]) ? floatval($_POST["loans"]) : 0;
-    $other_deductions = isset($_POST["other_deductions"]) ? floatval($_POST["other_deductions"]) : 0;
-    
-    $total_deductions = $sss + $philhealth + $pagibig + $loans + $other_deductions;
-    
-    // Calculate tax (improved progressive taxation)
-    $taxable_income = $gross_pay - $sss - $philhealth - $pagibig;
-    $tax = calculateTax($taxable_income);
-    
-    // Calculate net pay
-    $net_pay = $gross_pay - $total_deductions - $tax;
-    
-    $payment_method = $_POST["payment_method"];
-    $remarks = $_POST["remarks"];
-
-    // Insert into database
-    $stmt = $conn->prepare("INSERT INTO payroll (
-        employee_id, period_start, period_end, gross_pay, basic_pay, overtime_pay, 
-        allowances, bonus, sss, philhealth, pagibig, loans, other_deductions, 
-        total_deductions, tax, net_pay, payment_method, remarks
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
-    
-    $stmt->bind_param(
-        "issddddddddddddsss", 
-        $employee_id, $start, $end, $gross_pay, $basic_pay, $overtime_pay, 
-        $allowances, $bonus, $sss, $philhealth, $pagibig, $loans, $other_deductions, 
-        $total_deductions, $tax, $net_pay, $payment_method, $remarks
-    );
-    
-    if ($stmt->execute()) {
-        echo "<p class='highlight'>✅ Payroll generated successfully!</p>";
-    } else {
-        echo "<p style='color:red'>Error: " . $stmt->error . "</p>";
+    if ($conn->connect_error) {
+        die("Connection failed: " . $conn->connect_error);
     }
-    $stmt->close();
-}
 
-// Function to calculate tax using progressive tax brackets
-function calculateTax($taxable_income) {
-    // Monthly tax calculation (simplified Philippine tax structure)
-    if ($taxable_income <= 20833) { // 250,000 annually
-        return 0;
-    } elseif ($taxable_income <= 33332) { // 400,000 annually
-        return ($taxable_income - 20833) * 0.15;
-    } elseif ($taxable_income <= 66666) { // 800,000 annually
-        return 1875 + ($taxable_income - 33332) * 0.20;
-    } elseif ($taxable_income <= 166666) { // 2,000,000 annually
-        return 8541.8 + ($taxable_income - 66666) * 0.25;
-    } elseif ($taxable_income <= 666666) { // 8,000,000 annually
-        return 33541.8 + ($taxable_income - 166666) * 0.30;
-    } else {
-        return 183541.8 + ($taxable_income - 666666) * 0.35;
-    }
-}
+    // Create payroll table if it doesn't exist
+    $conn->query("DROP TABLE IF EXISTS payroll");
+    $conn->query("CREATE TABLE IF NOT EXISTS payroll (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        employee_id INT NOT NULL,
+        period_start DATE NOT NULL,
+        period_end DATE NOT NULL,
+        gross_pay DECIMAL(10,2) NOT NULL,
+        basic_pay DECIMAL(10,2) NOT NULL,
+        overtime_pay DECIMAL(10,2) DEFAULT 0,
+        allowances DECIMAL(10,2) DEFAULT 0,
+        bonus DECIMAL(10,2) DEFAULT 0,
+        sss DECIMAL(10,2) NOT NULL,
+        philhealth DECIMAL(10,2) NOT NULL,
+        pagibig DECIMAL(10,2) NOT NULL,
+        loans DECIMAL(10,2) DEFAULT 0,
+        other_deductions DECIMAL(10,2) DEFAULT 0,
+        total_deductions DECIMAL(10,2) NOT NULL,
+        tax DECIMAL(10,2) NOT NULL,
+        net_pay DECIMAL(10,2) NOT NULL,
+        payment_method VARCHAR(50) DEFAULT 'Bank Transfer',
+        remarks TEXT,
+        date_generated TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    )");
 
-if (isset($_GET['generate_department_report'])) {
-    $department = $_GET['report_department'];
-    $from_date = $_GET['report_date_from'];
-    $to_date = $_GET['report_date_to'];
-    
-    // Build the department report query
-    if ($department == 'all') {
-        $dept_query = "SELECT pr.department,
-            COUNT(DISTINCT p.employee_id) as employee_count,
-            SUM(p.gross_pay) as total_gross,
-            SUM(p.total_deductions) as total_deductions,
-            SUM(p.tax) as total_tax,
-            SUM(p.net_pay) as total_net
-        FROM payroll p 
-        JOIN personnel pr ON p.employee_id = pr.employee_id
-        WHERE p.date_generated BETWEEN ? AND ?
-        GROUP BY pr.department
-        ORDER BY pr.department";
+    // Process payroll generation
+    if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST["generate_payroll"])) {
+        $employee_id = $_POST["employee_id"];
+        $start = $_POST["period_start"];
+        $end = $_POST["period_end"];
+
+        // Get basic employee information
+        $emp = $conn->query("SELECT salary FROM personnel WHERE employee_id = $employee_id")->fetch_assoc();
+        $basic_pay = $emp['salary'];
         
-        $stmt = $conn->prepare($dept_query);
-        $stmt->bind_param("ss", $from_date, $to_date);
-    } else {
-        $dept_query = "SELECT pr.department,
-            COUNT(DISTINCT p.employee_id) as employee_count,
-            SUM(p.gross_pay) as total_gross,
-            SUM(p.total_deductions) as total_deductions,
-            SUM(p.tax) as total_tax,
-            SUM(p.net_pay) as total_net
-        FROM payroll p 
-        JOIN personnel pr ON p.employee_id = pr.employee_id
-        WHERE p.date_generated BETWEEN ? AND ? AND pr.department = ?
-        GROUP BY pr.department";
+        // Calculate additional earnings
+        $overtime_hours = isset($_POST["overtime_hours"]) ? floatval($_POST["overtime_hours"]) : 0;
+        $overtime_rate = isset($_POST["overtime_rate"]) ? floatval($_POST["overtime_rate"]) : 1.5;
+        $overtime_pay = ($basic_pay / 22 / 8) * $overtime_hours * $overtime_rate;
         
-        $stmt = $conn->prepare($dept_query);
-        $stmt->bind_param("sss", $from_date, $to_date, $department);
-    }
-    
-    $stmt->execute();
-    $dept_result = $stmt->get_result();
-    
-    echo "<div class='summary-box'>";
-    echo "<h4>Department Report (" . date('M d, Y', strtotime($from_date)) . " to " . date('M d, Y', strtotime($to_date)) . ")</h4>";
-    
-    if ($dept_result->num_rows > 0) {
-        while ($dept_row = $dept_result->fetch_assoc()) {
-            echo $dept_row['department'] . "<br>";
-            echo "Employee Count: " . $dept_row['employee_count'] . "<br>";
-            echo "Total Gross Pay: ₱" . number_format($dept_row['total_gross'], 2) . "<br>";
-            echo "Total Deductions: ₱" . number_format($dept_row['total_deductions'], 2) . "<br>";
-            echo "Total Tax: ₱" . number_format($dept_row['total_tax'], 2) . "<br>";
-            echo "Total Net Pay: ₱" . number_format($dept_row['total_net'], 2) . "<br>";
-            echo "<br>";
+        $allowances = isset($_POST["allowances"]) ? floatval($_POST["allowances"]) : 0;
+        $bonus = isset($_POST["bonus"]) ? floatval($_POST["bonus"]) : 0;
+        
+        // Calculate gross pay
+        $gross_pay = $basic_pay + $overtime_pay + $allowances + $bonus;
+        
+        // Calculate deductions
+        $sss = min($gross_pay * 0.045, 1125); // 4.5% SSS with cap at 25,000 salary
+        $philhealth = min($gross_pay * 0.035, 875); // 3.5% PhilHealth with cap at 25,000
+        $pagibig = min($gross_pay * 0.02, 100); // 2% Pag-IBIG up to max of 100
+        
+        $loans = isset($_POST["loans"]) ? floatval($_POST["loans"]) : 0;
+        $other_deductions = isset($_POST["other_deductions"]) ? floatval($_POST["other_deductions"]) : 0;
+        
+        $total_deductions = $sss + $philhealth + $pagibig + $loans + $other_deductions;
+        
+        // Calculate tax (improved progressive taxation)
+        $taxable_income = $gross_pay - $sss - $philhealth - $pagibig;
+        $tax = calculateTax($taxable_income);
+        
+        // Calculate net pay
+        $net_pay = $gross_pay - $total_deductions - $tax;
+        
+        $payment_method = $_POST["payment_method"];
+        $remarks = $_POST["remarks"];
+
+        // Insert into database
+        $stmt = $conn->prepare("INSERT INTO payroll (
+            employee_id, period_start, period_end, gross_pay, basic_pay, overtime_pay, 
+            allowances, bonus, sss, philhealth, pagibig, loans, other_deductions, 
+            total_deductions, tax, net_pay, payment_method, remarks
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
+        
+        $stmt->bind_param(
+            "issddddddddddddsss", 
+            $employee_id, $start, $end, $gross_pay, $basic_pay, $overtime_pay, 
+            $allowances, $bonus, $sss, $philhealth, $pagibig, $loans, $other_deductions, 
+            $total_deductions, $tax, $net_pay, $payment_method, $remarks
+        );
+        
+        if ($stmt->execute()) {
+            echo "<p class='highlight'>✅ Payroll generated successfully!</p>";
+        } else {
+            echo "<p style='color:red'>Error: " . $stmt->error . "</p>";
         }
-    } else {
-        echo "No data found for the selected period.<br>";
+        $stmt->close();
     }
-    echo "</div>"; // Close the summary-box div
-} // Close the if statement
+
+    // Function to calculate tax using progressive tax brackets
+    function calculateTax($taxable_income) {
+        // Monthly tax calculation (simplified Philippine tax structure)
+        if ($taxable_income <= 20833) { // 250,000 annually
+            return 0;
+        } elseif ($taxable_income <= 33332) { // 400,000 annually
+            return ($taxable_income - 20833) * 0.15;
+        } elseif ($taxable_income <= 66666) { // 800,000 annually
+            return 1875 + ($taxable_income - 33332) * 0.20;
+        } elseif ($taxable_income <= 166666) { // 2,000,000 annually
+            return 8541.8 + ($taxable_income - 66666) * 0.25;
+        } elseif ($taxable_income <= 666666) { // 8,000,000 annually
+            return 33541.8 + ($taxable_income - 166666) * 0.30;
+        } else {
+            return 183541.8 + ($taxable_income - 666666) * 0.35;
+        }
+    }
+
+    if (isset($_GET['generate_department_report'])) {
+        $department = $_GET['report_department'];
+        $from_date = $_GET['report_date_from'];
+        $to_date = $_GET['report_date_to'];
+        
+        // Build the department report query
+        if ($department == 'all') {
+            $dept_query = "SELECT pr.department,
+                COUNT(DISTINCT p.employee_id) as employee_count,
+                SUM(p.gross_pay) as total_gross,
+                SUM(p.total_deductions) as total_deductions,
+                SUM(p.tax) as total_tax,
+                SUM(p.net_pay) as total_net
+            FROM payroll p 
+            JOIN personnel pr ON p.employee_id = pr.employee_id
+            WHERE p.date_generated BETWEEN ? AND ?
+            GROUP BY pr.department
+            ORDER BY pr.department";
+            
+            $stmt = $conn->prepare($dept_query);
+            $stmt->bind_param("ss", $from_date, $to_date);
+        } else {
+            $dept_query = "SELECT pr.department,
+                COUNT(DISTINCT p.employee_id) as employee_count,
+                SUM(p.gross_pay) as total_gross,
+                SUM(p.total_deductions) as total_deductions,
+                SUM(p.tax) as total_tax,
+                SUM(p.net_pay) as total_net
+            FROM payroll p 
+            JOIN personnel pr ON p.employee_id = pr.employee_id
+            WHERE p.date_generated BETWEEN ? AND ? AND pr.department = ?
+            GROUP BY pr.department";
+            
+            $stmt = $conn->prepare($dept_query);
+            $stmt->bind_param("sss", $from_date, $to_date, $department);
+        }
+        
+        $stmt->execute();
+        $dept_result = $stmt->get_result();
+        
+        echo "<div class='summary-box'>";
+        echo "<h4>Department Report (" . date('M d, Y', strtotime($from_date)) . " to " . date('M d, Y', strtotime($to_date)) . ")</h4>";
+        
+        if ($dept_result->num_rows > 0) {
+            while ($dept_row = $dept_result->fetch_assoc()) {
+                echo $dept_row['department'] . "<br>";
+                echo "Employee Count: " . $dept_row['employee_count'] . "<br>";
+                echo "Total Gross Pay: ₱" . number_format($dept_row['total_gross'], 2) . "<br>";
+                echo "Total Deductions: ₱" . number_format($dept_row['total_deductions'], 2) . "<br>";
+                echo "Total Tax: ₱" . number_format($dept_row['total_tax'], 2) . "<br>";
+                echo "Total Net Pay: ₱" . number_format($dept_row['total_net'], 2) . "<br>";
+                echo "<br>";
+            }
+        } else {
+            echo "No data found for the selected period.<br>";
+        }
+        echo "</div>"; // Close the summary-box div
+    } // Close the if statement
 ?>
 
 <!DOCTYPE html>
@@ -615,28 +609,6 @@ if (isset($_GET['generate_department_report'])) {
     <script src="js/header.js"></script>
 
     <script>
-        document.addEventListener("DOMContentLoaded", function () {
-            // Sidebar Toggle
-            const toggleSidebarBtn = document.getElementById("toggleSidebar");
-            const sidebar = document.getElementById("sidebar");
-
-            if (toggleSidebarBtn && sidebar) {
-                toggleSidebarBtn.addEventListener("click", function () {
-                    sidebar.classList.toggle("collapsed");
-
-                    // Optional: Save state
-                    const isCollapsed = sidebar.classList.contains("collapsed");
-                    localStorage.setItem("sidebarCollapsed", isCollapsed);
-                });
-
-                // Restore sidebar state
-                const isCollapsed = localStorage.getItem("sidebarCollapsed") === "true";
-                if (isCollapsed) {
-                    sidebar.classList.add("collapsed");
-                }
-            }
-        });
-
         function openTab(tabName) {
             // Hide all tab content
             var tabContents = document.getElementsByClassName("tab-content");

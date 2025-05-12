@@ -1,12 +1,6 @@
 <?php
-session_start();
-$page_title = "REPORTS";
-
-// Check if user is logged in
-if (!isset($_SESSION['username'])) {
-    header("Location: ms_login.php");
-    exit();
-}
+    include('validate_login.php');
+    $page_title = "REPORTS";
 ?>
 
 <!DOCTYPE html>
@@ -41,29 +35,5 @@ if (!isset($_SESSION['username'])) {
 
     <script src="js/sidebar.js"></script>
     <script src="js/header.js"></script>
-
-    <script>
-        document.addEventListener("DOMContentLoaded", function () {
-            // Sidebar Toggle
-            const toggleSidebarBtn = document.getElementById("toggleSidebar");
-            const sidebar = document.getElementById("sidebar");
-
-            if (toggleSidebarBtn && sidebar) {
-                toggleSidebarBtn.addEventListener("click", function () {
-                    sidebar.classList.toggle("collapsed");
-
-                    // Optional: Save state
-                    const isCollapsed = sidebar.classList.contains("collapsed");
-                    localStorage.setItem("sidebarCollapsed", isCollapsed);
-                });
-
-                // Restore sidebar state
-                const isCollapsed = localStorage.getItem("sidebarCollapsed") === "true";
-                if (isCollapsed) {
-                    sidebar.classList.add("collapsed");
-                }
-            }
-        });
-    </script>
 </body>
 </html>

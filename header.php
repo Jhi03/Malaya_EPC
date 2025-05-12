@@ -11,27 +11,31 @@
 
 <!-- Header Section -->
 <header class="top-bar">
-    <button class="hamburger" id="toggleSidebar">☰</button>
+    <button class="hamburger" id="toggleSidebar">
+        <img src="icons/hamburger.svg" alt="Toggle Sidebar">
+    </button>    
     <h2 class="page-title"><?php echo isset($page_title) ? $page_title : 'PAGE TITLE'; ?></h2>
-    
-    <div class="user-dropdown">
+        <div class="user-dropdown">
         <button class="user-icon" id="userDropdownBtn">
-            <img src="icons/circle-user-round.svg" alt="UserIcon" width="30">
+            <img src="icons/header-icons/circle-user-round.svg" alt="User Icon" width="30">
         </button>
         <div class="dropdown-menu" id="userDropdownMenu">
-            <div class="user-info">
-                <i class="fas fa-user-circle"></i>
+            <div class="user-info d-flex align-items-center">
+                <img src="icons/header-icons/circle-user-round.svg" alt="User Icon" width="20">
                 <span><?php echo isset($_SESSION['username']) ? $_SESSION['username'] : 'User'; ?></span>
             </div>
             <div class="dropdown-divider"></div>
-            <a href="ms_settings.php" class="dropdown-item">
-                <i class="fas fa-cog me-2"></i>Settings
+            <a href="ms_settings.php" class="dropdown-item d-flex align-items-center">
+                <img src="icons/header-icons/settings.svg" alt="Settings Icon" width="18" class="me-2">
+                Settings
             </a>
-            <a href="ms_logout.php" class="dropdown-item logout-btn">
-                <i class="fas fa-sign-out-alt me-2"></i>Logout
+            <a href="ms_logout.php" class="dropdown-item logout-btn d-flex align-items-center">
+                <img src="icons/header-icons/logout.svg" alt="Logout Icon" width="18" class="me-2">
+                Logout
             </a>
         </div>
     </div>
+
 </header>
 <script src="js/sidebar.js"></script>
 <script src="js/header.js"></script>

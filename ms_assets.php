@@ -1,89 +1,83 @@
 <?php
-session_start();
-$page_title = "ASSETS";
+    include('validate_login.php');
+    $page_title = "ASSETS";
 
-// Check if user is logged in
-if (!isset($_SESSION['username'])) {
-    header("Location: ms_login.php");
-    exit();
-}
+    // DATABASE CONNECTION
+    $servername = "localhost";  
+    $username = "root";           
+    $password = "";            
+    $dbname = "malayasol";     
 
-// DATABASE CONNECTION
-$servername = "localhost";  
-$username = "root";           
-$password = "";            
-$dbname = "malayasol";     
+    // Create connection
+    $conn = new mysqli($servername, $username, $password, $dbname);
 
-// Create connection
-$conn = new mysqli($servername, $username, $password, $dbname);
-
-// Check connection
-if ($conn->connect_error) {
-    die("Connection failed: " . $conn->connect_error);
-}
-
-// For Categories dropdown
-$categoryOptions = '';
-$categoryQuery = "SELECT project_id FROM projects";
-$categoryResult = $conn->query($categoryQuery);
-if ($categoryResult->num_rows > 0) {
-    while ($cat = $categoryResult->fetch_assoc()) {
-        $categoryOptions .= '<option value="' . htmlspecialchars($cat['project_id']) . '">' . htmlspecialchars($cat['project_id']) . '</option>';
+    // Check connection
+    if ($conn->connect_error) {
+        die("Connection failed: " . $conn->connect_error);
     }
-}
 
-// ADD or EDIT Modal
-if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    if (isset($_POST['delete_assets'])) {
-        // Handle deletion logic
-        if (isset($_POST['asset_ids']) && !empty($_POST['asset_ids'])) {
-            $asset_ids = explode(',', $_POST['asset_ids']);  // Convert comma-separated string to array
-            foreach ($asset_ids as $asset_id) {
-                $stmt = $conn->prepare("DELETE FROM assets WHERE asset_id = ?");
-                $stmt->bind_param("i", $asset_id);
-                $stmt->execute();
+    // For Categories dropdown
+    $categoryOptions = '';
+    $categoryQuery = "SELECT project_id FROM projects";
+    $categoryResult = $conn->query($categoryQuery);
+    if ($categoryResult->num_rows > 0) {
+        while ($cat = $categoryResult->fetch_assoc()) {
+            $categoryOptions .= '<option value="' . htmlspecialchars($cat['project_id']) . '">' . htmlspecialchars($cat['project_id']) . '</option>';
+        }
+    }
+
+    // ADD or EDIT Modal
+    if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+        if (isset($_POST['delete_assets'])) {
+            // Handle deletion logic
+            if (isset($_POST['asset_ids']) && !empty($_POST['asset_ids'])) {
+                $asset_ids = explode(',', $_POST['asset_ids']);  // Convert comma-separated string to array
+                foreach ($asset_ids as $asset_id) {
+                    $stmt = $conn->prepare("DELETE FROM assets WHERE asset_id = ?");
+                    $stmt->bind_param("i", $asset_id);
+                    $stmt->execute();
+                }
+                // Redirect after deletion
+                echo "<script>window.location = 'ms_assets.php';</script>";
+                exit();
             }
-            // Redirect after deletion
-            echo "<script>window.location = 'ms_assets.php';</script>";
-            exit();
-        }
-    } else {
-        // Handle add/edit asset logic
-        $asset_id = $_POST['asset_id'];
-        $category = $_POST['category'];
-        $description = $_POST['asset_description'];
-        $value = $_POST['value'];
-        $purchase_date = $_POST['purchase_date'] ?: date('Y-m-d');
-        $rental_rate = $_POST['rental_rate'] ?: 0.00;
-        $tax = $_POST['tax'] ?: 0.00;
-        $remarks = $_POST['remarks'];
-
-        $imagePath = null;
-        if (!empty($_FILES['asset_image']['name'])) {
-            $targetDir = "uploads/";
-            if (!is_dir($targetDir)) mkdir($targetDir);
-            $imagePath = $targetDir . basename($_FILES["asset_image"]["name"]);
-            move_uploaded_file($_FILES["asset_image"]["tmp_name"], $imagePath);
-        }
-
-        if ($asset_id) {
-            // Update asset
-            $stmt = $conn->prepare("UPDATE assets SET category=?, asset_description=?, value=?, purchase_date=?, rental_rate=?, tax=?, remarks=?, asset_image=? WHERE asset_id=?");
-            $stmt->bind_param("ssdsddssi", $category, $description, $value, $purchase_date, $rental_rate, $tax, $remarks, $imagePath, $asset_id);
         } else {
-            // Insert new asset
-            $stmt = $conn->prepare("INSERT INTO assets (category, asset_description, value, purchase_date, rental_rate, tax, remarks, asset_image) VALUES (?, ?, ?, ?, ?, ?, ?, ?)");
-            $stmt->bind_param("ssdsddss", $category, $description, $value, $purchase_date, $rental_rate, $tax, $remarks, $imagePath);
-        }
+            // Handle add/edit asset logic
+            $asset_id = $_POST['asset_id'];
+            $category = $_POST['category'];
+            $description = $_POST['asset_description'];
+            $value = $_POST['value'];
+            $purchase_date = $_POST['purchase_date'] ?: date('Y-m-d');
+            $rental_rate = $_POST['rental_rate'] ?: 0.00;
+            $tax = $_POST['tax'] ?: 0.00;
+            $remarks = $_POST['remarks'];
 
-        if ($stmt->execute()) {
-            echo "<script>window.location = 'ms_assets.php';</script>";
-            exit();
-        } else {
-            echo "Error: " . $stmt->error;
+            $imagePath = null;
+            if (!empty($_FILES['asset_image']['name'])) {
+                $targetDir = "uploads/";
+                if (!is_dir($targetDir)) mkdir($targetDir);
+                $imagePath = $targetDir . basename($_FILES["asset_image"]["name"]);
+                move_uploaded_file($_FILES["asset_image"]["tmp_name"], $imagePath);
+            }
+
+            if ($asset_id) {
+                // Update asset
+                $stmt = $conn->prepare("UPDATE assets SET category=?, asset_description=?, value=?, purchase_date=?, rental_rate=?, tax=?, remarks=?, asset_image=? WHERE asset_id=?");
+                $stmt->bind_param("ssdsddssi", $category, $description, $value, $purchase_date, $rental_rate, $tax, $remarks, $imagePath, $asset_id);
+            } else {
+                // Insert new asset
+                $stmt = $conn->prepare("INSERT INTO assets (category, asset_description, value, purchase_date, rental_rate, tax, remarks, asset_image) VALUES (?, ?, ?, ?, ?, ?, ?, ?)");
+                $stmt->bind_param("ssdsddss", $category, $description, $value, $purchase_date, $rental_rate, $tax, $remarks, $imagePath);
+            }
+
+            if ($stmt->execute()) {
+                echo "<script>window.location = 'ms_assets.php';</script>";
+                exit();
+            } else {
+                echo "Error: " . $stmt->error;
+            }
         }
     }
-}
 ?>
 
 <!DOCTYPE html>
@@ -304,28 +298,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     <script src="js/header.js"></script>
 
     <script>
-        document.addEventListener("DOMContentLoaded", function () {
-            // Sidebar Toggle
-            const toggleSidebarBtn = document.getElementById("toggleSidebar");
-            const sidebar = document.getElementById("sidebar");
-
-            if (toggleSidebarBtn && sidebar) {
-                toggleSidebarBtn.addEventListener("click", function () {
-                    sidebar.classList.toggle("collapsed");
-
-                    // Optional: Save state
-                    const isCollapsed = sidebar.classList.contains("collapsed");
-                    localStorage.setItem("sidebarCollapsed", isCollapsed);
-                });
-
-                // Restore sidebar state
-                const isCollapsed = localStorage.getItem("sidebarCollapsed") === "true";
-                if (isCollapsed) {
-                    sidebar.classList.add("collapsed");
-                }
-            }
-        });
-
         // Store the currently selected asset
         let currentAsset = null;
 

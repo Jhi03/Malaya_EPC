@@ -1,12 +1,6 @@
 <?php
-    session_start();
+    include('validate_login.php');
     $page_title = "PROJECTS";
-
-    // Check if user is logged in
-    if (!isset($_SESSION['username'])) {
-        header("Location: ms_login.php");
-        exit();
-    }
 
     // Database connection
     $host = 'localhost';
@@ -36,24 +30,24 @@
         $company_name = trim($_POST['companyName']);
         $description = ($_POST['description']);
         $creation_date = date("Y-m-d");
-    
+
         // Validate all fields
         if (empty($project_name) || empty($project_id) || empty($first_name) || empty($last_name) || empty($company_name)) {
             die("All fields are required.");
         }
-    
+
         // Insert into projects table
         $stmt = $conn->prepare("INSERT INTO projects (project_id, project_name, first_name, last_name, company_name, description, budget, creation_date)
                                 VALUES (?, ?, ?, ?, ?, ?, 0, ?)");
         $stmt->bind_param("sssssss", $project_id, $project_name, $first_name, $last_name, $company_name, $description, $creation_date);
-    
+
         //runs the INSERT
         if ($stmt->execute()) {
             echo "success"; // Let JS know everything went well
         } else {
             echo "Error: " . $stmt->error; // Echo detailed error
         }
-    
+
         $stmt->close();
         $conn->close();
         exit;
@@ -174,28 +168,6 @@
     <script src="js/header.js"></script>
 
     <script>
-        document.addEventListener("DOMContentLoaded", function () {
-            // Sidebar Toggle
-            const toggleSidebarBtn = document.getElementById("toggleSidebar");
-            const sidebar = document.getElementById("sidebar");
-
-            if (toggleSidebarBtn && sidebar) {
-                toggleSidebarBtn.addEventListener("click", function () {
-                    sidebar.classList.toggle("collapsed");
-
-                    // Optional: Save state
-                    const isCollapsed = sidebar.classList.contains("collapsed");
-                    localStorage.setItem("sidebarCollapsed", isCollapsed);
-                });
-
-                // Restore sidebar state
-                const isCollapsed = localStorage.getItem("sidebarCollapsed") === "true";
-                if (isCollapsed) {
-                    sidebar.classList.add("collapsed");
-                }
-            }
-        });
-
         //Add Project Form
         document.addEventListener("DOMContentLoaded", function () {
             const modal = document.getElementById("addProjectModal");
