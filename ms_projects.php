@@ -62,38 +62,61 @@
         $result = $conn->query($query);
     }
 
-    // Form submission
-    if ($_SERVER["REQUEST_METHOD"] === "POST") {
+    // Form submission (Insert)
+    if ($_SERVER["REQUEST_METHOD"] === "POST" && !isset($_POST['delete_project_code'])) {
         // Collect and sanitize form data
         $project_name = trim($_POST['projectName']);
         $project_code = strtoupper(trim($_POST['projectCode']));
         $first_name = trim($_POST['clientFirstName']);
         $last_name = trim($_POST['clientLastName']);
         $company_name = trim($_POST['companyName']);
-        $description = ($_POST['description']);
+        $description = trim($_POST['description']);  // Ensured description is also sanitized
         $creation_date = date("Y-m-d");
-    
+
         // Validate all fields
         if (empty($project_name) || empty($project_code) || empty($first_name) || empty($last_name) || empty($company_name)) {
             die("All fields are required.");
         }
-    
+
         // Insert into projects table
         $stmt = $conn->prepare("INSERT INTO projects (project_code, project_name, first_name, last_name, company_name, description, budget, creation_date)
                                 VALUES (?, ?, ?, ?, ?, ?, 0, ?)");
         $stmt->bind_param("sssssss", $project_code, $project_name, $first_name, $last_name, $company_name, $description, $creation_date);
-    
-        //runs the INSERT
+
+        // Runs the INSERT
         if ($stmt->execute()) {
             echo "success"; // Let JS know everything went well
         } else {
             echo "Error: " . $stmt->error; // Echo detailed error
         }
-    
+
         $stmt->close();
-        $conn->close();
         exit;
-    }    
+    }
+
+    // DELETE Project
+    if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST['delete_project_code'])) {
+        // Sanitize the delete_project_code
+        $project_code = strtoupper(trim($_POST['delete_project_code']));  // Sanitize input
+
+        // Ensure project_code is not empty before deleting
+        if (empty($project_code)) {
+            die("Project code is required.");
+        }
+
+        // Prepare and execute delete query
+        $stmt = $conn->prepare("DELETE FROM projects WHERE project_code = ?");
+        $stmt->bind_param("s", $project_code);
+
+        if ($stmt->execute()) {
+            echo "success"; // Inform frontend of successful deletion
+        } else {
+            echo "Error: " . $stmt->error; // Provide error details if delete fails
+        }
+
+        $stmt->close();
+        exit;
+    }
 ?>
 
 <!DOCTYPE html>
@@ -161,7 +184,7 @@
                         <img src="icons/ellipsis.svg" alt="Menu" class="ellipsis-icon" onclick="toggleDropdown(this)">
                             <div class="dropdown-menu">
                                 <button class="dropdown-edit">Edit</button>
-                                <button class="dropdown-delete">Delete</button>
+                                <button class="dropdown-delete" onclick="deleteProject('<?= htmlspecialchars($row['project_code']) ?>')">Delete</button>
                             </div>
                         </div>
                     <?php endif; ?>
@@ -363,6 +386,32 @@
                 document.querySelectorAll('.dropdown-menu').forEach(m => m.style.display = 'none');
             }
         });
+
+        //DELETION
+        function deleteProject(projectCode) {
+        if (confirm("Are you sure you want to delete this project?")) {
+            const formData = new FormData();
+            formData.append('delete_project_code', projectCode);
+
+            fetch('', {
+                method: 'POST',
+                body: formData
+            })
+            .then(res => res.text())
+            .then(data => {
+                if (data.trim() === "success") {
+                    // Remove the project card from the page
+                    const projectCard = document.querySelector(`.project-card[data-project-code="${projectCode}"]`);
+                    if (projectCard) {
+                        projectCard.remove();
+                    }
+                    alert("Project deleted successfully!");
+                } else {
+                    alert("Error deleting project: " + data);
+                }
+            });
+        }
+    }
     </script>
 </body>
 </html>
