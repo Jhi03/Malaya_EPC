@@ -64,30 +64,35 @@
 
     // Form submission (Insert)
     if ($_SERVER["REQUEST_METHOD"] === "POST" && !isset($_POST['delete_project_code'])) {
-        // Collect and sanitize form data
+        $mode = $_POST['form_mode'] ?? 'add';
+
         $project_name = trim($_POST['projectName']);
         $project_code = strtoupper(trim($_POST['projectCode']));
         $first_name = trim($_POST['clientFirstName']);
         $last_name = trim($_POST['clientLastName']);
         $company_name = trim($_POST['companyName']);
-        $description = trim($_POST['description']);  // Ensured description is also sanitized
+        $description = trim($_POST['description']);
         $creation_date = date("Y-m-d");
 
-        // Validate all fields
         if (empty($project_name) || empty($project_code) || empty($first_name) || empty($last_name) || empty($company_name)) {
             die("All fields are required.");
         }
 
-        // Insert into projects table
-        $stmt = $conn->prepare("INSERT INTO projects (project_code, project_name, first_name, last_name, company_name, description, budget, creation_date)
-                                VALUES (?, ?, ?, ?, ?, ?, 0, ?)");
-        $stmt->bind_param("sssssss", $project_code, $project_name, $first_name, $last_name, $company_name, $description, $creation_date);
-
-        // Runs the INSERT
-        if ($stmt->execute()) {
-            echo "success"; // Let JS know everything went well
+        if ($mode === 'edit') {
+            // UPDATE existing project
+            $stmt = $conn->prepare("UPDATE projects SET project_name=?, first_name=?, last_name=?, company_name=?, description=? WHERE project_code=?");
+            $stmt->bind_param("ssssss", $project_name, $first_name, $last_name, $company_name, $description, $project_code);
         } else {
-            echo "Error: " . $stmt->error; // Echo detailed error
+            // INSERT new project
+            $stmt = $conn->prepare("INSERT INTO projects (project_code, project_name, first_name, last_name, company_name, description, budget, creation_date)
+                                    VALUES (?, ?, ?, ?, ?, ?, 0, ?)");
+            $stmt->bind_param("sssssss", $project_code, $project_name, $first_name, $last_name, $company_name, $description, $creation_date);
+        }
+
+        if ($stmt->execute()) {
+            echo "success";
+        } else {
+            echo "Error: " . $stmt->error;
         }
 
         $stmt->close();
@@ -158,19 +163,15 @@
 
         <!-- Project Cards Grid -->
         <div class="project-grid">
-            <!-- Show "Add New Project" only for manager or superadmin -->
             <?php if ($role === 'manager' || $role === 'superadmin'): ?>
-            <div id="addProjectBtn" class="project-card add-project" id="openAddProjectModal">
-                <div class="add-project-content">
-                    <div>
+                <div id="addProjectBtn" class="project-card add-project">
+                    <div class="add-project-content">
                         <img src="icons/circle-plus.svg" alt="AddProjectIcon" width="50">
+                        <div class="add-text">Add New Project</div>
                     </div>
-                    <div class="add-text">Add New Project</div>
                 </div>
-            </div>
             <?php endif; ?>
 
-            <!-- Dynamically added project cards -->
             <?php while($row = $projectResult->fetch_assoc()): ?>
                 <div class="project-card"
                     data-project-code="<?= htmlspecialchars($row['project_code']) ?>"
@@ -183,7 +184,7 @@
                         <div class="project-menu">
                             <img src="icons/ellipsis.svg" alt="Menu" class="ellipsis-icon" onclick="toggleDropdown(event, this)">
                             <div class="dropdown-menu">
-                                <button class="dropdown-edit">Edit</button>
+                                <button class="dropdown-edit" onclick="openEditModal(this)">Edit</button>
                                 <button class="dropdown-delete" onclick="deleteProject('<?= htmlspecialchars($row['project_code']) ?>')">Delete</button>
                             </div>
                         </div>
@@ -202,150 +203,143 @@
                 </div>
             <?php endwhile; ?>
         </div>
-    </div>
 
-    <!-- Pop-up Modal -->
-    <div id="addProjectModal" class="modal">
-        <div class="modal-content">
-            <h2 class="modal-title">NEW PROJECT</h2>
-            <form id="projectForm">
-                <div class="form-row">
-                    <div class="form-group">
-                        <label for="projectName">Project Name</label>
-                        <input type="text" name="projectName" id="projectName" placeholder="Project Name" required>
+        <!-- Pop-up Modal (Add/Edit Project) -->
+        <div id="addProjectModal" class="modal">
+            <div class="modal-content">
+                <h2 class="modal-title" id="modalTitle">NEW PROJECT</h2>
+                <form id="projectForm" method="POST">
+                    <input type="hidden" name="form_mode" id="formMode" value="add">
+
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="projectName">Project Name</label>
+                            <input type="text" name="projectName" id="projectName" placeholder="Project Name" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="projectCode">Project Code</label>
+                            <input type="text" name="projectCode" id="projectCode" placeholder="Project Code" required>
+                        </div>
                     </div>
-                    <div class="form-group">
-                        <label for="projectCode">Project Code</label>
-                        <input type="text" name="projectCode" id="projectCode" placeholder="Project Code" required>
+
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="clientFirstName">Client Name</label>
+                            <input type="text" name="clientFirstName" id="clientFirstName" placeholder="First Name" required>
+                        </div>
+                        <div class="form-group">
+                            <input type="text" name="clientLastName" id="clientLastName" placeholder="Last Name" required>
+                        </div>
                     </div>
-                </div>
 
-                <div class="form-row">
                     <div class="form-group">
-                        <label for="clientFirstName">Client Name</label>
-                        <input type="text" name="clientFirstName" id="clientFirstName" placeholder="First Name" required>
+                        <label for="companyName">Company</label>
+                        <input type="text" name="companyName" id="companyName" placeholder="Company Name" required>
                     </div>
+
                     <div class="form-group">
-                        <input type="text" name="clientLastName" id="clientLastName" placeholder="Last Name" required>
+                        <label for="description">Description</label>
+                        <textarea name="description" id="description" placeholder="Project Description" required></textarea>
                     </div>
-                </div>
 
-                <div class="form-group">
-                    <label for="companyName">Company</label>
-                    <input type="text" name="companyName" id="companyName" placeholder="Company Name" required>
-                </div>
-
-                <div class="form-group">
-                    <label for="description">Description</label>
-                    <textarea name="description" id="description" placeholder="Project Description" required></textarea>
-                </div>
-
-                <div class="modal-footer">
-                    <button type="submit" class="btn-add">ADD</button>
-                    <button type="button" class="btn-cancel" id="closeModal">CANCEL</button>
-                </div>
-            </form>
+                    <div class="modal-footer">
+                        <button type="submit" id="submitButton" class="btn-add" style="background-color: #38b6ff;">ADD</button>
+                        <button type="button" class="btn-cancel" id="closeModal">CANCEL</button>
+                    </div>
+                </form>
+            </div>
         </div>
-    </div>
 
     <script src="js/sidebar.js"></script>
     <script src="js/header.js"></script>
 
     <script>
-        document.addEventListener("DOMContentLoaded", function () {
-            // Sidebar Toggle
-            const toggleSidebarBtn = document.getElementById("toggleSidebar");
-            const sidebar = document.getElementById("sidebar");
+        //Add Project Form
+        const addProjectBtn = document.getElementById("addProjectBtn");
+        const modal = document.getElementById("addProjectModal");
+        const modalTitle = document.getElementById("modalTitle");
+        const form = document.getElementById("projectForm");
+        const submitButton = document.getElementById("submitButton");
+        const formMode = document.getElementById("formMode");
 
-            if (toggleSidebarBtn && sidebar) {
-                toggleSidebarBtn.addEventListener("click", function () {
-                    sidebar.classList.toggle("collapsed");
+        const fields = {
+            name: document.getElementById("projectName"),
+            code: document.getElementById("projectCode"),
+            first: document.getElementById("clientFirstName"),
+            last: document.getElementById("clientLastName"),
+            company: document.getElementById("companyName"),
+            description: document.getElementById("description")
+        };
 
-                    // Optional: Save state
-                    const isCollapsed = sidebar.classList.contains("collapsed");
-                    localStorage.setItem("sidebarCollapsed", isCollapsed);
-                });
+        // Open modal in "Add Project" mode
+        addProjectBtn.addEventListener("click", () => {
+            modalTitle.textContent = "NEW PROJECT";
+            submitButton.textContent = "ADD";
+            submitButton.style.backgroundColor = "#38b6ff";
+            formMode.value = "add";
 
-                // Restore sidebar state
-                const isCollapsed = localStorage.getItem("sidebarCollapsed") === "true";
-                if (isCollapsed) {
-                    sidebar.classList.add("collapsed");
-                }
+            form.reset();
+            modal.style.display = "block";
+        });
+
+        // Edit button handler (delegated inside dropdown-edit)
+        document.querySelectorAll(".dropdown-edit").forEach(button => {
+            button.addEventListener("click", (e) => {
+                const card = e.target.closest(".project-card");
+
+                // Extract data
+                fields.name.value = card.dataset.projectName || "";
+                fields.code.value = card.dataset.projectCode || "";
+                fields.first.value = card.dataset.firstName || "";
+                fields.last.value = card.dataset.lastName || "";
+                fields.company.value = card.dataset.companyName || "";
+                fields.description.value = card.dataset.description || "";
+
+                modalTitle.textContent = "EDIT PROJECT";
+                submitButton.textContent = "SAVE";
+                submitButton.style.backgroundColor = "#ff5757";
+                formMode.value = "edit";
+
+                modal.style.display = "block";
+            });
+        });
+
+        // Close modal logic
+        document.getElementById("closeModal").addEventListener("click", () => {
+            modal.style.display = "none";
+            form.reset();
+        });
+
+        // Optional: Close modal on outside click or ESC
+        window.addEventListener("click", (event) => {
+            if (event.target === modal) {
+                modal.style.display = "none";
+                form.reset();
+            }
+        });
+        window.addEventListener("keydown", (event) => {
+            if (event.key === "Escape") {
+                modal.style.display = "none";
+                form.reset();
             }
         });
 
-        //Add Project Form
-        document.addEventListener("DOMContentLoaded", function () {
-            const modal = document.getElementById("addProjectModal");
-            const addProjectBtn = document.querySelector(".add-project");
-            const closeModalBtn = document.getElementById("closeModal");
-            const projectForm = document.getElementById("projectForm");
-            const projectGrid = document.querySelector(".project-grid");
+        form.addEventListener("submit", function (e) {
+            e.preventDefault();
+            const formData = new FormData(form);
 
-            // Open modal
-            addProjectBtn.addEventListener("click", () => {
-                modal.style.display = "flex";
+            fetch("", {
+                method: "POST",
+                body: formData,
+            })
+            .then((res) => res.text())
+            .then((data) => {
+                if (data.trim() === "success") {
+                    location.reload();
+                } else {
+                    alert("Error: " + data);
+                }
             });
-
-            // Close modal
-            closeModalBtn.addEventListener("click", () => {
-                modal.style.display = "none";
-            });
-
-            // Handle form submission
-            projectForm.addEventListener("submit", function (event) {
-                event.preventDefault();
-
-                const formData = new FormData(projectForm);
-
-                fetch('', {
-                    method: 'POST',
-                    body: formData
-                })
-                .then(res => res.text())
-                .then(data => {
-                    if (data.trim() === "success") {
-                        const name = formData.get("projectName");
-                        const code = formData.get("projectCode").toUpperCase();
-
-                        const projectCard = document.createElement("div");
-                        projectCard.classList.add("project-card");
-                        projectCard.innerHTML = `
-                            <div class="project-info">
-                                <h3 class="project-name">${name}</h3>
-                                <p class="project-code">CODE: ${code}</p>
-                            </div>
-                            <div class="project-actions">
-                                <a href="ms_records.php?projectCode=${code}" class="btn-records">RECORDS</a>
-                                <a href="ms_records.php?projectCode=${code}&view=analytics" class="btn-analytics">
-                                    <img src="icons/chart-no-axes-column.svg" alt="AnalyticsIcon" width="16">
-                                </a>
-                            </div>
-                        `;
-
-                        projectGrid.appendChild(projectCard);
-                        projectForm.reset();
-                        modal.style.display = "none";
-                    } else {
-                        alert(data); // Show error message
-                    }
-                });
-            });
-
-            //Closing methods aside from Cancel Button
-                //  Close on outside click
-                window.addEventListener("click", function(event) {
-                    if (event.target === modal) {
-                        modal.style.display = "none";
-                    }
-                });
-
-                //  Close modal on Escape key
-                window.addEventListener("keydown", function(event) {
-                    if (event.key === "Escape" && modal.style.display === "flex") {
-                        modal.style.display = "none";
-                    }
-                });
         });
 
         // Example hook for edit dropdown
