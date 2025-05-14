@@ -181,7 +181,7 @@
                     data-description="<?= htmlspecialchars($row['description']) ?>">
                     <?php if ($role === 'manager' || $role === 'superadmin'): ?>
                         <div class="project-menu">
-                        <img src="icons/ellipsis.svg" alt="Menu" class="ellipsis-icon" onclick="toggleDropdown(this)">
+                            <img src="icons/ellipsis.svg" alt="Menu" class="ellipsis-icon" onclick="toggleDropdown(event, this)">
                             <div class="dropdown-menu">
                                 <button class="dropdown-edit">Edit</button>
                                 <button class="dropdown-delete" onclick="deleteProject('<?= htmlspecialchars($row['project_code']) ?>')">Delete</button>
@@ -205,47 +205,46 @@
     </div>
 
     <!-- Pop-up Modal -->
-        <div id="addProjectModal" class="modal">
-            <div class="modal-content">
-                <h2 class="modal-title">NEW PROJECT</h2>
-                <form id="projectForm">
-                    <div class="form-row">
-                        <div class="form-group">
-                            <label for="projectName">Project Name</label>
-                            <input type="text" name="projectName" id="projectName" placeholder="Project Name" required>
-                        </div>
-                        <div class="form-group">
-                            <label for="projectCode">Project Code</label>
-                            <input type="text" name="projectCode" id="projectCode" placeholder="Project Code" required>
-                        </div>
-                    </div>
-
-                    <div class="form-row">
-                        <div class="form-group">
-                            <label for="clientFirstName">Client Name</label>
-                            <input type="text" name="clientFirstName" id="clientFirstName" placeholder="First Name" required>
-                        </div>
-                        <div class="form-group">
-                            <input type="text" name="clientLastName" id="clientLastName" placeholder="Last Name" required>
-                        </div>
-                    </div>
-
+    <div id="addProjectModal" class="modal">
+        <div class="modal-content">
+            <h2 class="modal-title">NEW PROJECT</h2>
+            <form id="projectForm">
+                <div class="form-row">
                     <div class="form-group">
-                        <label for="companyName">Company</label>
-                        <input type="text" name="companyName" id="companyName" placeholder="Company Name" required>
+                        <label for="projectName">Project Name</label>
+                        <input type="text" name="projectName" id="projectName" placeholder="Project Name" required>
                     </div>
-
                     <div class="form-group">
-                        <label for="description">Description</label>
-                        <textarea name="description" id="description" placeholder="Project Description" required></textarea>
+                        <label for="projectCode">Project Code</label>
+                        <input type="text" name="projectCode" id="projectCode" placeholder="Project Code" required>
                     </div>
+                </div>
 
-                    <div class="modal-footer">
-                        <button type="submit" class="btn-add">ADD</button>
-                        <button type="button" class="btn-cancel" id="closeModal">CANCEL</button>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="clientFirstName">Client Name</label>
+                        <input type="text" name="clientFirstName" id="clientFirstName" placeholder="First Name" required>
                     </div>
-                </form>
-            </div>
+                    <div class="form-group">
+                        <input type="text" name="clientLastName" id="clientLastName" placeholder="Last Name" required>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label for="companyName">Company</label>
+                    <input type="text" name="companyName" id="companyName" placeholder="Company Name" required>
+                </div>
+
+                <div class="form-group">
+                    <label for="description">Description</label>
+                    <textarea name="description" id="description" placeholder="Project Description" required></textarea>
+                </div>
+
+                <div class="modal-footer">
+                    <button type="submit" class="btn-add">ADD</button>
+                    <button type="button" class="btn-cancel" id="closeModal">CANCEL</button>
+                </div>
+            </form>
         </div>
     </div>
 
@@ -370,22 +369,33 @@
         document.getElementById("addProjectBtn").addEventListener("click", openAddProjectModal);
 
         //Project Card Dropdown [EDIT and DELETE]
-        function toggleDropdown(el) {
+       function toggleDropdown(event, el) {
+            event.stopPropagation(); // Prevent outside click handler
             const menu = el.nextElementSibling;
-            menu.style.display = menu.style.display === 'block' ? 'none' : 'block';
+            const isOpen = menu.style.display === 'block';
 
-            // Close other dropdowns
-            document.querySelectorAll('.dropdown-menu').forEach(m => {
-                if (m !== menu) m.style.display = 'none';
+            // Close all open dropdowns
+            document.querySelectorAll('.dropdown-menu').forEach(m => m.style.display = 'none');
+
+            // Toggle current one
+            if (!isOpen) {
+                menu.style.display = 'block';
+            }
+            
+            // Close dropdown when clicking outside
+            document.addEventListener('click', function(e) {
+                if (!e.target.closest('.project-menu')) {
+                    document.querySelectorAll('.dropdown-menu').forEach(m => m.style.display = 'none');
+                }
+            });
+
+            // Close dropdown on Escape key
+            document.addEventListener('keydown', function(e) {
+                if (e.key === 'Escape') {
+                    document.querySelectorAll('.dropdown-menu').forEach(m => m.style.display = 'none');
+                }
             });
         }
-
-        // Optional: close on click outside
-        document.addEventListener('click', function(e) {
-            if (!e.target.closest('.project-menu')) {
-                document.querySelectorAll('.dropdown-menu').forEach(m => m.style.display = 'none');
-            }
-        });
 
         //DELETION
         function deleteProject(projectCode) {
