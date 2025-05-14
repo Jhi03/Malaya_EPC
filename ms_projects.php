@@ -41,19 +41,6 @@
     if ($role === 'superadmin') {
         $projectQuery = "SELECT * FROM projects ORDER BY creation_date ASC";
         $projectResult = $conn->query($projectQuery);
-    } else {
-        $projectQuery = "
-            SELECT p.*
-            FROM projects p
-            INNER JOIN project_assignments pa ON p.project_code = pa.project_code
-            WHERE pa.user_id = ?
-            ORDER BY p.creation_date DESC
-        ";
-        $stmt = $conn->prepare($projectQuery);
-        $stmt->bind_param("i", $user_id);
-        $stmt->execute();
-        $projectResult = $stmt->get_result();
-        $stmt->close();
     }
 
     // No form submission
@@ -61,11 +48,10 @@
         $query = "SELECT * FROM projects";
         $result = $conn->query($query);
     }
-
     // Form submission (Insert)
-    if ($_SERVER["REQUEST_METHOD"] === "POST" && !isset($_POST['delete_project_code'])) {
+    if ($_SERVER["REQUEST_METHOD"] === "POST" && !isset($_POST['delete_project_id'])) {
         $mode = $_POST['form_mode'] ?? 'add';
-
+        $project_id = isset($_POST['project_id']) ? intval($_POST['project_id']) : 0;
         $project_name = trim($_POST['projectName']);
         $project_code = strtoupper(trim($_POST['projectCode']));
         $first_name = trim($_POST['clientFirstName']);
@@ -80,13 +66,14 @@
 
         if ($mode === 'edit') {
             // UPDATE existing project
-            $stmt = $conn->prepare("UPDATE projects SET project_name=?, first_name=?, last_name=?, company_name=?, description=? WHERE project_code=?");
-            $stmt->bind_param("ssssss", $project_name, $first_name, $last_name, $company_name, $description, $project_code);
+            $stmt = $conn->prepare("UPDATE projects SET project_code = ?, project_name = ?, first_name = ?, last_name = ?, company_name = ?, description = ?, edit_date = NOW(), edited_by = ? 
+                                    WHERE project_id = ?");
+            $stmt->bind_param("ssssssii", $project_code, $project_name, $first_name, $last_name, $company_name, $description, $user_id, $project_id);
         } else {
-            // INSERT new project
-            $stmt = $conn->prepare("INSERT INTO projects (project_code, project_name, first_name, last_name, company_name, description, budget, creation_date)
-                                    VALUES (?, ?, ?, ?, ?, ?, 0, ?)");
-            $stmt->bind_param("sssssss", $project_code, $project_name, $first_name, $last_name, $company_name, $description, $creation_date);
+            // INSERT project
+            $stmt = $conn->prepare("INSERT INTO projects (project_code, project_name, first_name, last_name, company_name, description, budget, creation_date, created_by) 
+                                    VALUES (?, ?, ?, ?, ?, ?, 0, ?, ?)");
+            $stmt->bind_param("sssssssi", $project_code, $project_name, $first_name, $last_name, $company_name, $description, $creation_date, $user_id);
         }
 
         if ($stmt->execute()) {
@@ -99,24 +86,21 @@
         exit;
     }
 
-    // DELETE Project
-    if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST['delete_project_code'])) {
-        // Sanitize the delete_project_code
-        $project_code = strtoupper(trim($_POST['delete_project_code']));  // Sanitize input
+    // DELETE project
+    if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST['delete_project_id'])) {
+        $project_id = intval($_POST['delete_project_id']);
 
-        // Ensure project_code is not empty before deleting
-        if (empty($project_code)) {
-            die("Project code is required.");
+        if ($project_id <= 0) {
+            die("Valid project ID is required.");
         }
 
-        // Prepare and execute delete query
-        $stmt = $conn->prepare("DELETE FROM projects WHERE project_code = ?");
-        $stmt->bind_param("s", $project_code);
+        $stmt = $conn->prepare("DELETE FROM projects WHERE project_id = ?");
+        $stmt->bind_param("i", $project_id);
 
         if ($stmt->execute()) {
-            echo "success"; // Inform frontend of successful deletion
+            echo "success";
         } else {
-            echo "Error: " . $stmt->error; // Provide error details if delete fails
+            echo "Error: " . $stmt->error;
         }
 
         $stmt->close();
@@ -164,28 +148,30 @@
         <!-- Project Cards Grid -->
         <div class="project-grid">
             <?php if ($role === 'manager' || $role === 'superadmin'): ?>
-                <div id="addProjectBtn" class="project-card add-project">
-                    <div class="add-project-content">
-                        <img src="icons/circle-plus.svg" alt="AddProjectIcon" width="50">
-                        <div class="add-text">Add New Project</div>
-                    </div>
+            <div id="addProjectBtn" class="project-card add-project">
+                <div class="add-project-content">
+                    <img src="icons/circle-plus.svg" alt="AddProjectIcon" width="50">
+                    <div class="add-text">Add New Project</div>
                 </div>
+            </div>
             <?php endif; ?>
 
+            <!-- Dynamically added project cards -->
             <?php while($row = $projectResult->fetch_assoc()): ?>
-                <div class="project-card"
-                    data-project-code="<?= htmlspecialchars($row['project_code']) ?>"
-                    data-project-name="<?= htmlspecialchars($row['project_name']) ?>"
-                    data-first-name="<?= htmlspecialchars($row['first_name']) ?>"
-                    data-last-name="<?= htmlspecialchars($row['last_name']) ?>"
-                    data-company-name="<?= htmlspecialchars($row['company_name']) ?>"
-                    data-description="<?= htmlspecialchars($row['description']) ?>">
+            <div class="project-card" 
+                data-project-id="<?= $row['project_id'] ?>" 
+                data-project-code="<?= htmlspecialchars($row['project_code']) ?>"
+                data-project-name="<?= htmlspecialchars($row['project_name']) ?>"
+                data-first-name="<?= htmlspecialchars($row['first_name']) ?>"
+                data-last-name="<?= htmlspecialchars($row['last_name']) ?>"
+                data-company-name="<?= htmlspecialchars($row['company_name']) ?>"
+                data-description="<?= htmlspecialchars($row['description']) ?>">
                     <?php if ($role === 'manager' || $role === 'superadmin'): ?>
                         <div class="project-menu">
                             <img src="icons/ellipsis.svg" alt="Menu" class="ellipsis-icon" onclick="toggleDropdown(event, this)">
                             <div class="dropdown-menu">
                                 <button class="dropdown-edit" onclick="openEditModal(this)">Edit</button>
-                                <button class="dropdown-delete" onclick="deleteProject('<?= htmlspecialchars($row['project_code']) ?>')">Delete</button>
+                                <button class="dropdown-delete" onclick="deleteProject(this)">Delete</button>
                             </div>
                         </div>
                     <?php endif; ?>
@@ -202,58 +188,59 @@
                     </div>
                 </div>
             <?php endwhile; ?>
-        </div>
+    </div>
 
-        <!-- Pop-up Modal (Add/Edit Project) -->
-        <div id="addProjectModal" class="modal">
-            <div class="modal-content">
-                <h2 class="modal-title" id="modalTitle">NEW PROJECT</h2>
-                <form id="projectForm" method="POST">
-                    <input type="hidden" name="form_mode" id="formMode" value="add">
+    <!-- Pop-up Modal -->
+    <div id="addProjectModal" class="modal">
+        <div class="modal-content">
+            <h2 class="modal-title" id="modalTitle">NEW PROJECT</h2>
+            <form id="projectForm" method="POST">
+                <input type="hidden" name="form_mode" id="formMode" value="add">
+                <input type="hidden" name="project_id" id="editProjectId" value="">
 
-                    <div class="form-row">
-                        <div class="form-group">
-                            <label for="projectName">Project Name</label>
-                            <input type="text" name="projectName" id="projectName" placeholder="Project Name" required>
-                        </div>
-                        <div class="form-group">
-                            <label for="projectCode">Project Code</label>
-                            <input type="text" name="projectCode" id="projectCode" placeholder="Project Code" required>
-                        </div>
-                    </div>
-
-                    <div class="form-row">
-                        <div class="form-group">
-                            <label for="clientFirstName">Client Name</label>
-                            <input type="text" name="clientFirstName" id="clientFirstName" placeholder="First Name" required>
-                        </div>
-                        <div class="form-group">
-                            <input type="text" name="clientLastName" id="clientLastName" placeholder="Last Name" required>
-                        </div>
-                    </div>
-
+                <div class="form-row">
                     <div class="form-group">
-                        <label for="companyName">Company</label>
-                        <input type="text" name="companyName" id="companyName" placeholder="Company Name" required>
+                        <label for="projectName">Project Name</label>
+                        <input type="text" name="projectName" id="projectName" placeholder="Project Name" required>
                     </div>
-
                     <div class="form-group">
-                        <label for="description">Description</label>
-                        <textarea name="description" id="description" placeholder="Project Description" required></textarea>
+                        <label for="projectCode">Project Code</label>
+                        <input type="text" name="projectCode" id="projectCode" placeholder="Project Code" required>
                     </div>
+                </div>
 
-                    <div class="modal-footer">
-                        <button type="submit" id="submitButton" class="btn-add" style="background-color: #38b6ff;">ADD</button>
-                        <button type="button" class="btn-cancel" id="closeModal">CANCEL</button>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="clientFirstName">Client Name</label>
+                        <input type="text" name="clientFirstName" id="clientFirstName" placeholder="First Name" required>
                     </div>
-                </form>
-            </div>
+                    <div class="form-group">
+                        <input type="text" name="clientLastName" id="clientLastName" placeholder="Last Name" required>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label for="companyName">Company</label>
+                    <input type="text" name="companyName" id="companyName" placeholder="Company Name" required>
+                </div>
+
+                <div class="form-group">
+                    <label for="description">Description</label>
+                    <textarea name="description" id="description" placeholder="Project Description" required></textarea>
+                </div>
+
+                <div class="modal-footer">
+                    <button type="submit" id="submitButton" class="btn-add" style="background-color: #38b6ff;">ADD</button>
+                    <button type="button" class="btn-cancel" id="closeModal">CANCEL</button>
+                </div>
+            </form>
         </div>
+    </div>
 
     <script src="js/sidebar.js"></script>
     <script src="js/header.js"></script>
 
-    <script>
+    <script>            
         //Add Project Form
         const addProjectBtn = document.getElementById("addProjectBtn");
         const modal = document.getElementById("addProjectModal");
@@ -287,13 +274,14 @@
             button.addEventListener("click", (e) => {
                 const card = e.target.closest(".project-card");
 
-                // Extract data
                 fields.name.value = card.dataset.projectName || "";
                 fields.code.value = card.dataset.projectCode || "";
                 fields.first.value = card.dataset.firstName || "";
                 fields.last.value = card.dataset.lastName || "";
                 fields.company.value = card.dataset.companyName || "";
                 fields.description.value = card.dataset.description || "";
+
+                document.getElementById("editProjectId").value = card.dataset.projectId || "";  // <-- Set project_id here!
 
                 modalTitle.textContent = "EDIT PROJECT";
                 submitButton.textContent = "SAVE";
@@ -392,29 +380,36 @@
         }
 
         //DELETION
-        function deleteProject(projectCode) {
-        if (confirm("Are you sure you want to delete this project?")) {
-            const formData = new FormData();
-            formData.append('delete_project_code', projectCode);
+        function deleteProject(button) {
+            const card = button.closest(".project-card");
+            const projectId = card.dataset.projectId;
 
-            fetch('', {
-                method: 'POST',
-                body: formData
-            })
-            .then(res => res.text())
-            .then(data => {
-                if (data.trim() === "success") {
-                    // Remove the project card from the page
-                    const projectCard = document.querySelector(`.project-card[data-project-code="${projectCode}"]`);
-                    if (projectCard) {
-                        projectCard.remove();
+            if (!projectId) {
+                alert("Project ID not found.");
+                return;
+            }
+
+            if (confirm("Are you sure you want to delete this project?")) {
+                const formData = new FormData();
+                formData.append("delete_project_id", projectId);
+
+                fetch("", {
+                    method: "POST",
+                    body: formData
+                })
+                .then(response => response.text())
+                .then(data => {
+                    if (data.trim() === "success") {
+                        location.reload();
+                    } else {
+                        alert("Error: " + data);
                     }
-                    alert("Project deleted successfully!");
-                } else {
-                    alert("Error deleting project: " + data);
-                }
-            });
-        }
+                })
+                .catch(error => {
+                    console.error("Delete error:", error);
+                    alert("An error occurred.");
+                });
+            }
     }
     </script>
 </body>
