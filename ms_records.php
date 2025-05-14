@@ -52,7 +52,8 @@
             SELECT 
                 p.project_id, p.project_name, p.project_code, p.first_name, p.last_name,
                 p.company_name, p.description, p.creation_date, 
-                p.created_by, p.edit_date, p.edited_by
+                p.created_by, p.edit_date, p.edited_by,
+                p.email, p.contact
             FROM projects p
             WHERE p.project_id = ?
         ");
@@ -147,6 +148,30 @@
         exit();
     }    
 
+    // Handle project deletion
+    if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['delete_project_id'])) {
+        $delete_project_id = intval($_POST['delete_project_id']);
+
+        // First, delete related records from project_expense
+        $stmt = $conn->prepare("DELETE FROM project_expense WHERE project_id = ?");
+        $stmt->bind_param("i", $delete_project_id);
+        $stmt->execute();
+        $stmt->close();
+
+        // Then, delete the project itself
+        $stmt = $conn->prepare("DELETE FROM projects WHERE project_id = ?");
+        $stmt->bind_param("i", $delete_project_id);
+        if ($stmt->execute()) {
+            echo "success";
+        } else {
+            echo "Error deleting project: " . $stmt->error;
+        }
+        $stmt->close();
+
+        // Stop further rendering
+        exit();
+    }
+
     $conn->close();
 ?>
 
@@ -176,17 +201,35 @@
         <div class="content-body">
             <!-- Project Summary -->
             <?php if ($project): ?>
-            <div class="project-summary">
-                <div class="summary-left">
-                    <p><strong>PROJECT:</strong> <?= htmlspecialchars($project['project_name']) ?></p>
-                    <p><strong>CODE:</strong> <?= htmlspecialchars($project['project_code']) ?></p>
-                    <p><strong>CLIENT:</strong> <?= htmlspecialchars($project['first_name'] . ' ' . $project['last_name']) ?></p>
+                <div class="project-summary position-relative">
+                    <div class="project-options">
+                        <button class="ellipsis-btn" onclick="toggleDropdown(this)">
+                            <img src="icons/ellipsis-vertical.svg" alt="Options">
+                        </button>
+                        <div class="dropdown-menu" style="display:none;">
+                            <button class="dropdown-edit">Edit</button>
+                            <button class="dropdown-delete" onclick="deleteProject(<?= $project['project_id'] ?>)">Delete</button>
+                        </div>
+                    </div>
+                    
+                    <!-- Your existing project summary layout below -->
+                    <div class="summary-left">
+                        <div class="left-column">
+                            <p><strong>PROJECT:</strong> <?= htmlspecialchars($project['project_name']) ?></p>
+                            <p><strong>CODE:</strong> <?= htmlspecialchars($project['project_code']) ?></p>
+                            <p><strong>CLIENT:</strong> <?= htmlspecialchars($project['first_name'] . ' ' . $project['last_name']) ?></p>
+                        </div>
+                        <div class="right-column">
+                            <p><strong>COMPANY:</strong> <?= htmlspecialchars($project['company_name']) ?></p>
+                            <p><strong>EMAIL:</strong> <?= htmlspecialchars($project['email']) ?></p>
+                            <p><strong>CONTACT:</strong> <?= htmlspecialchars($project['contact']) ?></p>
+                        </div>
+                        </div>
+                    <div class="summary-right">
+                        <p><strong>CREATION DATE:</strong> <?= date('m-d-Y', strtotime($project['creation_date'])) ?></p>
+                        <p><strong>DESCRIPTION:</strong> <?= htmlspecialchars($project['description']) ?></p>
+                    </div>
                 </div>
-                <div class="summary-right">
-                    <p><strong>CREATION DATE:</strong> <?= date('m-d-Y', strtotime($project['creation_date'])) ?></p>
-                    <p><strong>DESCRIPTION:</strong> <?= htmlspecialchars($project['description']) ?></p>
-                </div>
-            </div>
             <?php else: ?>
                 <p class="text-danger text-center">Project not found.</p>
             <?php endif; ?>
@@ -440,6 +483,67 @@
     <script src="js/sidebar.js"></script>
     <script src="js/header.js"></script>
 
+    <script>//Project Summary Dropdown EDIT and DELETE
+        // Toggle dropdown visibility
+        function toggleDropdown(button) {
+            // Find the dropdown-menu sibling of the clicked button
+            const dropdown = button.nextElementSibling;
+            if (!dropdown) return;
+            
+            // Toggle visibility
+            dropdown.style.display = (dropdown.style.display === 'block') ? 'none' : 'block';
+        }
+
+        // Close dropdown if clicked outside
+        window.addEventListener('click', function(e) {
+            const dropdowns = document.querySelectorAll('.dropdown-menu');
+            dropdowns.forEach(menu => {
+                // If click is NOT inside menu or its button, hide it
+                if (!menu.contains(e.target) && !menu.previousElementSibling.contains(e.target)) {
+                    menu.style.display = 'none';
+                }
+            });
+        });
+
+        // Attach handlers for edit/delete buttons
+        document.querySelectorAll('.dropdown-edit').forEach(button => {
+            button.addEventListener('click', function () {
+                alert('Edit project functionality will be implemented later.');
+                // Hide dropdown after click
+                this.parentElement.style.display = 'none';
+            });
+        });
+
+        //DELETE Button
+        function deleteProject(projectId) {
+            if (!projectId) {
+                alert("Project ID not found.");
+                return;
+            }
+
+            if (confirm("Are you sure you want to delete this project?")) {
+                const formData = new FormData();
+                formData.append("delete_project_id", projectId);
+
+                fetch("", {
+                    method: "POST",
+                    body: formData
+                })
+                .then(response => response.text())
+                .then(data => {
+                    if (data.trim() === "success") {
+                        window.location.href = "ms_projects.php"; // redirect after deletion
+                    } else {
+                        alert("Error: " + data);
+                    }
+                })
+                .catch(error => {
+                    console.error("Delete error:", error);
+                    alert("An error occurred.");
+                });
+            }
+        }
+    </script>
     <script>
         //Records/Analytics View Toggles
         const btnRecords = document.getElementById('view-records');
