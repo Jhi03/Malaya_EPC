@@ -290,7 +290,7 @@ body {
     border-bottom: 1px solid #eee;
     background: white;
     top: 0;
-    justify-content: space-around;
+    justify-content: space-evenly !important;
     display: flex;
     width: 100%; /* Ensure full width */
 }
@@ -387,6 +387,11 @@ textarea::placeholder {
     padding: 10px 15px;
     border-radius: 8px;
     cursor: pointer;
+}
+
+.btn-cancel:hover {
+    background-color: #606060;
+    color: white;
 }
 
 /* 

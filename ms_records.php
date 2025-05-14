@@ -8,47 +8,65 @@
     $password = '';
     $database = 'malayasol';
     $conn = new mysqli($host, $user, $password, $database);
-    
+
     // Check connection
     if ($conn->connect_error) {
         die("Connection failed: " . $conn->connect_error);
     }
 
-    // Check if user is logged in
+    // Ensure user is logged in
     if (!isset($_SESSION['user_id'])) {
         header("Location: ms_login.php");
         exit();
     }
-    
-    // Fetch logged-in user info
-    $employee_id = $_SESSION['employee_id'];
-    $user_query = $conn->prepare("SELECT first_name, last_name FROM users WHERE employee_id = ?");
-    $user_query->bind_param("s", $employee_id);
-    $user_query->execute();
-    $user_result = $user_query->get_result();
-    $user = $user_result->fetch_assoc();
-    $created_by = $user['first_name'] . ' ' . $user['last_name'];
-    $user_query->close();       
 
-    if ($conn->connect_error) {
-        die("Connection failed: " . $conn->connect_error);
+    $user_id = $_SESSION['user_id'];
+
+    // Get user name from joined users & employee table
+    $created_by = "Unknown";
+    if ($user_id) {
+        $stmt = $conn->prepare("
+            SELECT e.first_name, e.last_name 
+            FROM users u
+            LEFT JOIN employee e ON u.employee_id = e.employee_id 
+            WHERE u.user_id = ?
+        ");
+        $stmt->bind_param("i", $user_id);
+        $stmt->execute();
+        $stmt->bind_result($first_name, $last_name);
+        if ($stmt->fetch()) {
+            $created_by = "$first_name $last_name";
+        }
+        $stmt->close();
     }
 
-    $project_code = isset($_GET['projectCode']) ? $_GET['projectCode'] : '';
+    // Get project_id from URL
+    $project_id = isset($_GET['projectId']) ? intval($_GET['projectId']) : 0;
 
     $records = [];
     $project = null;
 
-    if ($project_code !== '') {
-        // Get project info
-        $project_result = $conn->query("SELECT * FROM projects WHERE project_id = '$project_code'");
+    if ($project_id > 0) {
+        // Get project details
+        $project_stmt = $conn->prepare("
+            SELECT 
+                p.project_id, p.project_name, p.project_code, p.first_name, p.last_name,
+                p.company_name, p.description, p.creation_date, 
+                p.created_by, p.edit_date, p.edited_by
+            FROM projects p
+            WHERE p.project_id = ?
+        ");
+        $project_stmt->bind_param("i", $project_id);
+        $project_stmt->execute();
+        $project_result = $project_stmt->get_result();
         if ($project_result && $project_result->num_rows > 0) {
             $project = $project_result->fetch_assoc();
         }
+        $project_stmt->close();
 
-        // Get project_expenses records
+        // Get expense records for the project
         $stmt = $conn->prepare("SELECT * FROM project_expense WHERE project_id = ?");
-        $stmt->bind_param("s", $project_code);
+        $stmt->bind_param("i", $project['project_id']);
         $stmt->execute();
         $result = $stmt->get_result();
         while ($row = $result->fetch_assoc()) {
@@ -57,16 +75,14 @@
         $stmt->close();
     }
 
-    //Analytics Chart
+    // Prepare data for analytics if needed
     $category_totals = [];
     $monthly_totals = [];
 
     foreach ($records as $record) {
-        // Category totals
         $cat = $record['category'];
         $category_totals[$cat] = ($category_totals[$cat] ?? 0) + $record['actual'];
 
-        // Monthly totals
         $month = date('F Y', strtotime($record['record_date']));
         $monthly_totals[$month] = ($monthly_totals[$month] ?? 0) + $record['actual'];
     }
@@ -171,17 +187,21 @@
         <?php include 'header.php'; ?>
 
         <!-- Project Summary -->
+        <?php if ($project): ?>
         <div class="project-summary">
             <div class="summary-left">
-                <p><strong>PROJECT:</strong> <?= $project['project_name'] ?></p>
-                <p><strong>CODE:</strong> <?= $project['project_id'] ?></p>
-                <p><strong>CLIENT:</strong> <?= $project['first_name'] ?> <?= $project['last_name'] ?></p>
+                <p><strong>PROJECT:</strong> <?= htmlspecialchars($project['project_name']) ?></p>
+                <p><strong>CODE:</strong> <?= htmlspecialchars($project['project_code']) ?></p>
+                <p><strong>CLIENT:</strong> <?= htmlspecialchars($project['first_name'] . ' ' . $project['last_name']) ?></p>
             </div>
             <div class="summary-right">
                 <p><strong>CREATION DATE:</strong> <?= date('m-d-Y', strtotime($project['creation_date'])) ?></p>
-                <p><strong>DESCRIPTION:</strong> <?= $project['description'] ?></p>
+                <p><strong>DESCRIPTION:</strong> <?= htmlspecialchars($project['description']) ?></p>
             </div>
         </div>
+        <?php else: ?>
+            <p class="text-danger text-center">Project not found.</p>
+        <?php endif; ?>
 
         <!-- Add Records, Search, Filter, and Toggle Bar -->
         <div class="search-filter-bar">
@@ -211,7 +231,7 @@
         </div>
 
         <!-- RECORDS VIEW -->
-        <!-- Table of records -->
+        <!-- Expense Records Table -->
         <div class="records-table-container">
             <table class="table">
                 <thead>
@@ -235,7 +255,7 @@
                         <?php foreach ($records as $i => $row): ?>
                             <tr>
                                 <td><?= $i + 1 ?></td>
-                                <td><?= $row['category'] ?></td>
+                                <td><?= htmlspecialchars($row['category']) ?></td>
                                 <td title="<?= htmlspecialchars($row['description']) ?>">
                                     <?= htmlspecialchars($row['description']) ?>
                                 </td>
@@ -251,22 +271,22 @@
                                 </td>
                                 <td><?= date("m-d-Y", strtotime($row['record_date'])) ?></td>
                                 <td>
-                                    <a href="#"  class="edit-btn"
+                                    <a href="#" class="edit-btn"
                                         data-id="<?= $row['record_id'] ?>"
-                                        data-category="<?= $row['category'] ?>"
+                                        data-category="<?= htmlspecialchars($row['category']) ?>"
                                         data-date="<?= $row['record_date'] ?>"
                                         data-budget="<?= $row['budget'] ?>"
                                         data-actual="<?= $row['actual'] ?>"
-                                        data-payee="<?= $row['payee'] ?>"
-                                        data-description="<?= $row['description'] ?>"
-                                        data-remarks="<?= $row['remarks'] ?>"
-                                        data-created_by="<?= $row['created_by'] ?>"
+                                        data-payee="<?= htmlspecialchars($row['payee']) ?>"
+                                        data-description="<?= htmlspecialchars($row['description']) ?>"
+                                        data-remarks="<?= htmlspecialchars($row['remarks']) ?>"
+                                        data-created_by="<?= htmlspecialchars($row['created_by']) ?>"
                                         data-creation_date="<?= $row['creation_date'] ?>"
-                                        data-edited_by="<?= $row['edited_by'] ?>"
+                                        data-edited_by="<?= htmlspecialchars($row['edited_by']) ?>"
                                         data-edit_date="<?= $row['edit_date'] ?>">
                                         <img src="icons/edit.svg" width="18">
                                     </a>
-                                </td>   
+                                </td>
                                 <td>
                                     <a href="#" class="delete-btn" data-id="<?= htmlspecialchars($row['record_id']) ?>">
                                         <img src="icons/x-circle.svg" alt="Delete" width="18">

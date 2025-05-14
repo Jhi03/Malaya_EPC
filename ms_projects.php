@@ -231,8 +231,8 @@
                         <p class="project-code">CODE: <?= htmlspecialchars($row['project_code']) ?></p>
                     </div>
                     <div class="project-actions">
-                        <a href="ms_records.php?projectCode=<?= urlencode($row['project_code']) ?>" class="btn-records">RECORDS</a>
-                        <a href="ms_records.php?projectCode=<?= urlencode($row['project_code']) ?>&view=analytics" class="btn-analytics">
+                        <a href="ms_records.php?projectId=<?= urlencode($row['project_id']) ?>" class="btn-records">RECORDS</a>
+                        <a href="ms_records.php?projectId=<?= urlencode($row['project_id']) ?>&view=analytics" class="btn-analytics">
                             <img src="icons/chart-no-axes-column.svg" alt="AnalyticsIcon" width="16">
                         </a>
                     </div>
