@@ -39,17 +39,22 @@
 
     // Fetch projects depending on role
     if ($role === 'superadmin') {
-        $projectQuery = "SELECT * FROM projects ORDER BY creation_date ASC";
+        $projectQuery = "
+            SELECT 
+                p.*,
+                CONCAT(creator.first_name, ' ', creator.last_name) AS created_by_name,
+                CONCAT(editor.first_name, ' ', editor.last_name) AS edited_by_name
+            FROM projects p
+            LEFT JOIN users creator_user ON p.created_by = creator_user.user_id
+            LEFT JOIN employee creator ON creator_user.employee_id = creator.employee_id
+            LEFT JOIN users editor_user ON p.edited_by = editor_user.user_id
+            LEFT JOIN employee editor ON editor_user.employee_id = editor.employee_id
+            ORDER BY p.creation_date ASC
+        ";
         $projectResult = $conn->query($projectQuery);
     }
 
-    // No form submission
-    if ($_SERVER["REQUEST_METHOD"] !== "POST") {
-        $query = "SELECT * FROM projects";
-        $result = $conn->query($query);
-    }
-    
-    // Form submission (Insert)
+    // Handle the form submission for INSERT or UPDATE
     if ($_SERVER["REQUEST_METHOD"] === "POST" && !isset($_POST['delete_project_id'])) {
         $mode = $_POST['form_mode'] ?? 'add';
         $project_id = isset($_POST['project_id']) ? intval($_POST['project_id']) : 0;
@@ -191,21 +196,26 @@
 
             <!-- Dynamically added project cards -->
             <?php while($row = $projectResult->fetch_assoc()): ?>
-            <div class="project-card" 
-                data-project-id="<?= $row['project_id'] ?>" 
-                data-project-code="<?= htmlspecialchars($row['project_code']) ?>"
-                data-project-name="<?= htmlspecialchars($row['project_name']) ?>"
-                data-first-name="<?= htmlspecialchars($row['first_name']) ?>"
-                data-last-name="<?= htmlspecialchars($row['last_name']) ?>"
-                data-company-name="<?= htmlspecialchars($row['company_name']) ?>"
-                data-description="<?= htmlspecialchars($row['description']) ?>"
-                data-contact="<?= htmlspecialchars($row['contact']) ?>"
-                data-email="<?= htmlspecialchars($row['email']) ?>"
-                data-unit="<?= htmlspecialchars($row['unit_building_no']) ?>"
-                data-street="<?= htmlspecialchars($row['street']) ?>"
-                data-barangay="<?= htmlspecialchars($row['barangay']) ?>"
-                data-city="<?= htmlspecialchars($row['city']) ?>"
-                data-country="<?= htmlspecialchars($row['country']) ?>">
+                <div class="project-card" 
+                    data-project-id="<?= $row['project_id'] ?>" 
+                    data-project-code="<?= htmlspecialchars($row['project_code']) ?>"
+                    data-project-name="<?= htmlspecialchars($row['project_name']) ?>"
+                    data-first-name="<?= htmlspecialchars($row['first_name']) ?>"
+                    data-last-name="<?= htmlspecialchars($row['last_name']) ?>"
+                    data-company-name="<?= htmlspecialchars($row['company_name']) ?>"
+                    data-description="<?= htmlspecialchars($row['description']) ?>"
+                    data-contact="<?= htmlspecialchars($row['contact']) ?>"
+                    data-email="<?= htmlspecialchars($row['email']) ?>"
+                    data-unit="<?= htmlspecialchars($row['unit_building_no']) ?>"
+                    data-street="<?= htmlspecialchars($row['street']) ?>"
+                    data-barangay="<?= htmlspecialchars($row['barangay']) ?>"
+                    data-city="<?= htmlspecialchars($row['city']) ?>"
+                    data-country="<?= htmlspecialchars($row['country']) ?>"
+                    data-created-by="<?= htmlspecialchars($row['created_by_name'] ?? 'Unknown') ?>"
+                    data-edited-by="<?= htmlspecialchars($row['edited_by_name'] ?? 'Unknown') ?>"
+                    data-created-on="<?= htmlspecialchars($row['creation_date']) ?>"
+                    data-edited-on="<?= htmlspecialchars($row['edit_date']) ?>">
+                    
                     <?php if ($role === 'manager' || $role === 'superadmin'): ?>
                         <div class="project-menu">
                             <img src="icons/ellipsis.svg" alt="Menu" class="ellipsis-icon" onclick="toggleDropdown(event, this)">
@@ -310,6 +320,19 @@
                         <textarea name="description" id="description" placeholder="Project Description" required></textarea>
                     </div>
                     
+                    <div id="recordMeta" class="record-meta" style="display: none;">
+                        <div style="display: inline-flex; gap: 20px; width: 100%;">
+                            <div class="meta-left">
+                                <div>Added by: <strong id="createdByMeta">Unknown</strong></div>
+                                <div>Edited by: <strong id="editedByMeta">Unknown</strong></div>
+                            </div>
+                            <div class="meta-right">
+                                <div>Added on: <strong id="createdOnMeta">Unknown</strong></div>
+                                <div>Edited on: <strong id="editedOnMeta">Unknown</strong></div>
+                            </div>
+                        </div>
+                    </div>
+
                     <div class="modal-footer">
                         <button type="submit" id="submitButton" class="btn-add" style="background-color: #38b6ff;">ADD</button>
                         <button type="button" class="btn-cancel" id="closeModal">CANCEL</button>
@@ -322,17 +345,18 @@
     <script src="js/sidebar.js"></script>
     <script src="js/header.js"></script>
 
-    <script>//Dynamic modal: form handling
-        //Add Project Form
-        const addProjectBtn = document.getElementById("addProjectBtn");
+    <script>
+        // Dynamic modal: form handling
         const modal = document.getElementById("addProjectModal");
         const modalTitle = document.getElementById("modalTitle");
         const form = document.getElementById("projectForm");
         const submitButton = document.getElementById("submitButton");
         const formMode = document.getElementById("formMode");
+
         const contactEmailGroup = document.getElementById("contactEmailGroup");
         const addressGroup = document.getElementById("addressGroup");
         const locationGroup = document.getElementById("locationGroup");
+        const recordMeta = document.getElementById("recordMeta");
 
         const fields = {
             name: document.getElementById("projectName"),
@@ -345,55 +369,90 @@
             description: document.getElementById("description")
         };
 
-        // Open modal in "Add Project" mode
+        // For the "Add Project" button - keep this as-is
+        const addProjectBtn = document.getElementById("addProjectBtn");
         addProjectBtn.addEventListener("click", () => {
+            const modal = document.getElementById("addProjectModal");
+            const modalTitle = document.getElementById("modalTitle");
+            const form = document.getElementById("projectForm");
+            const submitButton = document.getElementById("submitButton");
+            const formMode = document.getElementById("formMode");
+            
             modalTitle.textContent = "NEW PROJECT";
             submitButton.textContent = "ADD";
             submitButton.style.backgroundColor = "#38b6ff";
             formMode.value = "add";
 
             form.reset();
-            contactEmailGroup.style.display = "flex";
-            addressGroup.style.display = "none";
-            locationGroup.style.display = "none";
+            document.getElementById("contactEmailGroup").style.display = "flex";
+            document.getElementById("addressGroup").style.display = "none";
+            document.getElementById("locationGroup").style.display = "none";
+            document.getElementById("recordMeta").style.display = "none";
 
             modal.style.display = "flex";
         });
+        
+        // Edit button handler - use this instead of the existing edit handler
+        function openEditModal(button) {
+            const card = button.closest(".project-card");
+            const modal = document.getElementById("addProjectModal");
+            const modalTitle = document.getElementById("modalTitle");
+            const submitButton = document.getElementById("submitButton");
+            const formMode = document.getElementById("formMode");
+            
+            // Fill in basic project info
+            document.getElementById("projectName").value = card.dataset.projectName || "";
+            document.getElementById("projectCode").value = card.dataset.projectCode || "";
+            document.getElementById("clientFirstName").value = card.dataset.firstName || "";
+            document.getElementById("clientLastName").value = card.dataset.lastName || "";
+            document.getElementById("companyName").value = card.dataset.companyName || "";
+            document.getElementById("description").value = card.dataset.description || "";
+            document.getElementById("contact").value = card.dataset.contact || "";
+            document.getElementById("email").value = card.dataset.email || "";
+            document.getElementById("editProjectId").value = card.dataset.projectId || "";
 
-        // Edit button handler (delegated inside dropdown-edit)
-        document.querySelectorAll(".dropdown-edit").forEach(button => {
-            button.addEventListener("click", (e) => {
-                const card = e.target.closest(".project-card");
+            // Configure modal appearance
+            modalTitle.textContent = "EDIT PROJECT";
+            submitButton.textContent = "SAVE";
+            submitButton.style.backgroundColor = "#ff5757";
+            formMode.value = "edit";
 
-                fields.name.value = card.dataset.projectName || "";
-                fields.code.value = card.dataset.projectCode || "";
-                fields.first.value = card.dataset.firstName || "";
-                fields.last.value = card.dataset.lastName || "";
-                fields.company.value = card.dataset.companyName || "";
-                fields.description.value = card.dataset.description || "";
-                fields.contact.value = card.dataset.contact || "";
-                fields.email.value = card.dataset.email || "";
+            // Show additional sections
+            document.getElementById("addressGroup").style.display = "flex";
+            document.getElementById("locationGroup").style.display = "flex";
+            document.getElementById("recordMeta").style.display = "flex";
 
-                document.getElementById("editProjectId").value = card.dataset.projectId || "";
+            // Optional address fields
+            document.getElementById("unit").value = card.dataset.unit || "";
+            document.getElementById("street").value = card.dataset.street || "";
+            document.getElementById("barangay").value = card.dataset.barangay || "";
+            document.getElementById("city").value = card.dataset.city || "";
+            document.getElementById("country").value = card.dataset.country || "";
 
-                modalTitle.textContent = "EDIT PROJECT";
-                submitButton.textContent = "SAVE";
-                submitButton.style.backgroundColor = "#ff5757";
-                formMode.value = "edit";
+            // Update metadata fields
+            document.getElementById("createdByMeta").textContent = card.dataset.createdBy || "Unknown";
+            document.getElementById("editedByMeta").textContent = card.dataset.editedBy || "Unknown";
+            document.getElementById("createdOnMeta").textContent = formatDate(card.dataset.createdOn) || "Unknown";
+            document.getElementById("editedOnMeta").textContent = formatDate(card.dataset.editedOn) || "Unknown";
 
-                addressGroup.style.display = "flex";
-                locationGroup.style.display = "flex";
+            // Display the modal
+            modal.style.display = "flex";
+        }
 
-                // OPTIONAL: If you plan to prefill edit form with address fields
-                document.getElementById("unit").value = card.dataset.unit || "";
-                document.getElementById("street").value = card.dataset.street || "";
-                document.getElementById("barangay").value = card.dataset.barangay || "";
-                document.getElementById("city").value = card.dataset.city || "";
-                document.getElementById("country").value = card.dataset.country || "";
-
-                modal.style.display = "flex";
+        // Helper function to format dates nicely
+        function formatDate(dateString) {
+            if (!dateString) return "";
+            const date = new Date(dateString);
+            if (isNaN(date.getTime())) return dateString;
+            
+            return date.toLocaleString('en-US', {
+                year: 'numeric',
+                month: 'short',
+                day: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit'
             });
-        });
+        }
 
         // Close modal logic
         document.getElementById("closeModal").addEventListener("click", () => {
@@ -415,6 +474,7 @@
             }
         });
 
+        // Submit form via POST
         form.addEventListener("submit", function (e) {
             e.preventDefault();
             const formData = new FormData(form);
@@ -432,30 +492,8 @@
                 }
             });
         });
-
-        // Hook for the ADD button
-        document.getElementById("addProjectBtn").addEventListener("click", openAddProjectModal); 
-    </script>
-    <script>//Project Card Dropdown [EDIT and DELETE]      
-
-        // Example hook for edit dropdown
-        document.querySelectorAll(".dropdown-edit").forEach(btn => {
-            btn.addEventListener("click", function () {
-                const card = this.closest(".project-card");
-                const data = {
-                    project_code: card.dataset.projectCode,
-                    project_name: card.dataset.projectName,
-                    project_code: card.dataset.projectCode,
-                    first_name: card.dataset.firstName,
-                    last_name: card.dataset.lastName,
-                    company_name: card.dataset.companyName,
-                    description: card.dataset.description
-                };
-                openEditProjectModal(data);
-            });
-        });
-
-        //Project Card Dropdown [EDIT and DELETE]
+        
+        //Project Card Dropdown [EDIT and DELETE]      
         function toggleDropdown(event, el) {
             event.stopPropagation(); // Prevent outside click handler
             const menu = el.nextElementSibling;
