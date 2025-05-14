@@ -89,7 +89,7 @@
     <link rel="icon" href="images/Malaya_Logo.png" type="image/png">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible&display=swap" rel="stylesheet">
-    <link href="css/ms_assets.css" rel="stylesheet">
+    <link href="css/ms_assetsdesign.css" rel="stylesheet">
     <link href="css/ms_sidebar.css" rel="stylesheet">
     <link href="css/ms_header.css" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
@@ -101,7 +101,8 @@
     
     <div class="content-area">
         <?php include 'header.php'; ?>
-
+   
+        <div class="content-body">
         <!-- Add Records, Search, Filter, and Toggle Bar -->
         <div class="search-filter-bar">
             <!-- Left group: Add, Search, Filter -->

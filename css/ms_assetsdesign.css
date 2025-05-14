@@ -1,32 +1,20 @@
 /* Base Reset and Layout */
 body {
-    font-family: 'IBM Plex Sans', sans-serif;
+    font-family: 'IBM Plex Sans', 'Atkinson Hyperlegible', sans-serif;
     margin: 0;
     display: flex;
     height: 100vh;
     overflow: hidden;
-    background-color: #f9fafb;
+    background-color: #1076dd;
     color: #333;
 }
-/* Content Pane */
-@media (max-width: 768px) {
-    .content-body {
-        padding: 0 20px;
-    }
-}
-
-@media (max-width: 480px) {
-    .content-body {
-        padding: 0 10px;
-    }
-}
 
 
-.payroll-form {
-    margin: 20px;
-}
+
+
+/* Content Pane with Glassmorphism */
 .content-body {
-    padding: 32px;
+    padding: 20px;
     flex: 1;
     overflow-x: hidden;
     display: flex;
@@ -36,11 +24,11 @@ body {
     margin-left: auto;
     margin-right: auto;
 
-    background: rgba(255, 255, 255, 0.8); /* slightly less opacity for stronger glass */
+    /* Glassmorphism effect */
+    background: rgba(255, 255, 255, 0.8);
     backdrop-filter: blur(12px) saturate(180%);
     -webkit-backdrop-filter: blur(12px) saturate(180%);
     
-
     /* Enhanced shadows for depth */
     box-shadow:
         0 1px 3px rgba(0, 0, 0, 0.08),
@@ -60,9 +48,46 @@ body {
         0 12px 28px rgba(0, 0, 0, 0.08);
 }
 
+@media (max-width: 768px) {
+    .content-body {
+        padding: 0 20px;
+    }
+}
+
+@media (max-width: 480px) {
+    .content-body {
+        padding: 0 10px;
+    }
+}
+
+
+/* Navigation Buttons */
+.nav-buttons a {
+    text-decoration: none;
+}
+
+.nav-buttons button {
+    background: none;
+    border: none;
+    color: white;
+    text-align: left;
+    font-size: 12px;
+    padding: 10px;
+    width: 100%;
+    display: flex;
+    justify-content: space-between;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.nav-buttons a.active button {
+    color: #facc15;
+    font-weight: bold;
+}
+
 /* Search and Filter Bar */
 .search-filter-bar {
-    display: flex;
+   display: flex;
     justify-content: space-between;
     align-items: center;
     flex-wrap: wrap;
@@ -85,7 +110,7 @@ body {
 
 /* PRIMARY BUTTON - Add Record */
 .add-record-btn {
-    background-color: #6366f1;
+    background: linear-gradient(135deg, #facc15, #eab308);
     color: #fff;
     border: none;
     padding: 10px 24px;
@@ -95,12 +120,16 @@ body {
     cursor: pointer;
     transition: all 0.2s ease;
     text-transform: uppercase;
-background: linear-gradient(135deg, #facc15, #eab308);
+    box-shadow: 0 4px 10px rgba(234, 179, 8, 0.3);
 }
 
 .add-record-btn:hover {
-    background-color: #4f46e5;
-background: linear-gradient(135deg, #facc15, #eab308);
+    transform: translateY(-2px);
+    box-shadow: 0 6px 15px rgba(234, 179, 8, 0.4);
+}
+
+.add-record-btn:active {
+    transform: translateY(1px);
 }
 
 /* SEARCH */
@@ -121,10 +150,10 @@ background: linear-gradient(135deg, #facc15, #eab308);
 }
 
 .search-input:focus {
-    border-color: #6366f1;
+    border-color: #facc15;
     background-color: #fff;
     outline: none;
-    box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.2);
+    box-shadow: 0 0 0 3px rgba(250, 204, 21, 0.2);
 }
 
 /* FILTERS */
@@ -158,10 +187,6 @@ background: linear-gradient(135deg, #facc15, #eab308);
     display: flex;
     gap: 12px;
 }
-img {
-    border: none;
-    outline: none;
-}
 
 .toggle-btn {
     padding: 10px 20px;
@@ -186,12 +211,45 @@ img {
 }
 
 .toggle-btn.active {
-background: linear-gradient(135deg, #facc15, #eab308);
+    background: linear-gradient(135deg, #facc15, #eab308);
     color: #fff;
-    box-shadow: 0 6px 16px rgba(99, 102, 241, 0.3);
+    box-shadow: 0 6px 16px rgba(234, 179, 8, 0.3);
     transform: translateY(-1px);
 }
 
+/* Select Button Styling */
+.select-items {
+    display: flex;
+    gap: 8px;
+}
+
+.select-btn {
+    padding: 10px 20px;
+    border-radius: 9999px;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    text-transform: uppercase;
+    transition: all 0.25s ease-in-out;
+    border: none;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.06);
+}
+
+.select-btn.active {
+    background: linear-gradient(135deg, #facc15, #eab308);
+    color: #fff;
+    box-shadow: 0 6px 16px rgba(234, 179, 8, 0.3);
+}
+
+.select-btn:not(.active) {
+    background: #f3f4f6;
+    color: #374151;
+}
+
+.select-btn:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 6px 14px rgba(0, 0, 0, 0.08);
+}
 
 /* Project Summary Box */
 .project-summary {
@@ -265,7 +323,250 @@ table.table td i {
     font-size: 14px;
 }
 
-/* Modern Modal Styling */
+/* Asset Content Wrapper */
+.asset-content {
+    display: flex;
+    gap: 20px;
+    margin-top: 20px;
+}
+
+/* Left Section - List of Assets */
+.asset-list {
+    flex: 1;
+    background: rgba(255, 255, 255, 0.8);
+    margin: 0px 0px 0px 20px;
+    border-radius: 12px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+    display: flex;
+    flex-direction: column;
+    padding: 15px;
+    overflow: hidden;
+    border: 1px solid rgba(255, 255, 255, 0.3);
+   
+    position: relative;
+     /* Glassmorphism effect */
+    background: rgba(255, 255, 255, 0.8);
+    backdrop-filter: blur(12px) saturate(180%);
+    -webkit-backdrop-filter: blur(12px) saturate(180%);
+    
+    /* Enhanced shadows for depth */
+    box-shadow:
+        0 1px 3px rgba(0, 0, 0, 0.08),
+        0 4px 6px rgba(0, 0, 0, 0.08),
+        0 10px 15px rgba(0, 0, 0, 0.06),
+        0 20px 25px rgba(0, 0, 0, 0.04);
+
+    border: 1px solid rgba(255, 255, 255, 0.3); /* glass border */
+    
+    transition: all 0.3s ease;
+}
+
+/* Asset List Header */
+.asset-list-header {
+background: linear-gradient(135deg, #facc15, #eab308);
+    border-radius: 20px;
+    color: #374151;
+    text-align: center;
+    font-weight: bold;
+    font-size: 16px;
+    height: 40px;
+    line-height: 40px;
+    width: 100%;
+    margin-bottom: 15px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.04);
+}
+
+/* Table inside Asset List */
+.asset-list table {
+    width: 100%;
+    font-size: 14px;
+    margin: 0;
+    border-collapse: collapse;
+}
+
+/* Header row that stays fixed */
+.asset-list table thead th {
+    background-color: #f3f4f6;
+    font-weight: 600;
+    padding: 12px;
+    text-align: left;
+    border-bottom: 2px solid #e5e7eb;
+    position: sticky;
+    top: 0;
+    z-index: 1;
+}
+
+/* Wrapper container for scrollable table body */
+.asset-list-table-container {
+    scrollbar-width: thin;
+    scrollbar-color: #d1d5db #f3f4f6;
+}
+
+/* Table rows */
+.asset-list table tbody tr {
+    cursor: pointer;
+    transition: background-color 0.2s, transform 0.1s;
+}
+
+.asset-list table tbody tr:hover {
+    background-color: rgba(250, 204, 21, 0.05);
+    transform: translateY(-1px);
+}
+
+.asset-list table td {
+    padding: 12px;
+    text-align: left;
+    border-bottom: 1px solid #e5e7eb;
+}
+
+/* Row number / checkbox cell */
+.row-index-cell {
+    width: 40px;
+    text-align: center;
+}
+
+.row-index-cell .row-number {
+    display: inline-block;
+}
+
+.row-index-cell .row-checkbox {
+    margin: 0;
+    transform: scale(1.2);
+    cursor: pointer;
+}
+
+/* Right Section - Asset Details */
+.asset-details {
+    flex: 1;
+    background: rgba(255, 255, 255, 0.8);
+    margin: 0px 20px 0px 0px;
+    padding: 25px;
+    border-radius: 12px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.3);
+     /* Glassmorphism effect */
+    background: rgba(255, 255, 255, 0.8);
+    backdrop-filter: blur(12px) saturate(180%);
+    -webkit-backdrop-filter: blur(12px) saturate(180%);
+    
+    /* Enhanced shadows for depth */
+    box-shadow:
+        0 1px 3px rgba(0, 0, 0, 0.08),
+        0 4px 6px rgba(0, 0, 0, 0.08),
+        0 10px 15px rgba(0, 0, 0, 0.06),
+        0 20px 25px rgba(0, 0, 0, 0.04);
+
+    border: 1px solid rgba(255, 255, 255, 0.3); /* glass border */
+    
+    transition: all 0.3s ease;
+}
+
+/* Asset Details Styling */
+.asset-details h4 {
+    margin-bottom: 20px;
+    color: #111827;
+    font-weight: 600;
+}
+
+.asset-cost-tax, .asset-rental-date {
+    display: flex;
+    justify-content: space-between;
+    gap: 20px;
+    margin-bottom: 15px;
+}
+
+.asset-cost-tax p, .asset-rental-date p {
+    flex: 1;
+    background-color: rgba(249, 250, 251, 0.5);
+    padding: 12px;
+    border-radius: 8px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+    margin: 0;
+}
+
+/* Asset Placeholder */
+#assetPlaceholder {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 100%;
+    text-align: center;
+    font-size: 18px;
+    color: #9ca3af;
+}
+
+#assetInfo p {
+    font-size: 14px;
+    line-height: 1.6;
+    color: #4b5563;
+}
+
+/* Image Container Placeholder */
+#assetImageContainer {
+    width: 100%;
+    height: 200px;
+    background: #f3f4f6;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    color: #9ca3af;
+    margin-bottom: 20px;
+    border-radius: 12px;
+    border: 1px dashed #d1d5db;
+    transition: all 0.2s ease;
+}
+
+/* Edit Button */
+.edit-button {
+    text-align: right;
+    margin-top: 20px;
+}
+
+.edit-button button {
+    background: linear-gradient(135deg, #facc15, #eab308);
+    color: #fff;
+    border: none;
+    padding: 10px 24px;
+    border-radius: 9999px;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    text-transform: uppercase;
+    box-shadow: 0 4px 10px rgba(234, 179, 8, 0.3);
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.edit-button button:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 15px rgba(234, 179, 8, 0.4);
+}
+
+/* Floating delete button */
+.delete-selected-btn {
+    position: absolute;
+    bottom: 20px;
+    right: 20px;
+    background: linear-gradient(135deg, #F87171, #EF4444);
+    color: white;
+    border: none;
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    display: none;
+    z-index: 10;
+    box-shadow: 0 4px 12px rgba(239, 68, 68, 0.2);
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.delete-selected-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 16px rgba(239, 68, 68, 0.3);
+}
+
 /* Modern Modal Styling */
 .custom-modal-overlay {
     display: none;
@@ -293,7 +594,7 @@ table.table td i {
     max-height: 90vh;
     overflow-y: auto;
     box-shadow: 0 20px 40px rgba(0,0,0,0.15), 0 10px 15px rgba(0,0,0,0.08);
-    font-family: 'Inter', 'Segoe UI', system-ui, sans-serif;
+    font-family: 'IBM Plex Sans', 'Atkinson Hyperlegible', sans-serif;
     transform: translateY(0);
     animation: slideUp 0.3s ease-out;
 }
@@ -309,8 +610,7 @@ table.table td i {
     align-items: center;
     margin-bottom: 24px;
     position: relative;
-        text-align: center;
-
+    text-align: center;
 }
 
 .modal-header h5 {
@@ -384,10 +684,10 @@ input, select, textarea {
 }
 
 input:focus, select:focus, textarea:focus {
-    border-color: #6366F1;
+    border-color: #facc15;
     background-color: #fff;
     outline: none;
-    box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.12);
+    box-shadow: 0 0 0 3px rgba(250, 204, 21, 0.12);
 }
 
 input:hover, select:hover, textarea:hover {
@@ -411,6 +711,7 @@ textarea {
     padding-top: 16px;
     border-top: 1px solid #F3F4F6;
 }
+
 .btn {
     font-weight: 600;
     padding: 12px 0;
@@ -446,20 +747,20 @@ textarea {
 }
 
 .btn-add {
-    background: linear-gradient(135deg, #10B981, #059669);
+    background: linear-gradient(135deg, #facc15, #eab308);
     color: white;
-    box-shadow: 0 4px 12px rgba(16, 185, 129, 0.2);
+    box-shadow: 0 4px 12px rgba(234, 179, 8, 0.2);
 }
 
 .btn-add:hover {
-    background: linear-gradient(135deg, #059669, #047857);
-    box-shadow: 0 6px 16px rgba(16, 185, 129, 0.3);
+    background: linear-gradient(135deg, #eab308, #d97706);
+    box-shadow: 0 6px 16px rgba(234, 179, 8, 0.3);
     transform: translateY(-2px);
 }
 
 .btn-add:active {
     transform: translateY(1px);
-    box-shadow: 0 2px 8px rgba(16, 185, 129, 0.2);
+    box-shadow: 0 2px 8px rgba(234, 179, 8, 0.2);
 }
 
 .btn-edit-delete {
@@ -498,8 +799,58 @@ textarea {
     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
 }
 
-.btn-cancel:hover {
-    background-color: #E5E7EB;
-    color: #1F2937;
+img {
+    border: none;
+    outline: none;
 }
-/* Use default browser scrollbar instead */
+
+/* Responsive adjustments */
+@media (max-width: 992px) {
+    .asset-content {
+        flex-direction: column;
+    }
+    
+    .asset-list, .asset-details {
+        margin: 10px 20px;
+    }
+    
+    .asset-list {
+        max-height: 40vh;
+    }
+}
+
+@media (max-width: 768px) {
+    .search-filter-bar {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+    
+    .left-controls, .view-toggle {
+        width: 100%;
+        justify-content: space-between;
+    }
+    
+    .search-container {
+        max-width: 100%;
+    }
+    
+    .custom-modal {
+        width: 90%;
+        padding: 20px;
+    }
+}
+
+@media (max-width: 576px) {
+    .input-row {
+        flex-direction: column;
+        gap: 10px;
+    }
+    
+    .modal-footer {
+        flex-direction: column;
+    }
+    
+    .btn {
+        width: 100%;
+    }
+}
