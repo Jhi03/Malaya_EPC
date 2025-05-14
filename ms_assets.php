@@ -107,7 +107,7 @@
         <div class="search-filter-bar">
             <!-- Left group: Add, Search, Filter -->
             <div class="left-controls">
-            <button class="add-record-btn" id="addAssetBtn">ASSET <img src="icons/circle-plus.svg" alt="UserIcon" width="16"></button>
+            <button class="add-record-btn" id="addAssetBtn">ASSET <img src="icons/plus.svg" alt="UserIcon" width="16"></button>
 
                 <div class="search-container">
                     <input type="text" class="search-input" placeholder="SEARCH">

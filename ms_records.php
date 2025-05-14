@@ -173,168 +173,170 @@
     <div class="content-area">
         <?php include 'header.php'; ?>
 
-        <!-- Project Summary -->
-        <?php if ($project): ?>
-        <div class="project-summary">
-            <div class="summary-left">
-                <p><strong>PROJECT:</strong> <?= htmlspecialchars($project['project_name']) ?></p>
-                <p><strong>CODE:</strong> <?= htmlspecialchars($project['project_code']) ?></p>
-                <p><strong>CLIENT:</strong> <?= htmlspecialchars($project['first_name'] . ' ' . $project['last_name']) ?></p>
-            </div>
-            <div class="summary-right">
-                <p><strong>CREATION DATE:</strong> <?= date('m-d-Y', strtotime($project['creation_date'])) ?></p>
-                <p><strong>DESCRIPTION:</strong> <?= htmlspecialchars($project['description']) ?></p>
-            </div>
-        </div>
-        <?php else: ?>
-            <p class="text-danger text-center">Project not found.</p>
-        <?php endif; ?>
-
-        <!-- Add Records, Search, Filter, and Toggle Bar -->
-        <div class="search-filter-bar">
-            <!-- Left group: Add, Search, Filter -->
-            <div class="left-controls">
-                <button onclick="openRecordModal('add')" class="add-record-btn">ADD RECORD</button>
-
-                <div class="search-container">
-                    <input type="text" class="search-input" placeholder="SEARCH">
+        <div class="content-body">
+            <!-- Project Summary -->
+            <?php if ($project): ?>
+            <div class="project-summary">
+                <div class="summary-left">
+                    <p><strong>PROJECT:</strong> <?= htmlspecialchars($project['project_name']) ?></p>
+                    <p><strong>CODE:</strong> <?= htmlspecialchars($project['project_code']) ?></p>
+                    <p><strong>CLIENT:</strong> <?= htmlspecialchars($project['first_name'] . ' ' . $project['last_name']) ?></p>
                 </div>
-
-                <div class="filter-options">
-                <button class="sort-btn">
-                    <img src="icons/arrow-down-up.svg" alt="SortIcon" width="16"> Sort By
-                </button>                    
-                <button class="filter-btn">
-                    <img src="icons/filter.svg" alt="FilterIcon" width="16"> Filter
-                </button>
+                <div class="summary-right">
+                    <p><strong>CREATION DATE:</strong> <?= date('m-d-Y', strtotime($project['creation_date'])) ?></p>
+                    <p><strong>DESCRIPTION:</strong> <?= htmlspecialchars($project['description']) ?></p>
                 </div>
             </div>
+            <?php else: ?>
+                <p class="text-danger text-center">Project not found.</p>
+            <?php endif; ?>
 
-            <!-- Right group: View toggle -->
-            <div class="view-toggle">
-                <button class="toggle-btn active" id="view-records">RECORD</button>
-                <button class="toggle-btn" id="view-analytics">ANALYTICS</button>
-            </div>
-        </div>
+            <!-- Add Records, Search, Filter, and Toggle Bar -->
+            <div class="search-filter-bar">
+                <!-- Left group: Add, Search, Filter -->
+                <div class="left-controls">
+                    <button onclick="openRecordModal('add')" class="add-record-btn">ADD RECORD</button>
 
-        <!-- RECORDS VIEW -->
-        <!-- Expense Records Table -->
-        <div class="records-table-container">
-            <table class="table">
-                <thead>
-                    <tr>
-                        <th> </th>
-                        <th>Category</th>
-                        <th>Description</th>
-                        <th>Budget</th>
-                        <th>Actual</th>
-                        <th>Payee</th>
-                        <th>Variance</th>
-                        <th>Tax</th>
-                        <th>Remarks</th>
-                        <th>Date</th>
-                        <th> </th>
-                        <th> </th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <?php if (count($records) > 0): ?>
-                        <?php foreach ($records as $i => $row): ?>
-                            <tr>
-                                <td><?= $i + 1 ?></td>
-                                <td><?= htmlspecialchars($row['category']) ?></td>
-                                <td title="<?= htmlspecialchars($row['description']) ?>">
-                                    <?= htmlspecialchars($row['description']) ?>
-                                </td>
-                                <td><?= number_format($row['budget'], 2) ?></td>
-                                <td><?= number_format($row['actual'], 2) ?></td>
-                                <td title="<?= htmlspecialchars($row['payee']) ?>">
-                                    <?= htmlspecialchars($row['payee']) ?>
-                                </td>
-                                <td><?= number_format($row['variance'], 2) ?></td>
-                                <td><?= number_format($row['tax'], 2) ?></td>
-                                <td title="<?= htmlspecialchars($row['remarks']) ?>">
-                                    <?= htmlspecialchars($row['remarks']) ?>
-                                </td>
-                                <td><?= date("m-d-Y", strtotime($row['record_date'])) ?></td>
-                                <td>
-                                    <a href="#" class="edit-btn"
-                                        data-id="<?= $row['record_id'] ?>"
-                                        data-category="<?= htmlspecialchars($row['category']) ?>"
-                                        data-date="<?= $row['record_date'] ?>"
-                                        data-budget="<?= $row['budget'] ?>"
-                                        data-actual="<?= $row['actual'] ?>"
-                                        data-payee="<?= htmlspecialchars($row['payee']) ?>"
-                                        data-description="<?= htmlspecialchars($row['description']) ?>"
-                                        data-remarks="<?= htmlspecialchars($row['remarks']) ?>"
-                                        data-created_by="<?= htmlspecialchars($row['created_by']) ?>"
-                                        data-creation_date="<?= $row['creation_date'] ?>"
-                                        data-edited_by="<?= htmlspecialchars($row['edited_by']) ?>"
-                                        data-edit_date="<?= $row['edit_date'] ?>">
-                                        <img src="icons/edit.svg" width="18">
-                                    </a>
-                                </td>
-                                <td>
-                                    <a href="#" class="delete-btn" data-id="<?= htmlspecialchars($row['record_id']) ?>">
-                                        <img src="icons/x-circle.svg" alt="Delete" width="18">
-                                    </a>
-                                </td>
-                            </tr>
-                        <?php endforeach; ?>
-                    <?php else: ?>
-                        <tr><td colspan="12" class="text-center">No records available for this project.</td></tr>
-                    <?php endif; ?>
-                </tbody>
-            </table>
-        </div>
-
-        <!--ANALYTICS VIEW -->
-        
-        <div class="analytics-view container py-4" style="display: none;">
-            <div class="mb-4">
-                <div class="row">
-                    <!-- Left: Summary (25%) -->
-                    <div class="col-md-3">
-                        <div class="card shadow rounded-4 p-3 mb-3">
-                            <h6>Total Budget</h6>
-                            <p class="fs-5 fw-bold text-black">₱<?= number_format(array_sum(array_column($records, 'budget')), 2) ?></p>
-                        </div>
-                        <div class="card shadow rounded-4 p-3 mb-3">
-                            <h6>Total Actual</h6>
-                            <p class="fs-5 fw-bold text-black">₱<?= number_format(array_sum(array_column($records, 'actual')), 2) ?></p>
-                        </div>
-                        <div class="card shadow rounded-4 p-3 mb-3">
-                            <h6>Total Variance</h6>
-                            <p class="fs-5 fw-bold text-black">₱<?= number_format(array_sum(array_column($records, 'budget')) - array_sum(array_column($records, 'actual')), 2) ?></p>
-                        </div>
-                        <div class="card shadow rounded-4 p-3">
-                            <h6>Total Tax</h6>
-                            <p class="fs-5 fw-bold text-black">₱<?= number_format(array_sum(array_column($records, 'tax')), 2) ?></p>
-                        </div>
+                    <div class="search-container">
+                        <input type="text" class="search-input" placeholder="SEARCH">
                     </div>
 
-                    <!-- Right: Charts (65%) -->
-                    <div class="col-md-9">
-                        <div class="row g-4">
-                            <div class="col-md-8">
-                                <div class="card shadow rounded-4 p-3 h-100">
-                                    <h6 class="text-center">Weekly Budget vs Actual</h6>
-                                    <canvas id="weeklyChart" height="200"></canvas>
-                                </div>
-                            </div>
-                            <div class="col-md-4">
-                                <div class="card shadow rounded-4 p-3 h-100">
-                                    <h6 class="text-center">Category Breakdown</h6>
-                                    <canvas id="doughnutChart"></canvas>
-                                    <div class="mt-2 small text-center" id="categoryLegend"></div>
-                                </div>
-                            </div>
-                        </div>
+                    <div class="filter-options">
+                    <button class="sort-btn">
+                        <img src="icons/arrow-down-up.svg" alt="SortIcon" width="16"> Sort By
+                    </button>                    
+                    <button class="filter-btn">
+                        <img src="icons/filter.svg" alt="FilterIcon" width="16"> Filter
+                    </button>
                     </div>
                 </div>
 
-                <div class="text-end mt-4">
-                    <button id="downloadReport" class="btn btn-outline-secondary">📄 Download Report (PDF)</button>
+                <!-- Right group: View toggle -->
+                <div class="view-toggle">
+                    <button class="toggle-btn active" id="view-records">RECORD</button>
+                    <button class="toggle-btn" id="view-analytics">ANALYTICS</button>
+                </div>
+            </div>
+
+            <!-- RECORDS VIEW -->
+            <!-- Expense Records Table -->
+            <div class="records-table-container">
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th> </th>
+                            <th>Category</th>
+                            <th>Description</th>
+                            <th>Budget</th>
+                            <th>Actual</th>
+                            <th>Payee</th>
+                            <th>Variance</th>
+                            <th>Tax</th>
+                            <th>Remarks</th>
+                            <th>Date</th>
+                            <th> </th>
+                            <th> </th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <?php if (count($records) > 0): ?>
+                            <?php foreach ($records as $i => $row): ?>
+                                <tr>
+                                    <td><?= $i + 1 ?></td>
+                                    <td><?= htmlspecialchars($row['category']) ?></td>
+                                    <td title="<?= htmlspecialchars($row['description']) ?>">
+                                        <?= htmlspecialchars($row['description']) ?>
+                                    </td>
+                                    <td><?= number_format($row['budget'], 2) ?></td>
+                                    <td><?= number_format($row['actual'], 2) ?></td>
+                                    <td title="<?= htmlspecialchars($row['payee']) ?>">
+                                        <?= htmlspecialchars($row['payee']) ?>
+                                    </td>
+                                    <td><?= number_format($row['variance'], 2) ?></td>
+                                    <td><?= number_format($row['tax'], 2) ?></td>
+                                    <td title="<?= htmlspecialchars($row['remarks']) ?>">
+                                        <?= htmlspecialchars($row['remarks']) ?>
+                                    </td>
+                                    <td><?= date("m-d-Y", strtotime($row['record_date'])) ?></td>
+                                    <td>
+                                        <a href="#" class="edit-btn"
+                                            data-id="<?= $row['record_id'] ?>"
+                                            data-category="<?= htmlspecialchars($row['category']) ?>"
+                                            data-date="<?= $row['record_date'] ?>"
+                                            data-budget="<?= $row['budget'] ?>"
+                                            data-actual="<?= $row['actual'] ?>"
+                                            data-payee="<?= htmlspecialchars($row['payee']) ?>"
+                                            data-description="<?= htmlspecialchars($row['description']) ?>"
+                                            data-remarks="<?= htmlspecialchars($row['remarks']) ?>"
+                                            data-created_by="<?= htmlspecialchars($row['created_by']) ?>"
+                                            data-creation_date="<?= $row['creation_date'] ?>"
+                                            data-edited_by="<?= htmlspecialchars($row['edited_by']) ?>"
+                                            data-edit_date="<?= $row['edit_date'] ?>">
+                                            <img src="icons/edit.svg" width="18">
+                                        </a>
+                                    </td>
+                                    <td>
+                                        <a href="#" class="delete-btn" data-id="<?= htmlspecialchars($row['record_id']) ?>">
+                                            <img src="icons/x-circle.svg" alt="Delete" width="18">
+                                        </a>
+                                    </td>
+                                </tr>
+                            <?php endforeach; ?>
+                        <?php else: ?>
+                            <tr><td colspan="12" class="text-center">No records available for this project.</td></tr>
+                        <?php endif; ?>
+                    </tbody>
+                </table>
+            </div>
+
+            <!--ANALYTICS VIEW -->
+            
+            <div class="analytics-view container py-4" style="display: none;">
+                <div class="mb-4">
+                    <div class="row">
+                        <!-- Left: Summary (25%) -->
+                        <div class="col-md-3">
+                            <div class="card shadow rounded-4 p-3 mb-3">
+                                <h6>Total Budget</h6>
+                                <p class="fs-5 fw-bold text-black">₱<?= number_format(array_sum(array_column($records, 'budget')), 2) ?></p>
+                            </div>
+                            <div class="card shadow rounded-4 p-3 mb-3">
+                                <h6>Total Actual</h6>
+                                <p class="fs-5 fw-bold text-black">₱<?= number_format(array_sum(array_column($records, 'actual')), 2) ?></p>
+                            </div>
+                            <div class="card shadow rounded-4 p-3 mb-3">
+                                <h6>Total Variance</h6>
+                                <p class="fs-5 fw-bold text-black">₱<?= number_format(array_sum(array_column($records, 'budget')) - array_sum(array_column($records, 'actual')), 2) ?></p>
+                            </div>
+                            <div class="card shadow rounded-4 p-3">
+                                <h6>Total Tax</h6>
+                                <p class="fs-5 fw-bold text-black">₱<?= number_format(array_sum(array_column($records, 'tax')), 2) ?></p>
+                            </div>
+                        </div>
+
+                        <!-- Right: Charts (65%) -->
+                        <div class="col-md-9">
+                            <div class="row g-4">
+                                <div class="col-md-8">
+                                    <div class="card shadow rounded-4 p-3 h-100">
+                                        <h6 class="text-center">Weekly Budget vs Actual</h6>
+                                        <canvas id="weeklyChart" height="200"></canvas>
+                                    </div>
+                                </div>
+                                <div class="col-md-4">
+                                    <div class="card shadow rounded-4 p-3 h-100">
+                                        <h6 class="text-center">Category Breakdown</h6>
+                                        <canvas id="doughnutChart"></canvas>
+                                        <div class="mt-2 small text-center" id="categoryLegend"></div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="text-end mt-4">
+                        <button id="downloadReport" class="btn btn-outline-secondary">📄 Download Report (PDF)</button>
+                    </div>
                 </div>
             </div>
         </div>

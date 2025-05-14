@@ -2,32 +2,80 @@
     include('validate_login.php');
     $page_title = "EXPENSES";
 
+    // Database connection
     $host = 'localhost';
     $user = 'root';
     $password = '';
     $database = 'malayasol';
     $conn = new mysqli($host, $user, $password, $database);
 
+    // Check connection
     if ($conn->connect_error) {
         die("Connection failed: " . $conn->connect_error);
     }
 
-    //Use fixed project code for corporate tracker
-    $project_code = 'Corporate';
+    // Ensure user is logged in
+    if (!isset($_SESSION['user_id'])) {
+        header("Location: ms_login.php");
+        exit();
+    }
+
+    $user_id = $_SESSION['user_id'];
+
+    // Get user name from joined users & employee table
+    $created_by = "Unknown";
+    if ($user_id) {
+        $stmt = $conn->prepare("
+            SELECT e.first_name, e.last_name 
+            FROM users u
+            LEFT JOIN employee e ON u.employee_id = e.employee_id 
+            WHERE u.user_id = ?
+        ");
+        $stmt->bind_param("i", $user_id);
+        $stmt->execute();
+        $stmt->bind_result($first_name, $last_name);
+        if ($stmt->fetch()) {
+            $created_by = "$first_name $last_name";
+        }
+        $stmt->close();
+    }
+
+    // Get project_id from URL
+    $project_id = 1;
 
     $records = [];
+    $project = null;
 
-    //Get records for 'Corporate' project only
-    $stmt = $conn->prepare("SELECT * FROM project_expense WHERE project_id = ?");
-    $stmt->bind_param("s", $project_code);
-    $stmt->execute();
-    $result = $stmt->get_result();
-    while ($row = $result->fetch_assoc()) {
-        $records[] = $row;
+    if ($project_id > 0) {
+        // Get project details
+        $project_stmt = $conn->prepare("
+            SELECT 
+                p.project_id, p.project_name, p.project_code, p.first_name, p.last_name,
+                p.company_name, p.description, p.creation_date, 
+                p.created_by, p.edit_date, p.edited_by
+            FROM projects p
+            WHERE p.project_id = ?
+        ");
+        $project_stmt->bind_param("i", $project_id);
+        $project_stmt->execute();
+        $project_result = $project_stmt->get_result();
+        if ($project_result && $project_result->num_rows > 0) {
+            $project = $project_result->fetch_assoc();
+        }
+        $project_stmt->close();
+
+        // Get expense records for the project
+        $stmt = $conn->prepare("SELECT * FROM project_expense WHERE project_id = ?");
+        $stmt->bind_param("i", $project['project_id']);
+        $stmt->execute();
+        $result = $stmt->get_result();
+        while ($row = $result->fetch_assoc()) {
+            $records[] = $row;
+        }
+        $stmt->close();
     }
-    $stmt->close();
 
-    // Analytics Chart
+    // Prepare data for analytics if needed
     $category_totals = [];
     $monthly_totals = [];
 
@@ -39,75 +87,65 @@
         $monthly_totals[$month] = ($monthly_totals[$month] ?? 0) + $record['actual'];
     }
 
-    // Add Record
-    if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['add_record'])) {
-        $category = $_POST['category'];
-        $record_date = $_POST['record_date'];
-        $budget = $_POST['budget'];
-        $actual = $_POST['actual'];
-        $payee = $_POST['payee'];
-        $description = $_POST['description'];
-        $remarks = $_POST['remarks'];
+    // Handle form submission
+    if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['form_mode'])) {
+        $edit_id = isset($_POST['edit_id']) ? intval($_POST['edit_id']) : 0;
 
+        $category = $_POST['category'] ?? '';
+        $record_date = $_POST['record_date'] ?? date('Y-m-d');
+        $budget = floatval($_POST['budget'] ?? 0);
+        $actual = floatval($_POST['actual'] ?? 0);
+        $payee = $_POST['payee'] ?? '';
+        $description = $_POST['description'] ?? '';
+        $remarks = $_POST['remarks'] ?? '';
         $variance = $budget - $actual;
-        $tax = 0;
-        $creation_date = date('Y-m-d');
+        $tax = round($actual * 0.12, 2); // Assuming 12% VAT
 
-        $stmt = $conn->prepare("INSERT INTO project_expense 
-            (project_id, category, description, budget, actual, payee, variance, tax, remarks, record_date, creation_date) 
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
-        $stmt->bind_param("sssiisissss", 
-            $project_code, $category, $description, $budget, $actual, $payee, $variance, $tax, $remarks, $record_date, $creation_date);
-
-        if ($stmt->execute()) {
-            header("Location: ms_expenses.php"); // 
-            exit();
+        if ($edit_id > 0) {
+            // UPDATE EXISTING RECORD
+            $stmt = $conn->prepare("UPDATE project_expense SET 
+                category = ?, record_date = ?, budget = ?, actual = ?, payee = ?, description = ?, remarks = ?, 
+                variance = ?, tax = ?, edited_by = ?, edit_date = NOW()
+                WHERE record_id = ? AND project_id = ?");
+            $stmt->bind_param(
+                "ssddsssdsdii",
+                $category, $record_date, $budget, $actual, $payee, $description, $remarks,
+                $variance, $tax, $user_id, $edit_id, $project_id
+            );
+            $stmt->execute();
+            $stmt->close();
         } else {
-            echo "<script>alert('Error adding record: " . $stmt->error . "');</script>";
+            // ADD NEW RECORD
+            $stmt = $conn->prepare("INSERT INTO project_expense (
+                project_id, category, record_date, budget, actual, payee, description, remarks, 
+                variance, tax, created_by, creation_date
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())");
+            $stmt->bind_param(
+                "issddssssds",
+                $project_id, $category, $record_date, $budget, $actual, $payee, $description, $remarks,
+                $variance, $tax, $user_id
+            );
+            $stmt->execute();
+            $stmt->close();
         }
-        $stmt->close();
+
+        // Redirect to avoid form resubmission
+        header("Location: ms_records.php?projectId=$project_id");
+        exit();
     }
 
-    // Edit Record
-    if (isset($_POST['save_edit'])) {
-        $edit_id = $_POST['edit_id'];
-        $category = $_POST['category'];
-        $record_date = $_POST['record_date'];
-        $budget = $_POST['budget'];
-        $actual = $_POST['actual'];
-        $payee = $_POST['payee'];
-        $description = $_POST['description'];
-        $remarks = $_POST['remarks'];
-
-        $variance = $budget - $actual;
-        $tax = 0; // Define tax again
-
-        $stmt = $conn->prepare("UPDATE project_expense SET 
-            category = ?, record_date = ?, budget = ?, actual = ?, variance = ?, tax = ?, payee = ?, description = ?, remarks = ?
-            WHERE record_id = ?");
-        $stmt->bind_param("ssddddsssi", 
-            $category, $record_date, $budget, $actual, $variance, $tax, $payee, $description, $remarks, $edit_id);
-
-        if ($stmt->execute()) {
-            echo "<script>window.location.href = 'ms_expenses.php';</script>";
-            exit();
-        } else {
-            echo "Error updating record: " . $conn->error;
-        }
-    }
-
-    // Delete Record
+    // Delete record
     if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['delete_record'])) {
         $id = $_POST['record_id'];
-
+    
         $stmt = $conn->prepare("DELETE FROM project_expense WHERE record_id = ?");
         $stmt->bind_param("i", $id);
         $stmt->execute();
         $stmt->close();
-
-        header("Location: ms_expenses.php"); 
+    
+        header("Location: ms_records.php?projectId=" . $project_id);
         exit();
-    }
+    }    
 
     $conn->close();
 ?>
@@ -135,283 +173,234 @@
     <div class="content-area">
         <?php include 'header.php'; ?>
 
-    <div class="content-body">
+        <div class="content-body">
+            <!-- Add Records, Search, Filter, and Toggle Bar -->
+            <div class="search-filter-bar">
+                <!-- Left group: Add, Search, Filter -->
+                <div class="left-controls">
+                    <button onclick="openRecordModal('add')" class="add-record-btn">ADD RECORD</button>
 
-        <!-- Add Records, Search, Filter, and Toggle Bar -->
-        <div class="search-filter-bar">
-            <!-- Left group: Add, Search, Filter -->
-            <div class="left-controls">
-                <button class="add-record-btn">ADD RECORD</button>
+                    <div class="search-container">
+                        <input type="text" class="search-input" placeholder="SEARCH">
+                    </div>
 
-                <div class="search-container">
-                    <input type="text" class="search-input" placeholder="SEARCH">
+                    <div class="filter-options">
+                    <button class="sort-btn">
+                        <img src="icons/arrow-down-up.svg" alt="SortIcon" width="16"> Sort By
+                    </button>                    
+                    <button class="filter-btn">
+                        <img src="icons/filter.svg" alt="FilterIcon" width="16"> Filter
+                    </button>
+                    </div>
                 </div>
 
-                <div class="filter-options">
-                <button class="sort-btn">
-                    <img src="icons/arrow-down-up.svg" alt="SortIcon" width="16"> Sort By
-                </button>                    
-                <button class="filter-btn">
-                    <img src="icons/filter.svg" alt="FilterIcon" width="16"> Filter
-                </button>
+                <!-- Right group: View toggle -->
+                <div class="view-toggle">
+                    <button class="toggle-btn active" id="view-records">RECORD</button>
+                    <button class="toggle-btn" id="view-analytics">ANALYTICS</button>
                 </div>
             </div>
-        <!-- Right group: View toggle -->
-        <div class="view-toggle">
-                <button class="toggle-btn active" id="view-records">RECORD</button>
-                <button class="toggle-btn" id="view-analytics">ANALYTICS</button>
+
+            <!-- RECORDS VIEW -->
+            <!-- Expense Records Table -->
+            <div class="records-table-container">
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th> </th>
+                            <th>Category</th>
+                            <th>Description</th>
+                            <th>Budget</th>
+                            <th>Actual</th>
+                            <th>Payee</th>
+                            <th>Variance</th>
+                            <th>Tax</th>
+                            <th>Remarks</th>
+                            <th>Date</th>
+                            <th> </th>
+                            <th> </th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <?php if (count($records) > 0): ?>
+                            <?php foreach ($records as $i => $row): ?>
+                                <tr>
+                                    <td><?= $i + 1 ?></td>
+                                    <td><?= htmlspecialchars($row['category']) ?></td>
+                                    <td title="<?= htmlspecialchars($row['description']) ?>">
+                                        <?= htmlspecialchars($row['description']) ?>
+                                    </td>
+                                    <td><?= number_format($row['budget'], 2) ?></td>
+                                    <td><?= number_format($row['actual'], 2) ?></td>
+                                    <td title="<?= htmlspecialchars($row['payee']) ?>">
+                                        <?= htmlspecialchars($row['payee']) ?>
+                                    </td>
+                                    <td><?= number_format($row['variance'], 2) ?></td>
+                                    <td><?= number_format($row['tax'], 2) ?></td>
+                                    <td title="<?= htmlspecialchars($row['remarks']) ?>">
+                                        <?= htmlspecialchars($row['remarks']) ?>
+                                    </td>
+                                    <td><?= date("m-d-Y", strtotime($row['record_date'])) ?></td>
+                                    <td>
+                                        <a href="#" class="edit-btn"
+                                            data-id="<?= $row['record_id'] ?>"
+                                            data-category="<?= htmlspecialchars($row['category']) ?>"
+                                            data-date="<?= $row['record_date'] ?>"
+                                            data-budget="<?= $row['budget'] ?>"
+                                            data-actual="<?= $row['actual'] ?>"
+                                            data-payee="<?= htmlspecialchars($row['payee']) ?>"
+                                            data-description="<?= htmlspecialchars($row['description']) ?>"
+                                            data-remarks="<?= htmlspecialchars($row['remarks']) ?>"
+                                            data-created_by="<?= htmlspecialchars($row['created_by']) ?>"
+                                            data-creation_date="<?= $row['creation_date'] ?>"
+                                            data-edited_by="<?= htmlspecialchars($row['edited_by']) ?>"
+                                            data-edit_date="<?= $row['edit_date'] ?>">
+                                            <img src="icons/edit.svg" width="18">
+                                        </a>
+                                    </td>
+                                    <td>
+                                        <a href="#" class="delete-btn" data-id="<?= htmlspecialchars($row['record_id']) ?>">
+                                            <img src="icons/x-circle.svg" alt="Delete" width="18">
+                                        </a>
+                                    </td>
+                                </tr>
+                            <?php endforeach; ?>
+                        <?php else: ?>
+                            <tr><td colspan="12" class="text-center">No records available for this project.</td></tr>
+                        <?php endif; ?>
+                    </tbody>
+                </table>
             </div>
-        </div>
 
-        <!-- RECORDS VIEW -->
-        <!-- Table of records -->
-        <div class="records-table-container">
-            <table class="table">
-                <thead>
-                    <tr>
-                        <th>ID </th>
-                        <th>Category</th>
-                        <th>Description</th>
-                        <th>Budget</th>
-                        <th>Actual</th>
-                        <th>Payee</th>
-                        <th>Variance</th>
-                        <th>Tax</th>
-                        <th>Remarks</th>
-                        <th>Date</th>
-                        <th>Action</th>
-                       
-                    </tr>
-                </thead>
-                <tbody>
-                    <?php if (count($records) > 0): ?>
-                        <?php foreach ($records as $i => $row): ?>
-                            <tr>
-                                <td><?= $i + 1 ?></td>
-                                <td><?= $row['category'] ?></td>
-                                <td title="<?= htmlspecialchars($row['description']) ?>">
-                                    <?= htmlspecialchars($row['description']) ?>
-                                </td>
-                                <td><?= number_format($row['budget'], 2) ?></td>
-                                <td><?= number_format($row['actual'], 2) ?></td>
-                                <td title="<?= htmlspecialchars($row['payee']) ?>">
-                                    <?= htmlspecialchars($row['payee']) ?>
-                                </td>
-                                <td><?= number_format($row['variance'], 2) ?></td>
-                                <td><?= number_format($row['tax'], 2) ?></td>
-                                <td title="<?= htmlspecialchars($row['remarks']) ?>">
-                                    <?= htmlspecialchars($row['remarks']) ?>
-                                </td>
-                                <td><?= date("m-d-Y", strtotime($row['record_date'])) ?></td>
-                                <td>
-                                    <a href="#"  class="edit-btn"
-                                        data-id="<?= $row['record_id'] ?>"
-                                        data-category="<?= $row['category'] ?>"
-                                        data-date="<?= $row['record_date'] ?>"
-                                        data-budget="<?= $row['budget'] ?>"
-                                        data-actual="<?= $row['actual'] ?>"
-                                        data-payee="<?= $row['payee'] ?>"
-                                        data-description="<?= $row['description'] ?>"
-                                        data-remarks="<?= $row['remarks'] ?>">
-                                       &nbsp;&nbsp;&nbsp; <img src="icons/edit.svg" width="18">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
-                                                                                <img src="icons/x-circle.svg" alt="Delete" width="18">
+            <!--ANALYTICS VIEW -->
+            
+            <div class="analytics-view container py-4" style="display: none;">
+                <div class="mb-4">
+                    <div class="row">
+                        <!-- Left: Summary (25%) -->
+                        <div class="col-md-3">
+                            <div class="card shadow rounded-4 p-3 mb-3">
+                                <h6>Total Budget</h6>
+                                <p class="fs-5 fw-bold text-black">₱<?= number_format(array_sum(array_column($records, 'budget')), 2) ?></p>
+                            </div>
+                            <div class="card shadow rounded-4 p-3 mb-3">
+                                <h6>Total Actual</h6>
+                                <p class="fs-5 fw-bold text-black">₱<?= number_format(array_sum(array_column($records, 'actual')), 2) ?></p>
+                            </div>
+                            <div class="card shadow rounded-4 p-3 mb-3">
+                                <h6>Total Variance</h6>
+                                <p class="fs-5 fw-bold text-black">₱<?= number_format(array_sum(array_column($records, 'budget')) - array_sum(array_column($records, 'actual')), 2) ?></p>
+                            </div>
+                            <div class="card shadow rounded-4 p-3">
+                                <h6>Total Tax</h6>
+                                <p class="fs-5 fw-bold text-black">₱<?= number_format(array_sum(array_column($records, 'tax')), 2) ?></p>
+                            </div>
+                        </div>
 
-                                    </a>
-                                </td>   
-                                    <a href="#" class="delete-btn" data-id="<?= htmlspecialchars($row['record_id']) ?>">
-                                    </a>
-                            </tr>
-                        <?php endforeach; ?>
-                    <?php else: ?>
-                        <tr><td colspan="12" class="text-center">No records available for this project.</td></tr>
-                    <?php endif; ?>
-                </tbody>
-            </table>
-        </div>
-
-        <!--ANALYTICS VIEW -->
-        
-        <div class="analytics-view container py-4" style="display: none;">
-            <div class="mb-4">
-                <h2 class="text-center mb-3">Project Overview</h2>
-                <div class="row text-center">
-                    <div class="col-md-3">
-                        <div class="card shadow rounded-4 p-3">
-                            <h6>Total Budget</h6>
-                            <p class="fs-5 fw-bold text-primary">₱<?= number_format(array_sum(array_column($records, 'budget')), 2) ?></p>
+                        <!-- Right: Charts (65%) -->
+                        <div class="col-md-9">
+                            <div class="row g-4">
+                                <div class="col-md-8">
+                                    <div class="card shadow rounded-4 p-3 h-100">
+                                        <h6 class="text-center">Weekly Budget vs Actual</h6>
+                                        <canvas id="weeklyChart" height="200"></canvas>
+                                    </div>
+                                </div>
+                                <div class="col-md-4">
+                                    <div class="card shadow rounded-4 p-3 h-100">
+                                        <h6 class="text-center">Category Breakdown</h6>
+                                        <canvas id="doughnutChart"></canvas>
+                                        <div class="mt-2 small text-center" id="categoryLegend"></div>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
                     </div>
-                    <div class="col-md-3">
-                        <div class="card shadow rounded-4 p-3">
-                            <h6>Total Actual</h6>
-                            <p class="fs-5 fw-bold text-success">₱<?= number_format(array_sum(array_column($records, 'actual')), 2) ?></p>
-                        </div>
-                    </div>
-                    <div class="col-md-3">
-                        <div class="card shadow rounded-4 p-3">
-                            <h6>Total Variance</h6>
-                            <p class="fs-5 fw-bold text-warning">₱<?= number_format(array_sum(array_column($records, 'budget')) - array_sum(array_column($records, 'actual')), 2) ?></p>
-                        </div>
-                    </div>
-                    <div class="col-md-3">
-                        <div class="card shadow rounded-4 p-3">
-                            <h6>Total Tax</h6>
-                            <p class="fs-5 fw-bold text-danger">₱<?= number_format(array_sum(array_column($records, 'tax')), 2) ?></p>
-                        </div>
-                    </div>
-                </div>
-            </div>
 
-            <div class="row g-4">
-                <div class="col-md-6">
-                    <div class="card shadow rounded-4 p-3">
-                        <h6 class="text-center">Actual by Category</h6>
-                        <canvas id="categoryChart"></canvas>
+                    <div class="text-end mt-4">
+                        <button id="downloadReport" class="btn btn-outline-secondary">📄 Download Report (PDF)</button>
                     </div>
                 </div>
-                <div class="col-md-6">
-                    <div class="card shadow rounded-4 p-3">
-                        <h6 class="text-center">Monthly Actual Spending</h6>
-                        <canvas id="monthlyChart"></canvas>
-                    </div>
-                </div>
-            </div>
-
-            <div class="row mt-4">
-                <div class="col-md-6">
-                    <div class="card shadow rounded-4 p-3">
-                        <h6 class="text-center">Expense Distribution</h6>
-                        <canvas id="pieChart"></canvas>
-                    </div>
-                </div>
-                <div class="col-md-6">
-                    <div class="card shadow rounded-4 p-3">
-                        <h6 class="text-center">Variance Over Time</h6>
-                        <canvas id="varianceChart"></canvas>
-                    </div>
-                </div>
-            </div>
-
-            <div class="text-end mt-4">
-                <button id="downloadReport" class="btn btn-outline-secondary">📄 Download Report (PDF)</button>
             </div>
         </div>
-    </div>
 
-    <!-- ADD RECORD MODAL -->
-    <div id="addRecordModal" class="custom-modal-overlay">
-        <div class="custom-modal">
-            <div class="modal-header">
-               <center><h5>ADD RECORD</h5></center>  
+        <!-- ADD/EDIT RECORD MODAL -->
+        <div id="recordModal" class="custom-modal-overlay" style="display:none;">
+            <div class="custom-modal">
+                <div class="modal-header">
+                    <h5 id="recordModalHeader">ADD RECORD</h5>
+                </div>
+                <form method="POST" action="ms_records.php?projectId=<?= $project_id ?>">
+                    <input type="hidden" name="edit_id" id="edit_id">
+                    <div class="modal-body">
+                        <div class="input-row">
+                            <div class="form-group">
+                                <label>Category</label>
+                                <select name="category" id="category" required>
+                                    <option value="">-- SELECT --</option>
+                                    <option value="CAPEX: Materials">CAPEX: Materials</option>
+                                    <option value="CAPEX: Labors">CAPEX: Labors</option>
+                                    <option value="CAPEX: Purchase">CAPEX: Purchase</option>
+                                    <option value="OPEX: Gas">OPEX: Gas</option>
+                                    <option value="OPEX: Food">OPEX: Food</option>
+                                    <option value="OPEX: Toll">OPEX: Toll</option>
+                                    <option value="OPEX: Parking">OPEX: Parking</option>
+                                    <option value="OPEX: Salary">OPEX: Salary</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label>Date</label>
+                                <input type="date" name="record_date" id="record_date" value="<?= date('Y-m-d') ?>">
+                            </div>
+                        </div>
+
+                        <div class="input-row">
+                            <div class="form-group">
+                                <label>Budget</label>
+                                <input type="number" name="budget" id="budget" value="0" step="0.01">
+                            </div>
+                            <div class="form-group">
+                                <label>Amount</label>
+                                <input type="number" name="actual" id="actual" step="0.01" required>
+                            </div>
+                        </div>
+
+                        <div class="form-group full-width">
+                            <label>Payee</label>
+                            <input type="text" name="payee" id="payee" required>
+                        </div>
+
+                        <div class="form-group full-width">
+                            <label>Description</label>
+                            <input type="text" name="description" id="description" required> 
+                        </div>
+
+                        <div class="form-group full-width">
+                            <label>Remarks</label>
+                            <textarea name="remarks" id="remarks" rows="3"></textarea>
+                        </div>
+                    </div>
+
+                    <!-- Display metadata (added/edited info) -->
+                    <div id="recordMeta" class="record-meta" style="display: none;">
+                        <div style="display: inline-flex; gap: 20px; width: 100%;">
+                            <div class="meta-left">
+                                <div>Added by: <strong id="createdBy"></strong></div>
+                                <div>Edited by: <strong id="editedBy"></strong></div>
+                            </div>
+                            <div class="meta-right">
+                                <div>Added on: <strong id="createdDate"></strong></div>
+                                <div>Edited on: <strong id="editedDate"></strong></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="modal-footer">
+                        <button type="submit" name="form_mode" id="recordSubmitBtn" class="btn-add">ADD</button>
+                        <button type="button" class="btn-cancel" onclick="closeModal()">CANCEL</button>
+                    </div>
+                </form>
             </div>
-            <form method="POST" action="ms_expenses.php?projectCode=<?= $project_code ?>">
-                <div class="modal-body">
-                    <div class="input-row">
-                        <div class="form-group">
-                            <label>Category</label>
-                            <select name="category" required>
-                                <option value="">-- SELECT --</option>
-                                <option value="OPEX">OPEX</option>
-                                <option value="CAPEX">CAPEX</option>
-                            </select>
-                        </div>
-                        <div class="form-group">
-                            <label>Date</label>
-                            <input type="date" name="record_date" value="<?= date('Y-m-d') ?>">
-                        </div>
-                    </div>
-
-                    <div class="input-row">
-                        <div class="form-group">
-                            <label>Budget</label>
-                            <input type="number" name="budget" value="0" step="0.01">
-                        </div>
-                        <div class="form-group">
-                            <label>Amount</label>
-                            <input type="number" name="actual" step="0.01" required>
-                        </div>
-                    </div>
-
-                    <div class="form-group full-width">
-                        <label>Payee</label>
-                        <input type="text" name="payee" required>
-                    </div>
-
-                    <div class="form-group full-width">
-                        <label>Description</label>
-                        <input type="text" name="description" required> 
-                    </div>
-
-                    <div class="form-group full-width">
-                        <label>Remarks</label>
-                        <textarea name="remarks" rows="3"></textarea>
-                    </div>
-                </div>
-
-                <div class="modal-footer">
-                    <button type="submit" name="add_record" class="btn-add">ADD</button>
-                    <button type="button" class="btn-cancel" onclick="closeModal()">CANCEL</button>
-                </div>
-            </form>
-        </div>
-    </div>
-    
-    <!-- Edit Modal -->
-    <div id="editRecordModal" class="custom-modal-overlay" style="display:none;">
-        <div class="custom-modal">
-            <div class="modal-header">
-              <center> <h5>EDIT RECORD</h5></center>  
-            </div>
-            <form method="POST" action="ms_expenses.php?projectCode=<?= $project_code ?>">
-                <input type="hidden" name="edit_id" id="edit_id">
-                <div class="modal-body">
-                    <div class="input-row">
-                        <div class="form-group">
-                            <label>Category</label>
-                            <select name="category" required>
-                                <option value="">-- SELECT --</option>
-                                <option value="OPEX">OPEX</option>
-                                <option value="CAPEX">CAPEX</option>
-                            </select>
-                        </div>
-                        <div class="form-group">
-                            <label>Date</label>
-                            <input type="date" name="record_date">
-                        </div>
-                    </div>
-
-                    <div class="input-row">
-                        <div class="form-group">
-                            <label>Budget</label>
-                            <input type="number" name="budget" step="0.01">
-                        </div>
-                        <div class="form-group">
-                            <label>Amount</label>
-                            <input type="number" name="actual" step="0.01" required>
-                        </div>
-                    </div>
-
-                    <div class="form-group full-width">
-                        <label>Payee</label>
-                        <input type="text" name="payee" required>
-                    </div>
-
-                    <div class="form-group full-width">
-                        <label>Description</label>
-                        <input type="text" name="description" required>
-                    </div>
-
-                    <div class="form-group full-width">
-                        <label>Remarks</label>
-                        <textarea name="remarks" rows="3"></textarea>
-                    </div>
-                </div>
-
-                <div class="modal-footer">
-                    <button type="submit" name="save_edit" class="btn-edit-delete">SAVE</button>
-                    <button type="button" class="btn-cancel" onclick="closeEditModal()">CANCEL</button>
-                </div>
-            </form>
         </div>
     </div>
 
@@ -419,12 +408,12 @@
     <div id="deleteConfirmModal" class="custom-modal-overlay" style="display:none;">
         <div class="custom-modal">
             <div class="modal-header">
-               <center><h5>Delete Record?</h5></center>
+                <h5>Delete Record?</h5>
             </div>
             <div class="modal-footer">
-                <form method="POST" action="ms_expenses.php?projectCode=<?= $project_code ?>">
+                <form method="POST" action="ms_records.php?projectId=<?= $project_id ?>">
                     <input type="hidden" name="record_id" id="delete_id">
-                    <button type="submit" name="delete_record" class="btn-edit-delete">YES</button>
+                    <button type="submit" name="delete_record" class="btn-save-delete">YES</button>
                     <button type="button" class="btn-cancel" onclick="closeDeleteModal()">NO</button>
                 </form>
             </div>

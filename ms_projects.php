@@ -168,76 +168,78 @@
     <div class="content-area">
         <?php include 'header.php'; ?>
 
-        <!-- Search and Filter Bar -->
-        <div class="search-filter-bar">
-            <div class="search-container">
-                <input type="text" class="search-input" placeholder="SEARCH">
-            </div>
-            <div class="filter-options">
-                <button class="sort-btn">
-                    <img src="icons/arrow-down-up.svg" alt="SortIcon" width="16"> Sort By
-                </button>                    
-                <button class="filter-btn">
-                    <img src="icons/filter.svg" alt="FilterIcon" width="16"> Filter
-                </button>
-            </div>
-        </div>
-
-        <!-- Project Cards Grid -->
-        <div class="project-grid">
-            <?php if ($role === 'manager' || $role === 'superadmin'): ?>
-            <div id="addProjectBtn" class="project-card add-project">
-                <div class="add-project-content">
-                    <img src="icons/circle-plus.svg" alt="AddProjectIcon" width="50">
-                    <div class="add-text">Add New Project</div>
+        <div class="content-body">
+            <!-- Search and Filter Bar -->
+            <div class="search-filter-bar">
+                <div class="search-container">
+                    <input type="text" class="search-input" placeholder="SEARCH">
+                </div>
+                <div class="filter-options">
+                    <button class="sort-btn">
+                        <img src="icons/arrow-down-up.svg" alt="SortIcon" width="16"> Sort By
+                    </button>                    
+                    <button class="filter-btn">
+                        <img src="icons/filter.svg" alt="FilterIcon" width="16"> Filter
+                    </button>
                 </div>
             </div>
-            <?php endif; ?>
 
-            <!-- Dynamically added project cards -->
-            <?php while($row = $projectResult->fetch_assoc()): ?>
-                <div class="project-card" 
-                    data-project-id="<?= $row['project_id'] ?>" 
-                    data-project-code="<?= htmlspecialchars($row['project_code']) ?>"
-                    data-project-name="<?= htmlspecialchars($row['project_name']) ?>"
-                    data-first-name="<?= htmlspecialchars($row['first_name']) ?>"
-                    data-last-name="<?= htmlspecialchars($row['last_name']) ?>"
-                    data-company-name="<?= htmlspecialchars($row['company_name']) ?>"
-                    data-description="<?= htmlspecialchars($row['description']) ?>"
-                    data-contact="<?= htmlspecialchars($row['contact']) ?>"
-                    data-email="<?= htmlspecialchars($row['email']) ?>"
-                    data-unit="<?= htmlspecialchars($row['unit_building_no']) ?>"
-                    data-street="<?= htmlspecialchars($row['street']) ?>"
-                    data-barangay="<?= htmlspecialchars($row['barangay']) ?>"
-                    data-city="<?= htmlspecialchars($row['city']) ?>"
-                    data-country="<?= htmlspecialchars($row['country']) ?>"
-                    data-created-by="<?= htmlspecialchars($row['created_by_name'] ?? 'Unknown') ?>"
-                    data-edited-by="<?= htmlspecialchars($row['edited_by_name'] ?? 'Unknown') ?>"
-                    data-created-on="<?= htmlspecialchars($row['creation_date']) ?>"
-                    data-edited-on="<?= htmlspecialchars($row['edit_date']) ?>">
-                    
-                    <?php if ($role === 'manager' || $role === 'superadmin'): ?>
-                        <div class="project-menu">
-                            <img src="icons/ellipsis.svg" alt="Menu" class="ellipsis-icon" onclick="toggleDropdown(event, this)">
-                            <div class="dropdown-menu">
-                                <button class="dropdown-edit" onclick="openEditModal(this)">Edit</button>
-                                <button class="dropdown-delete" onclick="deleteProject(this)">Delete</button>
+            <!-- Project Cards Grid -->
+            <div class="project-grid">
+                <?php if ($role === 'manager' || $role === 'superadmin'): ?>
+                <div id="addProjectBtn" class="project-card add-project">
+                    <div class="add-project-content">
+                        <img src="icons/circle-plus.svg" alt="AddProjectIcon" width="50">
+                        <div class="add-text">Add New Project</div>
+                    </div>
+                </div>
+                <?php endif; ?>
+
+                <!-- Dynamically added project cards -->
+                <?php while($row = $projectResult->fetch_assoc()): ?>
+                    <div class="project-card" 
+                        data-project-id="<?= $row['project_id'] ?>" 
+                        data-project-code="<?= htmlspecialchars($row['project_code']) ?>"
+                        data-project-name="<?= htmlspecialchars($row['project_name']) ?>"
+                        data-first-name="<?= htmlspecialchars($row['first_name']) ?>"
+                        data-last-name="<?= htmlspecialchars($row['last_name']) ?>"
+                        data-company-name="<?= htmlspecialchars($row['company_name']) ?>"
+                        data-description="<?= htmlspecialchars($row['description']) ?>"
+                        data-contact="<?= htmlspecialchars($row['contact']) ?>"
+                        data-email="<?= htmlspecialchars($row['email']) ?>"
+                        data-unit="<?= htmlspecialchars($row['unit_building_no']) ?>"
+                        data-street="<?= htmlspecialchars($row['street']) ?>"
+                        data-barangay="<?= htmlspecialchars($row['barangay']) ?>"
+                        data-city="<?= htmlspecialchars($row['city']) ?>"
+                        data-country="<?= htmlspecialchars($row['country']) ?>"
+                        data-created-by="<?= htmlspecialchars($row['created_by_name'] ?? 'Unknown') ?>"
+                        data-edited-by="<?= htmlspecialchars($row['edited_by_name'] ?? 'Unknown') ?>"
+                        data-created-on="<?= htmlspecialchars($row['creation_date']) ?>"
+                        data-edited-on="<?= htmlspecialchars($row['edit_date']) ?>">
+                        
+                        <?php if ($role === 'manager' || $role === 'superadmin'): ?>
+                            <div class="project-menu">
+                                <img src="icons/ellipsis.svg" alt="Menu" class="ellipsis-icon" onclick="toggleDropdown(event, this)">
+                                <div class="dropdown-menu">
+                                    <button class="dropdown-edit" onclick="openEditModal(this)">Edit</button>
+                                    <button class="dropdown-delete" onclick="deleteProject(this)">Delete</button>
+                                </div>
                             </div>
-                        </div>
-                    <?php endif; ?>
+                        <?php endif; ?>
 
-                    <div class="project-info">
-                        <h3 class="project-name"><?= htmlspecialchars($row['project_name']) ?></h3>
-                        <p class="project-code">CODE: <?= htmlspecialchars($row['project_code']) ?></p>
+                        <div class="project-info">
+                            <h3 class="project-name"><?= htmlspecialchars($row['project_name']) ?></h3>
+                            <p class="project-code">CODE: <?= htmlspecialchars($row['project_code']) ?></p>
+                        </div>
+                        <div class="project-actions">
+                            <a href="ms_records.php?projectId=<?= urlencode($row['project_id']) ?>" class="btn-records">RECORDS</a>
+                            <a href="ms_records.php?projectId=<?= urlencode($row['project_id']) ?>&view=analytics" class="btn-analytics">
+                                <img src="icons/chart-no-axes-column.svg" alt="AnalyticsIcon" width="16">
+                            </a>
+                        </div>
                     </div>
-                    <div class="project-actions">
-                        <a href="ms_records.php?projectId=<?= urlencode($row['project_id']) ?>" class="btn-records">RECORDS</a>
-                        <a href="ms_records.php?projectId=<?= urlencode($row['project_id']) ?>&view=analytics" class="btn-analytics">
-                            <img src="icons/chart-no-axes-column.svg" alt="AnalyticsIcon" width="16">
-                        </a>
-                    </div>
-                </div>
-            <?php endwhile; ?>
+                <?php endwhile; ?>
+            </div>
         </div>
     </div>
 

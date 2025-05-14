@@ -19,6 +19,7 @@ body {
     font-family: 'Muli', sans-serif;
 
 }
+
 .content-body {
     padding: 20px;
     flex: 1;
@@ -26,26 +27,21 @@ body {
     display: flex;
     flex-direction: column;
     width: 100%;
-    max-width: 1280px;
     margin-left: auto;
     margin-right: auto;
 
-    /* Glassmorphism effect */
-    background: rgba(255, 255, 255, 0.8);
+    background: rgba(242, 242, 242, 0.8);
+    background-image: repeating-linear-gradient(
+        45deg,
+        rgba(255, 255, 255, 0.700) 0px,
+        rgba(255, 255, 255, 0.500) 1px,
+        transparent 1px,
+        transparent 20px
+    );
     backdrop-filter: blur(12px) saturate(180%);
     -webkit-backdrop-filter: blur(12px) saturate(180%);
-    
-    /* Enhanced shadows for depth */
-    box-shadow:
-        0 1px 3px rgba(0, 0, 0, 0.08),
-        0 4px 6px rgba(0, 0, 0, 0.08),
-        0 10px 15px rgba(0, 0, 0, 0.06),
-        0 20px 25px rgba(0, 0, 0, 0.04);
-
-    border: 1px solid rgba(255, 255, 255, 0.3); /* glass border */
-    
-    transition: all 0.3s ease;
 }
+
 .container {
     max-width: 900px; /* or try 960px */
     background-color: #f4f6f8;
