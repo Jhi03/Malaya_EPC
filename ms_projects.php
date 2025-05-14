@@ -48,6 +48,7 @@
         $query = "SELECT * FROM projects";
         $result = $conn->query($query);
     }
+    
     // Form submission (Insert)
     if ($_SERVER["REQUEST_METHOD"] === "POST" && !isset($_POST['delete_project_id'])) {
         $mode = $_POST['form_mode'] ?? 'add';
@@ -60,20 +61,52 @@
         $description = trim($_POST['description']);
         $creation_date = date("Y-m-d");
 
-        if (empty($project_name) || empty($project_code) || empty($first_name) || empty($last_name) || empty($company_name)) {
+        $contact = isset($_POST['contact']) ? intval($_POST['contact']) : null;
+        $email = isset($_POST['email']) ? trim($_POST['email']) : null;
+
+        $unit = $_POST['unit'] ?? null;
+        $street = $_POST['street'] ?? null;
+        $barangay = $_POST['barangay'] ?? null;
+        $city = $_POST['city'] ?? null;
+        $country = $_POST['country'] ?? null;
+
+        if (empty($project_name) || empty($project_code) || empty($first_name) || empty($last_name) || empty($contact) || empty($email) || empty($company_name)) {
             die("All fields are required.");
         }
 
         if ($mode === 'edit') {
             // UPDATE existing project
-            $stmt = $conn->prepare("UPDATE projects SET project_code = ?, project_name = ?, first_name = ?, last_name = ?, company_name = ?, description = ?, edit_date = NOW(), edited_by = ? 
-                                    WHERE project_id = ?");
-            $stmt->bind_param("ssssssii", $project_code, $project_name, $first_name, $last_name, $company_name, $description, $user_id, $project_id);
+            $stmt = $conn->prepare("UPDATE projects SET 
+                project_code = ?, 
+                project_name = ?, 
+                first_name = ?, 
+                last_name = ?, 
+                company_name = ?, 
+                description = ?, 
+                contact = ?, 
+                email = ?, 
+                unit_building_no = ?, 
+                street = ?, 
+                barangay = ?, 
+                city = ?, 
+                country = ?, 
+                edit_date = NOW(), 
+                edited_by = ? 
+                WHERE project_id = ?");
+
+            $stmt->bind_param("sssssssssssssii", 
+                $project_code, $project_name, $first_name, $last_name, $company_name, $description,
+                $contact, $email, $unit, $street, $barangay, $city, $country, $user_id, $project_id);
+
         } else {
-            // INSERT project
-            $stmt = $conn->prepare("INSERT INTO projects (project_code, project_name, first_name, last_name, company_name, description, budget, creation_date, created_by) 
-                                    VALUES (?, ?, ?, ?, ?, ?, 0, ?, ?)");
-            $stmt->bind_param("sssssssi", $project_code, $project_name, $first_name, $last_name, $company_name, $description, $creation_date, $user_id);
+            $stmt = $conn->prepare("INSERT INTO projects 
+                (project_code, project_name, first_name, last_name, company_name, description, contact, email, budget, creation_date, created_by)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, 0, ?, ?)");
+
+            $stmt->bind_param("ssssssissi", 
+                $project_code, $project_name, $first_name, $last_name, $company_name, $description,
+                $contact, $email, $creation_date, $user_id);
+
         }
 
         if ($stmt->execute()) {
@@ -165,7 +198,14 @@
                 data-first-name="<?= htmlspecialchars($row['first_name']) ?>"
                 data-last-name="<?= htmlspecialchars($row['last_name']) ?>"
                 data-company-name="<?= htmlspecialchars($row['company_name']) ?>"
-                data-description="<?= htmlspecialchars($row['description']) ?>">
+                data-description="<?= htmlspecialchars($row['description']) ?>"
+                data-contact="<?= htmlspecialchars($row['contact']) ?>"
+                data-email="<?= htmlspecialchars($row['email']) ?>"
+                data-unit="<?= htmlspecialchars($row['unit_building_no']) ?>"
+                data-street="<?= htmlspecialchars($row['street']) ?>"
+                data-barangay="<?= htmlspecialchars($row['barangay']) ?>"
+                data-city="<?= htmlspecialchars($row['city']) ?>"
+                data-country="<?= htmlspecialchars($row['country']) ?>">
                     <?php if ($role === 'manager' || $role === 'superadmin'): ?>
                         <div class="project-menu">
                             <img src="icons/ellipsis.svg" alt="Menu" class="ellipsis-icon" onclick="toggleDropdown(event, this)">
@@ -188,59 +228,101 @@
                     </div>
                 </div>
             <?php endwhile; ?>
+        </div>
     </div>
 
     <!-- Pop-up Modal -->
     <div id="addProjectModal" class="modal">
         <div class="modal-content">
-            <h2 class="modal-title" id="modalTitle">NEW PROJECT</h2>
-            <form id="projectForm" method="POST">
-                <input type="hidden" name="form_mode" id="formMode" value="add">
-                <input type="hidden" name="project_id" id="editProjectId" value="">
+            <div class="modal-header">
+                <h4 class="modal-title" id="modalTitle">NEW PROJECT</h4>
+            </div>
+            <div class="modal-body">
+                <form id="projectForm" method="POST">
+                    <input type="hidden" name="form_mode" id="formMode" value="add">
+                    <input type="hidden" name="project_id" id="editProjectId">
 
-                <div class="form-row">
-                    <div class="form-group">
-                        <label for="projectName">Project Name</label>
-                        <input type="text" name="projectName" id="projectName" placeholder="Project Name" required>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="projectName">Project Name</label>
+                            <input type="text" name="projectName" id="projectName" placeholder="Project Name" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="projectCode">Project Code</label>
+                            <input type="text" name="projectCode" id="projectCode" placeholder="Project Code" required>
+                        </div>
                     </div>
-                    <div class="form-group">
-                        <label for="projectCode">Project Code</label>
-                        <input type="text" name="projectCode" id="projectCode" placeholder="Project Code" required>
+
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="clientFirstName">Client Name</label>
+                            <input type="text" name="clientFirstName" id="clientFirstName" placeholder="First Name" required>
+                        </div>
+                        <div class="form-group">
+                            <input type="text" name="clientLastName" id="clientLastName" placeholder="Last Name" required>
+                        </div>
                     </div>
-                </div>
-
-                <div class="form-row">
-                    <div class="form-group">
-                        <label for="clientFirstName">Client Name</label>
-                        <input type="text" name="clientFirstName" id="clientFirstName" placeholder="First Name" required>
+                    <!-- Contact and Email (visible in add mode) -->
+                    <div id="contactEmailGroup" class="form-row">
+                        <div class="form-group">
+                            <label for="contact">Contact</label>
+                            <input type="text" name="contact" id="contact" placeholder="Contact Number">
+                        </div>
+                        <div class="form-group">
+                            <label for="email">Email Address</label>
+                            <input type="email" name="email" id="email" placeholder="Email Address">
+                        </div>
                     </div>
+
                     <div class="form-group">
-                        <input type="text" name="clientLastName" id="clientLastName" placeholder="Last Name" required>
+                        <label for="companyName">Company</label>
+                        <input type="text" name="companyName" id="companyName" placeholder="Company Name" required>
                     </div>
-                </div>
+                    <!-- Address Fields (visible in edit mode) -->
+                    <div id="addressGroup" class="form-row" style="display: none;">
+                        <div class="form-group">
+                            <label for="unit">Unit/Building No.</label>
+                            <input type="text" name="unit" id="unit" placeholder="Unit or Building No.">
+                        </div>
+                        <div class="form-group">
+                            <label for="street">Street</label>
+                            <input type="text" name="street" id="street" placeholder="Street">
+                        </div>
+                    </div>
 
-                <div class="form-group">
-                    <label for="companyName">Company</label>
-                    <input type="text" name="companyName" id="companyName" placeholder="Company Name" required>
-                </div>
+                    <div id="locationGroup" class="form-row" style="display: none;">
+                        <div class="form-group">
+                            <label for="barangay">Barangay</label>
+                            <input type="text" name="barangay" id="barangay" placeholder="Barangay">
+                        </div>
+                        <div class="form-group">
+                            <label for="city">City</label>
+                            <input type="text" name="city" id="city" placeholder="City">
+                        </div>
+                        <div class="form-group">
+                            <label for="country">Country</label>
+                            <input type="text" name="country" id="country" placeholder="Country">
+                        </div>
+                    </div>
 
-                <div class="form-group">
-                    <label for="description">Description</label>
-                    <textarea name="description" id="description" placeholder="Project Description" required></textarea>
-                </div>
-
-                <div class="modal-footer">
-                    <button type="submit" id="submitButton" class="btn-add" style="background-color: #38b6ff;">ADD</button>
-                    <button type="button" class="btn-cancel" id="closeModal">CANCEL</button>
-                </div>
-            </form>
+                    <div class="form-group">
+                        <label for="description">Description</label>
+                        <textarea name="description" id="description" placeholder="Project Description" required></textarea>
+                    </div>
+                    
+                    <div class="modal-footer">
+                        <button type="submit" id="submitButton" class="btn-add" style="background-color: #38b6ff;">ADD</button>
+                        <button type="button" class="btn-cancel" id="closeModal">CANCEL</button>
+                    </div>
+                </form>
+            </div>
         </div>
     </div>
 
     <script src="js/sidebar.js"></script>
     <script src="js/header.js"></script>
 
-    <script>            
+    <script>//Dynamic modal: form handling
         //Add Project Form
         const addProjectBtn = document.getElementById("addProjectBtn");
         const modal = document.getElementById("addProjectModal");
@@ -248,12 +330,17 @@
         const form = document.getElementById("projectForm");
         const submitButton = document.getElementById("submitButton");
         const formMode = document.getElementById("formMode");
+        const contactEmailGroup = document.getElementById("contactEmailGroup");
+        const addressGroup = document.getElementById("addressGroup");
+        const locationGroup = document.getElementById("locationGroup");
 
         const fields = {
             name: document.getElementById("projectName"),
             code: document.getElementById("projectCode"),
             first: document.getElementById("clientFirstName"),
             last: document.getElementById("clientLastName"),
+            contact: document.getElementById("contact"),
+            email: document.getElementById("email"),
             company: document.getElementById("companyName"),
             description: document.getElementById("description")
         };
@@ -266,7 +353,11 @@
             formMode.value = "add";
 
             form.reset();
-            modal.style.display = "block";
+            contactEmailGroup.style.display = "flex";
+            addressGroup.style.display = "none";
+            locationGroup.style.display = "none";
+
+            modal.style.display = "flex";
         });
 
         // Edit button handler (delegated inside dropdown-edit)
@@ -280,15 +371,27 @@
                 fields.last.value = card.dataset.lastName || "";
                 fields.company.value = card.dataset.companyName || "";
                 fields.description.value = card.dataset.description || "";
+                fields.contact.value = card.dataset.contact || "";
+                fields.email.value = card.dataset.email || "";
 
-                document.getElementById("editProjectId").value = card.dataset.projectId || "";  // <-- Set project_id here!
+                document.getElementById("editProjectId").value = card.dataset.projectId || "";
 
                 modalTitle.textContent = "EDIT PROJECT";
                 submitButton.textContent = "SAVE";
                 submitButton.style.backgroundColor = "#ff5757";
                 formMode.value = "edit";
 
-                modal.style.display = "block";
+                addressGroup.style.display = "flex";
+                locationGroup.style.display = "flex";
+
+                // OPTIONAL: If you plan to prefill edit form with address fields
+                document.getElementById("unit").value = card.dataset.unit || "";
+                document.getElementById("street").value = card.dataset.street || "";
+                document.getElementById("barangay").value = card.dataset.barangay || "";
+                document.getElementById("city").value = card.dataset.city || "";
+                document.getElementById("country").value = card.dataset.country || "";
+
+                modal.style.display = "flex";
             });
         });
 
@@ -298,7 +401,7 @@
             form.reset();
         });
 
-        // Optional: Close modal on outside click or ESC
+        // Close modal on outside click or ESC
         window.addEventListener("click", (event) => {
             if (event.target === modal) {
                 modal.style.display = "none";
@@ -330,6 +433,11 @@
             });
         });
 
+        // Hook for the ADD button
+        document.getElementById("addProjectBtn").addEventListener("click", openAddProjectModal); 
+    </script>
+    <script>//Project Card Dropdown [EDIT and DELETE]      
+
         // Example hook for edit dropdown
         document.querySelectorAll(".dropdown-edit").forEach(btn => {
             btn.addEventListener("click", function () {
@@ -347,11 +455,8 @@
             });
         });
 
-        // Hook for the ADD button
-        document.getElementById("addProjectBtn").addEventListener("click", openAddProjectModal);
-
         //Project Card Dropdown [EDIT and DELETE]
-       function toggleDropdown(event, el) {
+        function toggleDropdown(event, el) {
             event.stopPropagation(); // Prevent outside click handler
             const menu = el.nextElementSibling;
             const isOpen = menu.style.display === 'block';
@@ -410,7 +515,7 @@
                     alert("An error occurred.");
                 });
             }
-    }
+        }
     </script>
 </body>
 </html>
