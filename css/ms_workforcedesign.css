@@ -1,6 +1,6 @@
 
 body {
-    font-family: 'Atkinson Hyperlegible', sans-serif;
+    font-family: 'Muli', sans-serif;
     margin: 0;
     padding: 0;
     color: black;
@@ -16,8 +16,36 @@ body {
     overflow-y: auto;
     height: 120vh;
     transition: margin-left 0.3s ease-in-out;
-}
+    font-family: 'Muli', sans-serif;
 
+}
+.content-body {
+    padding: 20px;
+    flex: 1;
+    overflow-x: hidden;
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+    max-width: 1280px;
+    margin-left: auto;
+    margin-right: auto;
+
+    /* Glassmorphism effect */
+    background: rgba(255, 255, 255, 0.8);
+    backdrop-filter: blur(12px) saturate(180%);
+    -webkit-backdrop-filter: blur(12px) saturate(180%);
+    
+    /* Enhanced shadows for depth */
+    box-shadow:
+        0 1px 3px rgba(0, 0, 0, 0.08),
+        0 4px 6px rgba(0, 0, 0, 0.08),
+        0 10px 15px rgba(0, 0, 0, 0.06),
+        0 20px 25px rgba(0, 0, 0, 0.04);
+
+    border: 1px solid rgba(255, 255, 255, 0.3); /* glass border */
+    
+    transition: all 0.3s ease;
+}
 .container {
     max-width: 900px; /* or try 960px */
     background-color: #f4f6f8;
@@ -30,7 +58,7 @@ body {
 h1 {
     color: black;
     margin-bottom: 20px;
-    font-family: 'Atkinson Hyperlegible', sans-serif;
+    font-family: 'Muli', sans-serif;
 
 }
 
@@ -41,7 +69,7 @@ h1 {
     width: 85%;          /* Matches the table width */
     margin: 0 auto 20px; /* Centers it and adds spacing below */
     gap: 10px; ;
-    font-family: 'Atkinson Hyperlegible', sans-serif;
+    font-family: 'Muli', sans-serif;
 }
 
 .search-box {
@@ -80,7 +108,7 @@ table {
     border-collapse: separate;
     border-spacing: 0 12px; /* spacing between rows */
     background-color: transparent;
-    font-family: 'Atkinson Hyperlegible', sans-serif;
+    font-family: 'Muli', sans-serif;
 }
 
 th {

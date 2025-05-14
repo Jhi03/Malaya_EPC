@@ -152,9 +152,9 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Malaya Solar Energies Inc.</title>
     <link rel="icon" href="images/Malaya_Logo.png" type="image/png">
+    <link href="https://fonts.googleapis.com/css2?family=Work+Sans:wght@300;400;500;700&family=Tisa:wght@400;700&family=Muli:wght@300;400;600;800&display=swap" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible&display=swap" rel="stylesheet">
-    <link href="css/ms_workforce.css" rel="stylesheet">
+    <link href="css/ms_workforcedesign.css" rel="stylesheet">
     <link href="css/ms_sidebar.css" rel="stylesheet">
     <link href="css/ms_header.css" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
@@ -166,10 +166,9 @@
     
     <div class="content-area">
         <?php include 'header.php'; ?>
-        
-        <div style="padding-top: 50px;"><!-- Space for fixed header -->
-        <h1 style="color: black; margin-left: 80px;  margin-bottom: 20px ;">Employee Management</h1>
-            
+                    
+            <div class="content-body">
+
             <div class="controls">
                 <form method="GET" action="">
                     <input type="text" name="search" class="search-box" placeholder="Search employees..." value="<?php echo htmlspecialchars($search); ?>">

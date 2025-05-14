@@ -119,8 +119,9 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
         <title>Malaya Solar Energies Inc.</title>
     <link rel="icon" href="images/Malaya_Logo.png" type="image/png">
+        <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@300;400;500;700&display=swap" rel="stylesheet">
+
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible&display=swap" rel="stylesheet">
     <link href="css/ms_project_expense.css" rel="stylesheet">
     <link href="css/ms_sidebar.css" rel="stylesheet">
     <link href="css/ms_header.css" rel="stylesheet">
@@ -130,9 +131,11 @@
     <div class="sidebar" id="sidebar">
         <?php include 'sidebar.php'; ?>
     </div>
-    
+
     <div class="content-area">
         <?php include 'header.php'; ?>
+
+    <div class="content-body">
 
         <!-- Add Records, Search, Filter, and Toggle Bar -->
         <div class="search-filter-bar">
@@ -166,7 +169,7 @@
             <table class="table">
                 <thead>
                     <tr>
-                        <th> </th>
+                        <th>ID </th>
                         <th>Category</th>
                         <th>Description</th>
                         <th>Budget</th>
@@ -176,8 +179,8 @@
                         <th>Tax</th>
                         <th>Remarks</th>
                         <th>Date</th>
-                        <th> </th>
-                        <th> </th>
+                        <th>Action</th>
+                       
                     </tr>
                 </thead>
                 <tbody>
@@ -210,14 +213,13 @@
                                         data-payee="<?= $row['payee'] ?>"
                                         data-description="<?= $row['description'] ?>"
                                         data-remarks="<?= $row['remarks'] ?>">
-                                        <img src="icons/edit.svg" width="18">
+                                       &nbsp;&nbsp;&nbsp; <img src="icons/edit.svg" width="18">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+                                                                                <img src="icons/x-circle.svg" alt="Delete" width="18">
+
                                     </a>
                                 </td>   
-                                <td>
                                     <a href="#" class="delete-btn" data-id="<?= htmlspecialchars($row['record_id']) ?>">
-                                        <img src="icons/x-circle.svg" alt="Delete" width="18">
                                     </a>
-                                </td>
                             </tr>
                         <?php endforeach; ?>
                     <?php else: ?>
@@ -300,7 +302,7 @@
     <div id="addRecordModal" class="custom-modal-overlay">
         <div class="custom-modal">
             <div class="modal-header">
-                <h5>ADD RECORD</h5>
+               <center><h5>ADD RECORD</h5></center>  
             </div>
             <form method="POST" action="ms_expenses.php?projectCode=<?= $project_code ?>">
                 <div class="modal-body">
@@ -358,7 +360,7 @@
     <div id="editRecordModal" class="custom-modal-overlay" style="display:none;">
         <div class="custom-modal">
             <div class="modal-header">
-                <h5>EDIT RECORD</h5>
+              <center> <h5>EDIT RECORD</h5></center>  
             </div>
             <form method="POST" action="ms_expenses.php?projectCode=<?= $project_code ?>">
                 <input type="hidden" name="edit_id" id="edit_id">
@@ -417,7 +419,7 @@
     <div id="deleteConfirmModal" class="custom-modal-overlay" style="display:none;">
         <div class="custom-modal">
             <div class="modal-header">
-                <h5>Delete Record?</h5>
+               <center><h5>Delete Record?</h5></center>
             </div>
             <div class="modal-footer">
                 <form method="POST" action="ms_expenses.php?projectCode=<?= $project_code ?>">
