@@ -87,64 +87,51 @@
         $monthly_totals[$month] = ($monthly_totals[$month] ?? 0) + $record['actual'];
     }
 
-    // Add record
-    if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['add_record'])) {
-        $category = $_POST['category'];
-        $record_date = $_POST['record_date'];
-        $budget = $_POST['budget'];
-        $actual = $_POST['actual'];
-        $payee = $_POST['payee'];
-        $description = $_POST['description'];
-        $remarks = $_POST['remarks'];
+    // Handle form submission
+    if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['form_mode'])) {
+        $edit_id = isset($_POST['edit_id']) ? intval($_POST['edit_id']) : 0;
 
+        $category = $_POST['category'] ?? '';
+        $record_date = $_POST['record_date'] ?? date('Y-m-d');
+        $budget = floatval($_POST['budget'] ?? 0);
+        $actual = floatval($_POST['actual'] ?? 0);
+        $payee = $_POST['payee'] ?? '';
+        $description = $_POST['description'] ?? '';
+        $remarks = $_POST['remarks'] ?? '';
         $variance = $budget - $actual;
-        $tax = 0;
-        $creation_date = date('Y-m-d');
+        $tax = round($actual * 0.12, 2); // Assuming 12% VAT
 
-        $stmt = $conn->prepare("INSERT INTO project_expense 
-            (project_id, category, description, budget, actual, payee, variance, tax, remarks, record_date, creation_date, created_by) 
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
-
-        $stmt->bind_param("sssddsddssss", 
-            $project_code, $category, $description, $budget, $actual, $payee, $variance, $tax, $remarks, $record_date, $creation_date, $created_by);
-
-        if ($stmt->execute()) {
-            header("Location: ms_records.php?projectCode=" . $project_code);
-            exit();
+        if ($edit_id > 0) {
+            // UPDATE EXISTING RECORD
+            $stmt = $conn->prepare("UPDATE project_expense SET 
+                category = ?, record_date = ?, budget = ?, actual = ?, payee = ?, description = ?, remarks = ?, 
+                variance = ?, tax = ?, edited_by = ?, edit_date = NOW()
+                WHERE record_id = ? AND project_id = ?");
+            $stmt->bind_param(
+                "ssddsssdsdii",
+                $category, $record_date, $budget, $actual, $payee, $description, $remarks,
+                $variance, $tax, $user_id, $edit_id, $project_id
+            );
+            $stmt->execute();
+            $stmt->close();
         } else {
-            echo "<script>alert('Error adding record: " . $stmt->error . "');</script>";
+            // ADD NEW RECORD
+            $stmt = $conn->prepare("INSERT INTO project_expense (
+                project_id, category, record_date, budget, actual, payee, description, remarks, 
+                variance, tax, created_by, creation_date
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())");
+            $stmt->bind_param(
+                "issddssssds",
+                $project_id, $category, $record_date, $budget, $actual, $payee, $description, $remarks,
+                $variance, $tax, $user_id
+            );
+            $stmt->execute();
+            $stmt->close();
         }
-        $stmt->close();
-    }
 
-    // Edit record
-    if (isset($_POST['save_edit'])) {
-        $edit_id = $_POST['edit_id'];
-        $category = $_POST['category'];
-        $record_date = $_POST['record_date'];
-        $budget = $_POST['budget'];
-        $actual = $_POST['actual'];
-        $payee = $_POST['payee'];
-        $description = $_POST['description'];
-        $remarks = $_POST['remarks'];
-
-        $variance = $budget - $actual;
-        $tax = 0;
-        $edit_date = date('Y-m-d');
-        $edited_by = $created_by;
-
-        $stmt = $conn->prepare("UPDATE project_expense SET 
-            category = ?, record_date = ?, budget = ?, actual = ?, variance = ?, tax = ?, payee = ?, description = ?, remarks = ?, edit_date = ?, edited_by = ?
-            WHERE record_id = ?");
-
-        $stmt->bind_param("ssddddsssssi", $category, $record_date, $budget, $actual, $variance, $tax, $payee, $description, $remarks, $edit_date, $edited_by, $edit_id);
-
-        if ($stmt->execute()) {
-            echo "<script>window.location.href = 'ms_records.php?projectCode=$project_code';</script>";
-            exit();
-        } else {
-            echo "Error updating record: " . $conn->error;
-        }
+        // Redirect to avoid form resubmission
+        header("Location: ms_records.php?projectId=$project_id");
+        exit();
     }
 
     // Delete record
@@ -156,7 +143,7 @@
         $stmt->execute();
         $stmt->close();
     
-        header("Location: ms_records.php?projectCode=" . $project_code);
+        header("Location: ms_records.php?projectId=" . $project_id);
         exit();
     }    
 
@@ -359,7 +346,7 @@
             <div class="modal-header">
                 <h5 id="recordModalHeader">ADD RECORD</h5>
             </div>
-            <form method="POST" action="ms_records.php?projectCode=<?= $project_code ?>">
+            <form method="POST" action="ms_records.php?projectId=<?= $project_id ?>">
                 <input type="hidden" name="edit_id" id="edit_id">
                 <div class="modal-body">
                     <div class="input-row">
@@ -439,7 +426,7 @@
                 <h5>Delete Record?</h5>
             </div>
             <div class="modal-footer">
-                <form method="POST" action="ms_records.php?projectCode=<?= $project_code ?>">
+                <form method="POST" action="ms_records.php?projectId=<?= $project_id ?>">
                     <input type="hidden" name="record_id" id="delete_id">
                     <button type="submit" name="delete_record" class="btn-save-delete">YES</button>
                     <button type="button" class="btn-cancel" onclick="closeDeleteModal()">NO</button>
@@ -480,97 +467,87 @@
             btnAnalytics.click(); // simulate button click
         }
 
-        //ADD and EDIT Record Modal
-        function openRecordModal(mode, data = {}) {
-            const modal = document.getElementById('recordModal');
-            const header = document.getElementById('recordModalHeader');
-            const submitBtn = document.getElementById('recordSubmitBtn');
-            const editIdField = document.getElementById('edit_id');
+        function openAddModal() {
+            document.getElementById('recordModalHeader').textContent = "ADD RECORD";
+            document.getElementById('recordSubmitBtn').textContent = "ADD";
+            document.getElementById('recordMeta').style.display = 'none';
 
-            // Reset all form fields
-            document.querySelector('#recordModal form').reset();
+            // Reset form
+            document.getElementById('edit_id').value = '';
+            document.getElementById('category').value = '';
+            document.getElementById('record_date').value = '<?= date('Y-m-d') ?>';
+            document.getElementById('budget').value = '0';
+            document.getElementById('actual').value = '';
+            document.getElementById('payee').value = '';
+            document.getElementById('description').value = '';
+            document.getElementById('remarks').value = '';
 
-            // Set form based on mode
-            if (mode === 'add') {
-                header.textContent = 'ADD RECORD';
-                submitBtn.textContent = 'ADD';
-                submitBtn.className = 'btn-add';
-                submitBtn.name = 'add_record';
-                editIdField.value = '';
-
-                document.getElementById('recordMeta').style.display = 'none';
-            } else if (mode === 'edit') {
-                header.textContent = 'EDIT RECORD';
-                submitBtn.textContent = 'SAVE';
-                submitBtn.className = 'btn-save-delete';
-                submitBtn.name = 'save_edit';
-                editIdField.value = data.id;
-
-                document.getElementById('category').value = data.category;
-                document.getElementById('record_date').value = data.date;
-                document.getElementById('budget').value = data.budget;
-                document.getElementById('actual').value = data.actual;
-                document.getElementById('payee').value = data.payee;
-                document.getElementById('description').value = data.description;
-                document.getElementById('remarks').value = data.remarks;
-
-                // Fill metadata
-                document.getElementById('recordMeta').style.display = 'block';
-                document.getElementById('createdBy').textContent = data.created_by || 'N/A';
-                document.getElementById('createdDate').textContent = data.creation_date ? formatDate(data.creation_date) : 'N/A';
-                document.getElementById('editedBy').textContent = data.edited_by || '—';
-                document.getElementById('editedDate').textContent = data.edit_date ? formatDate(data.edit_date) : '—';
-            }
-
-            modal.style.display = 'flex';
+            document.getElementById('recordModal').style.display = 'flex';
         }
 
-        function formatDate(dateStr) {
-            const date = new Date(dateStr);
-            return (date.getMonth()+1).toString().padStart(2, '0') + '/' + date.getDate().toString().padStart(2, '0') + '/' + date.getFullYear();
+        function openEditModal(btn) {
+            document.getElementById('recordModalHeader').textContent = "EDIT RECORD";
+            document.getElementById('recordSubmitBtn').textContent = "SAVE"; // Keep as ADD per requirement
+            document.getElementById('recordMeta').style.display = 'flex';
+
+            document.getElementById('edit_id').value = btn.dataset.id;
+            document.getElementById('category').value = btn.dataset.category;
+            document.getElementById('record_date').value = btn.dataset.date;
+            document.getElementById('budget').value = btn.dataset.budget;
+            document.getElementById('actual').value = btn.dataset.actual;
+            document.getElementById('payee').value = btn.dataset.payee;
+            document.getElementById('description').value = btn.dataset.description;
+            document.getElementById('remarks').value = btn.dataset.remarks;
+
+            document.getElementById('createdBy').textContent = btn.dataset.created_by || 'Unknown';
+            document.getElementById('editedBy').textContent = btn.dataset.edited_by || '—';
+            document.getElementById('createdDate').textContent = btn.dataset.creation_date || '—';
+            document.getElementById('editedDate').textContent = btn.dataset.edit_date || '—';
+
+            document.getElementById('recordModal').style.display = 'flex';
         }
 
         function closeModal() {
             document.getElementById('recordModal').style.display = 'none';
         }
 
-        // Trigger edit modal
-        document.querySelectorAll('.edit-btn').forEach(btn => {
-            btn.addEventListener('click', function(e) {
-                e.preventDefault();
-                const data = {
-                    id: this.dataset.id,
-                    category: this.dataset.category,
-                    date: this.dataset.date,
-                    budget: this.dataset.budget,
-                    actual: this.dataset.actual,
-                    payee: this.dataset.payee,
-                    description: this.dataset.description,
-                    remarks: this.dataset.remarks,
-                    created_by: this.dataset.created_by,
-                    creation_date: this.dataset.creation_date,
-                    edited_by: this.dataset.edited_by,
-                    edit_date: this.dataset.edit_date
-                };
-                openRecordModal('edit', data);
+        // Event delegation for edit buttons
+        document.addEventListener('DOMContentLoaded', () => {
+            document.querySelector('.add-record-btn').addEventListener('click', openAddModal);
+            document.querySelectorAll('.edit-btn').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    openEditModal(btn);
+                });
             });
         });
 
-        //Closing methods aside from Cancel Button
-            //  Close on outside click
-            window.onclick = function(event) {
-                if (event.target === modal) {
-                    closeModal();
-                }
+        // Close modal when clicking outside the modal box
+        document.getElementById('recordModal').addEventListener('click', function(event) {
+            const modalBox = document.querySelector('.custom-modal');
+            if (!modalBox.contains(event.target)) {
+                closeModal();
             }
+        });
 
-            //  Close modal on Escape key
-            window.addEventListener("keydown", function(event) {
-                if (event.key === "Escape" && modal.style.display === "flex") {
-                    modal.style.display = "none";
-                    closeModal();
-                }
-            });
+        // Close modal on ESC key press
+        document.addEventListener('keydown', function(event) {
+            if (event.key === "Escape") {
+                closeModal();
+            }
+        });
+
+        // Close modal function
+        function closeModal() {
+            document.getElementById('recordModal').style.display = 'none';
+            document.getElementById('recordModalHeader').innerText = 'ADD RECORD';
+            document.getElementById('recordSubmitBtn').innerText = 'ADD';
+            document.getElementById('recordMeta').style.display = 'none';
+
+            // Optional: Clear the form on close
+            document.querySelector('#recordModal form').reset();
+            document.getElementById('edit_id').value = '';
+        }
 
         // DELETE
         const deleteModal = document.getElementById("deleteConfirmModal");
