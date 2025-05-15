@@ -6,140 +6,110 @@ body {
     overflow: hidden; /* Prevent overall page scroll */
 }
 
-.container {
-    max-width: 1000px;
-    margin: 30px auto; /* Added top margin here */
-    background: #fff;
-    padding: 30px;
-    border-radius: 10px;
-    box-shadow: 0 0 15px rgba(0,0,0,0.1);
-}
-
-h2, h3 {
-    text-align: center;
-    color: #007bff;
-}
-form {
+.content-body {
+    padding: 20px;
+    flex: 1;
+    overflow-x: hidden;
     display: flex;
     flex-direction: column;
-    gap: 12px;
-    margin-bottom: 30px;
-}
-label {
-    font-weight: bold;
-}
-select, input[type="date"], input[type="submit"], input[type="text"], input[type="number"] {
-    padding: 10px;
-    border: 1px solid #ccc;
-    border-radius: 5px;
     width: 100%;
+    margin-left: auto;
+    margin-right: auto;
+
+    background: rgba(242, 242, 242, 0.8);
+    background-image: repeating-linear-gradient(
+        45deg,
+        rgba(255, 255, 255, 0.700) 0px,
+        rgba(255, 255, 255, 0.500) 1px,
+        transparent 1px,
+        transparent 20px
+    );
+    backdrop-filter: blur(12px) saturate(180%);
+    -webkit-backdrop-filter: blur(12px) saturate(180%);
 }
-input[type="submit"], .btn {
-    background-color: #007bff;
-    color: white;
-    border: none;
-    cursor: pointer;
-    text-align: center;
-    display: inline-block;
-    text-decoration: none;
+
+.content-container {
+    padding: 20px;
 }
-input[type="submit"]:hover, .btn:hover {
-    background-color: #0056b3;
-}
-table {
-    width: 100%;
-    border-collapse: collapse;
-    margin-top: 20px;
-}
-th, td {
-    padding: 12px;
-    border: 1px solid #ccc;
-    text-align: center;
-}
-th {
-    background-color: #007bff;
-    color: white;
-}
-.highlight {
-    font-weight: bold;
-    color: #28a745;
-}
-.search-container {
+.card {
     margin-bottom: 20px;
-    display: flex;
-    gap: 10px;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
 }
-.search-container input {
-    flex-grow: 1;
+.card-header {
+    background-color: #f8f9fa;
+    padding: 15px;
+    border-bottom: 1px solid #e7e7e7;
 }
-.search-container button {
-    padding: 10px 15px;
-    background-color: #007bff;
-    color: white;
-    border: none;
-    border-radius: 5px;
-    cursor: pointer;
+.form-group {
+    margin-bottom: 15px;
 }
-.tabs {
-    display: flex;
-    margin-bottom: 20px;
-    border-bottom: 1px solid #ccc;
+.table-responsive {
+    overflow-x: auto;
 }
-.tab {
-    padding: 10px 20px;
-    cursor: pointer;
-    background-color: #f1f1f1;
-    border-radius: 5px 5px 0 0;
+.table th {
+    background-color: #f8f9fa;
+}
+.btn-action {
     margin-right: 5px;
 }
-.tab.active {
-    background-color: #007bff;
-    color: white;
-}
-.tab-content {
-    display: none;
-}
-.tab-content.active {
-    display: block;
-}
-.form-row {
-    display: flex;
-    gap: 10px;
-}
-.form-col {
-    flex: 1;
-}
-.summary-box {
-    background-color: #f8f9fa;
-    border: 1px solid #ddd;
-    border-radius: 5px;
-    padding: 15px;
-    margin: 15px 0;
-}
-.pagination {
-    display: flex;
-    justify-content: center;
-    margin-top: 20px;
-}
-.pagination a {
-    color: black;
-    padding: 8px 16px;
-    text-decoration: none;
-    border: 1px solid #ddd;
-    margin: 0 4px;
-}
-.pagination a.active {
-    background-color: #007bff;
-    color: white;
-    border: 1px solid #007bff;
-}
-.pagination a:hover:not(.active) {
-    background-color: #ddd;
-}
-.filter-container {
+.alert {
     margin-bottom: 20px;
-    padding: 10px;
+}
+.payroll-stats {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 15px;
+    margin-bottom: 20px;
+}
+.stat-card {
+    flex: 1;
+    min-width: 200px;
+    padding: 15px;
+    border-radius: 8px;
+    background-color: #fff;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+.stat-card h3 {
+    margin: 0;
+    font-size: 14px;
+    color: #6c757d;
+}
+.stat-card p {
+    margin: 10px 0 0;
+    font-size: 24px;
+    font-weight: bold;
+}
+.filter-form {
+    padding: 15px;
+    margin-bottom: 20px;
     background-color: #f8f9fa;
-    border-radius: 5px;
-    border: 1px solid #ddd;
+    border-radius: 8px;
+}
+.form-section {
+    border: 1px solid #dee2e6;
+    border-radius: 8px;
+    padding: 15px;
+    margin-bottom: 15px;
+}
+.form-section-title {
+    font-weight: bold;
+    margin-bottom: 10px;
+    border-bottom: 1px solid #dee2e6;
+    padding-bottom: 5px;
+}
+#calculationSummary {
+    font-size: 16px;
+    margin-top: 15px;
+}
+.calculation-row {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 5px;
+}
+.calculation-row.total {
+    font-weight: bold;
+    border-top: 1px solid #dee2e6;
+    padding-top: 5px;
+    margin-top: 5px;
 }

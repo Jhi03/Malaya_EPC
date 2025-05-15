@@ -14,7 +14,6 @@
     <button class="hamburger" id="toggleSidebar">
         <img src="icons/hamburger.svg" alt="Toggle Sidebar">
     </button>    
-    <h2 class="page-title"><?php echo isset($page_title) ? $page_title : 'PAGE TITLE'; ?></h2>
         <div class="user-dropdown">
         <button class="user-icon" id="userDropdownBtn">
             <img src="icons/header-icons/circle-user-round.svg" alt="User Icon" width="30">

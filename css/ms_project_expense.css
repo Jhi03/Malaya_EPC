@@ -1,16 +1,12 @@
 /* Base Reset and Layout */
 body {
-    font-family: 'IBM Plex Sans', sans-serif;
+    font-family: 'IBM Plex Sans', 'Atkinson Hyperlegible', sans-serif;
     margin: 0;
     display: flex;
     height: 100vh;
     overflow: hidden;
     background-color: #f9fafb;
     color: #333;
-}
-
-.payroll-form {
-    margin: 20px;
 }
 
 .content-body {

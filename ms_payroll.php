@@ -208,97 +208,11 @@
     <link rel="icon" href="images/Malaya_Logo.png" type="image/png">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible&display=swap" rel="stylesheet">
+    <link href="css/ms_payroll.css" rel="stylesheet">
     <link href="css/ms_sidebar.css" rel="stylesheet">
     <link href="css/ms_header.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-    <style>
-        .content-container {
-            padding: 20px;
-        }
-        .card {
-            margin-bottom: 20px;
-            border-radius: 8px;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-        }
-        .card-header {
-            background-color: #f8f9fa;
-            padding: 15px;
-            border-bottom: 1px solid #e7e7e7;
-        }
-        .form-group {
-            margin-bottom: 15px;
-        }
-        .table-responsive {
-            overflow-x: auto;
-        }
-        .table th {
-            background-color: #f8f9fa;
-        }
-        .btn-action {
-            margin-right: 5px;
-        }
-        .alert {
-            margin-bottom: 20px;
-        }
-        .payroll-stats {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 15px;
-            margin-bottom: 20px;
-        }
-        .stat-card {
-            flex: 1;
-            min-width: 200px;
-            padding: 15px;
-            border-radius: 8px;
-            background-color: #fff;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-        }
-        .stat-card h3 {
-            margin: 0;
-            font-size: 14px;
-            color: #6c757d;
-        }
-        .stat-card p {
-            margin: 10px 0 0;
-            font-size: 24px;
-            font-weight: bold;
-        }
-        .filter-form {
-            padding: 15px;
-            margin-bottom: 20px;
-            background-color: #f8f9fa;
-            border-radius: 8px;
-        }
-        .form-section {
-            border: 1px solid #dee2e6;
-            border-radius: 8px;
-            padding: 15px;
-            margin-bottom: 15px;
-        }
-        .form-section-title {
-            font-weight: bold;
-            margin-bottom: 10px;
-            border-bottom: 1px solid #dee2e6;
-            padding-bottom: 5px;
-        }
-        #calculationSummary {
-            font-size: 16px;
-            margin-top: 15px;
-        }
-        .calculation-row {
-            display: flex;
-            justify-content: space-between;
-            margin-bottom: 5px;
-        }
-        .calculation-row.total {
-            font-weight: bold;
-            border-top: 1px solid #dee2e6;
-            padding-top: 5px;
-            margin-top: 5px;
-        }
-    </style>
 </head>
 <body>
     <div class="sidebar" id="sidebar">
