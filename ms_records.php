@@ -76,6 +76,20 @@
         $stmt->close();
     }
 
+    // Fetch categories
+    $categories = [];
+    $cat_result = $conn->query("SELECT category_id, category_name FROM categories ORDER BY category_name");
+    while ($row = $cat_result->fetch_assoc()) {
+        $categories[] = $row;
+    }
+
+    // Fetch subcategories
+    $subcategories = [];
+    $subcat_result = $conn->query("SELECT subcategory_id, subcategory_name, category_name FROM subcategories ORDER BY subcategory_name");
+    while ($row = $subcat_result->fetch_assoc()) {
+        $subcategories[] = $row;
+    }
+
     // Prepare data for analytics if needed
     $category_totals = [];
     $monthly_totals = [];
@@ -93,6 +107,7 @@
         $edit_id = isset($_POST['edit_id']) ? intval($_POST['edit_id']) : 0;
 
         $category = $_POST['category'] ?? '';
+        $subcategory = $_POST['subcategory'] ?? '';
         $record_date = $_POST['record_date'] ?? date('Y-m-d');
         $budget = floatval($_POST['budget'] ?? 0);
         $actual = floatval($_POST['actual'] ?? 0);
@@ -105,12 +120,12 @@
         if ($edit_id > 0) {
             // UPDATE EXISTING RECORD
             $stmt = $conn->prepare("UPDATE project_expense SET 
-                category = ?, record_date = ?, budget = ?, actual = ?, payee = ?, description = ?, remarks = ?, 
+                category = ?, subcategory = ?, record_date = ?, budget = ?, actual = ?, payee = ?, description = ?, remarks = ?, 
                 variance = ?, tax = ?, edited_by = ?, edit_date = NOW()
                 WHERE record_id = ? AND project_id = ?");
             $stmt->bind_param(
-                "ssddsssdsdii",
-                $category, $record_date, $budget, $actual, $payee, $description, $remarks,
+                "sssddsssdsdii",
+                $category, $subcategory, $record_date, $budget, $actual, $payee, $description, $remarks,
                 $variance, $tax, $user_id, $edit_id, $project_id
             );
             $stmt->execute();
@@ -118,12 +133,12 @@
         } else {
             // ADD NEW RECORD
             $stmt = $conn->prepare("INSERT INTO project_expense (
-                project_id, category, record_date, budget, actual, payee, description, remarks, 
+                project_id, category, subcategory, record_date, budget, actual, payee, description, remarks, 
                 variance, tax, created_by, creation_date
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())");
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())");
             $stmt->bind_param(
-                "issddssssds",
-                $project_id, $category, $record_date, $budget, $actual, $payee, $description, $remarks,
+                "isssddssssds",
+                $project_id, $category, $subcategory, $record_date, $budget, $actual, $payee, $description, $remarks,
                 $variance, $tax, $user_id
             );
             $stmt->execute();
@@ -305,6 +320,7 @@
                                         <a href="#" class="edit-btn"
                                             data-id="<?= $row['record_id'] ?>"
                                             data-category="<?= htmlspecialchars($row['category']) ?>"
+                                            data-subcategory="<?= htmlspecialchars($row['subcategory']) ?>"
                                             data-date="<?= $row['record_date'] ?>"
                                             data-budget="<?= $row['budget'] ?>"
                                             data-actual="<?= $row['actual'] ?>"
@@ -382,6 +398,7 @@
                     </div>
                 </div>
             </div>
+            <?php include('edit_project_modal.php'); ?>
         </div>
     </div>
 
@@ -396,19 +413,36 @@
                 <div class="modal-body">
                     <div class="input-row">
                         <div class="form-group">
-                            <label>Category</label>
-                            <select name="category" id="category" required>
-                                <option value="">-- SELECT --</option>
-                                <option value="CAPEX: Materials">CAPEX: Materials</option>
-                                <option value="CAPEX: Labors">CAPEX: Labors</option>
-                                <option value="CAPEX: Purchase">CAPEX: Purchase</option>
-                                <option value="OPEX: Gas">OPEX: Gas</option>
-                                <option value="OPEX: Food">OPEX: Food</option>
-                                <option value="OPEX: Toll">OPEX: Toll</option>
-                                <option value="OPEX: Parking">OPEX: Parking</option>
-                                <option value="OPEX: Salary">OPEX: Salary</option>
+                            <label for="category">Category</label>
+                            <select class="form-control" id="category" name="category" required>
+                                <option value="">-- Select Category --</option>
+                                <?php foreach ($categories as $cat): ?>
+                                    <option value="<?= htmlspecialchars($cat['category_name']) ?>" data-id="<?= htmlspecialchars($cat['category_id']) ?>">
+                                        <?= htmlspecialchars($cat['category_name']) ?>
+                                    </option>
+                                <?php endforeach; ?>
                             </select>
                         </div>
+                        <div class="form-group">
+                            <label for="subcategory">Subcategory</label>
+                            <select class="form-control" id="subcategory" name="subcategory" disabled>
+                                <option value="">-- Select Subcategory --</option>
+                                <?php foreach ($subcategories as $subcat): ?>
+                                    <option value="<?= htmlspecialchars($subcat['subcategory_name']) ?>" 
+                                            data-category="<?= htmlspecialchars($subcat['category_name']) ?>">
+                                        <?= htmlspecialchars($subcat['subcategory_name']) ?>
+                                    </option>
+                                <?php endforeach; ?>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="form-group full-width">
+                        <label>Description</label>
+                        <input type="text" name="description" id="description" required> 
+                    </div>
+
+                    <div class="form-group full-width">
                         <div class="form-group">
                             <label>Date</label>
                             <input type="date" name="record_date" id="record_date" value="<?= date('Y-m-d') ?>">
@@ -429,11 +463,6 @@
                     <div class="form-group full-width">
                         <label>Payee</label>
                         <input type="text" name="payee" id="payee" required>
-                    </div>
-
-                    <div class="form-group full-width">
-                        <label>Description</label>
-                        <input type="text" name="description" id="description" required> 
                     </div>
 
                     <div class="form-group full-width">
@@ -508,11 +537,17 @@
         // Attach handlers for edit/delete buttons
         document.querySelectorAll('.dropdown-edit').forEach(button => {
             button.addEventListener('click', function () {
-                alert('Edit project functionality will be implemented later.');
-                // Hide dropdown after click
+                // Show the slide-in edit panel
+                document.getElementById('editProjectPanel').classList.add('open');
+                // Optionally hide the dropdown
                 this.parentElement.style.display = 'none';
             });
         });
+
+        // Close panel function
+        function closeEditPanel() {
+            document.getElementById('editProjectPanel').classList.remove('open');
+        }
 
         //DELETE Button
         function deleteProject(projectId) {
@@ -581,6 +616,7 @@
             // Reset form
             document.getElementById('edit_id').value = '';
             document.getElementById('category').value = '';
+            document.getElementById('subcategory').value = '';
             document.getElementById('record_date').value = '<?= date('Y-m-d') ?>';
             document.getElementById('budget').value = '0';
             document.getElementById('actual').value = '';
@@ -598,6 +634,7 @@
 
             document.getElementById('edit_id').value = btn.dataset.id;
             document.getElementById('category').value = btn.dataset.category;
+            document.getElementById('subcategory').value = btn.dataset.subcategory;
             document.getElementById('record_date').value = btn.dataset.date;
             document.getElementById('budget').value = btn.dataset.budget;
             document.getElementById('actual').value = btn.dataset.actual;
@@ -679,7 +716,36 @@
             if (e.key === "Escape" && deleteModal.style.display === "flex") closeDeleteModal();
         });
     </script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            const categorySelect = document.getElementById('category');
+            const subcategorySelect = document.getElementById('subcategory');
 
+            // Store all subcategories initially
+            const allSubOptions = Array.from(subcategorySelect.querySelectorAll('option[data-category]'));
+
+            categorySelect.addEventListener('change', function () {
+                const selectedCategory = categorySelect.value;
+
+                // Reset and disable if no category selected
+                if (!selectedCategory) {
+                    subcategorySelect.disabled = true;
+                    subcategorySelect.innerHTML = '<option value="">-- Select Subcategory --</option>';
+                    return;
+                }
+
+                subcategorySelect.disabled = false;
+                subcategorySelect.innerHTML = '<option value="">-- Select Subcategory --</option>';
+
+                // Filter subcategories by category name
+                allSubOptions.forEach(option => {
+                    if (option.getAttribute('data-category') === selectedCategory) {
+                        subcategorySelect.appendChild(option.cloneNode(true));
+                    }
+                });
+            });
+        });
+    </script>
     <script>
         const weeklyCtx = document.getElementById('weeklyChart').getContext('2d');
         const doughnutCtx = document.getElementById('doughnutChart').getContext('2d');

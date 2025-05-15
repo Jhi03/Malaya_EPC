@@ -1,177 +1,202 @@
 <?php
     include('validate_login.php');
-    $page_title = "PAYROLL MANAGEMENT";
+    $page_title = "PAYROLL";
 
-    $conn = new mysqli("localhost", "root", "", "malayasol");
+    // Database connection
+    $host = 'localhost';
+    $user = 'root';
+    $password = '';
+    $database = 'malayasol';
+    $conn = new mysqli($host, $user, $password, $database);
 
+    // Check connection
     if ($conn->connect_error) {
         die("Connection failed: " . $conn->connect_error);
     }
 
-    // Create payroll table if it doesn't exist
-    $conn->query("DROP TABLE IF EXISTS payroll");
-    $conn->query("CREATE TABLE IF NOT EXISTS payroll (
-        id INT AUTO_INCREMENT PRIMARY KEY,
-        employee_id INT NOT NULL,
-        period_start DATE NOT NULL,
-        period_end DATE NOT NULL,
-        gross_pay DECIMAL(10,2) NOT NULL,
-        basic_pay DECIMAL(10,2) NOT NULL,
-        overtime_pay DECIMAL(10,2) DEFAULT 0,
-        allowances DECIMAL(10,2) DEFAULT 0,
-        bonus DECIMAL(10,2) DEFAULT 0,
-        sss DECIMAL(10,2) NOT NULL,
-        philhealth DECIMAL(10,2) NOT NULL,
-        pagibig DECIMAL(10,2) NOT NULL,
-        loans DECIMAL(10,2) DEFAULT 0,
-        other_deductions DECIMAL(10,2) DEFAULT 0,
-        total_deductions DECIMAL(10,2) NOT NULL,
-        tax DECIMAL(10,2) NOT NULL,
-        net_pay DECIMAL(10,2) NOT NULL,
-        payment_method VARCHAR(50) DEFAULT 'Bank Transfer',
-        remarks TEXT,
-        date_generated TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-    )");
+    // Ensure user is logged in
+    if (!isset($_SESSION['user_id'])) {
+        header("Location: ms_login.php");
+        exit();
+    }
 
-    // Process payroll generation
-    if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST["generate_payroll"])) {
-        $employee_id = $_POST["employee_id"];
-        $start = $_POST["period_start"];
-        $end = $_POST["period_end"];
-
-        // Get basic employee information
-        $emp = $conn->query("SELECT salary FROM personnel WHERE employee_id = $employee_id")->fetch_assoc();
-        $basic_pay = $emp['salary'];
-        
-        // Calculate additional earnings
-        $overtime_hours = isset($_POST["overtime_hours"]) ? floatval($_POST["overtime_hours"]) : 0;
-        $overtime_rate = isset($_POST["overtime_rate"]) ? floatval($_POST["overtime_rate"]) : 1.5;
-        $overtime_pay = ($basic_pay / 22 / 8) * $overtime_hours * $overtime_rate;
-        
-        $allowances = isset($_POST["allowances"]) ? floatval($_POST["allowances"]) : 0;
-        $bonus = isset($_POST["bonus"]) ? floatval($_POST["bonus"]) : 0;
-        
-        // Calculate gross pay
-        $gross_pay = $basic_pay + $overtime_pay + $allowances + $bonus;
-        
-        // Calculate deductions
-        $sss = min($gross_pay * 0.045, 1125); // 4.5% SSS with cap at 25,000 salary
-        $philhealth = min($gross_pay * 0.035, 875); // 3.5% PhilHealth with cap at 25,000
-        $pagibig = min($gross_pay * 0.02, 100); // 2% Pag-IBIG up to max of 100
-        
-        $loans = isset($_POST["loans"]) ? floatval($_POST["loans"]) : 0;
-        $other_deductions = isset($_POST["other_deductions"]) ? floatval($_POST["other_deductions"]) : 0;
-        
-        $total_deductions = $sss + $philhealth + $pagibig + $loans + $other_deductions;
-        
-        // Calculate tax (improved progressive taxation)
-        $taxable_income = $gross_pay - $sss - $philhealth - $pagibig;
-        $tax = calculateTax($taxable_income);
-        
-        // Calculate net pay
-        $net_pay = $gross_pay - $total_deductions - $tax;
-        
-        $payment_method = $_POST["payment_method"];
-        $remarks = $_POST["remarks"];
-
-        // Insert into database
-        $stmt = $conn->prepare("INSERT INTO payroll (
-            employee_id, period_start, period_end, gross_pay, basic_pay, overtime_pay, 
-            allowances, bonus, sss, philhealth, pagibig, loans, other_deductions, 
-            total_deductions, tax, net_pay, payment_method, remarks
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
-        
-        $stmt->bind_param(
-            "issddddddddddddsss", 
-            $employee_id, $start, $end, $gross_pay, $basic_pay, $overtime_pay, 
-            $allowances, $bonus, $sss, $philhealth, $pagibig, $loans, $other_deductions, 
-            $total_deductions, $tax, $net_pay, $payment_method, $remarks
-        );
+    $user_id = $_SESSION['user_id'];
+    
+    // Process form submissions
+    $success_message = "";
+    $error_message = "";
+    
+    // Handle payroll entry deletion
+    if (isset($_POST['delete_payroll'])) {
+        $payroll_id = $_POST['payroll_id'];
+        $delete_sql = "DELETE FROM payroll WHERE id = ?";
+        $stmt = $conn->prepare($delete_sql);
+        $stmt->bind_param("i", $payroll_id);
         
         if ($stmt->execute()) {
-            echo "<p class='highlight'>✅ Payroll generated successfully!</p>";
+            $success_message = "Payroll entry deleted successfully.";
         } else {
-            echo "<p style='color:red'>Error: " . $stmt->error . "</p>";
+            $error_message = "Error deleting payroll entry: " . $conn->error;
         }
         $stmt->close();
     }
-
-    // Function to calculate tax using progressive tax brackets
-    function calculateTax($taxable_income) {
-        // Monthly tax calculation (simplified Philippine tax structure)
-        if ($taxable_income <= 20833) { // 250,000 annually
-            return 0;
-        } elseif ($taxable_income <= 33332) { // 400,000 annually
-            return ($taxable_income - 20833) * 0.15;
-        } elseif ($taxable_income <= 66666) { // 800,000 annually
-            return 1875 + ($taxable_income - 33332) * 0.20;
-        } elseif ($taxable_income <= 166666) { // 2,000,000 annually
-            return 8541.8 + ($taxable_income - 66666) * 0.25;
-        } elseif ($taxable_income <= 666666) { // 8,000,000 annually
-            return 33541.8 + ($taxable_income - 166666) * 0.30;
-        } else {
-            return 183541.8 + ($taxable_income - 666666) * 0.35;
-        }
-    }
-
-    if (isset($_GET['generate_department_report'])) {
-        $department = $_GET['report_department'];
-        $from_date = $_GET['report_date_from'];
-        $to_date = $_GET['report_date_to'];
+    
+    // Handle payroll entry addition or update
+    if (isset($_POST['save_payroll'])) {
+        $employee_id = $_POST['employee_id'];
+        $period_start = $_POST['period_start'];
+        $period_end = $_POST['period_end'];
+        $gross_pay = $_POST['gross_pay'];
+        $basic_pay = $_POST['basic_pay'];
+        $overtime_pay = $_POST['overtime_pay'] ?? 0;
+        $allowances = $_POST['allowances'] ?? 0;
+        $bonus = $_POST['bonus'] ?? 0;
+        $sss = $_POST['sss'];
+        $philhealth = $_POST['philhealth'];
+        $pagibig = $_POST['pagibig'];
+        $loans = $_POST['loans'] ?? 0;
+        $other_deductions = $_POST['other_deductions'] ?? 0;
+        $total_deductions = $_POST['total_deductions'];
+        $tax = $_POST['tax'];
+        $net_pay = $_POST['net_pay'];
+        $payment_method = $_POST['payment_method'];
+        $remarks = $_POST['remarks'] ?? '';
         
-        // Build the department report query
-        if ($department == 'all') {
-            $dept_query = "SELECT pr.department,
-                COUNT(DISTINCT p.employee_id) as employee_count,
-                SUM(p.gross_pay) as total_gross,
-                SUM(p.total_deductions) as total_deductions,
-                SUM(p.tax) as total_tax,
-                SUM(p.net_pay) as total_net
-            FROM payroll p 
-            JOIN personnel pr ON p.employee_id = pr.employee_id
-            WHERE p.date_generated BETWEEN ? AND ?
-            GROUP BY pr.department
-            ORDER BY pr.department";
+        // Check if we're updating or adding
+        if (isset($_POST['payroll_id']) && !empty($_POST['payroll_id'])) {
+            $payroll_id = $_POST['payroll_id'];
+            $sql = "UPDATE payroll SET 
+                employee_id = ?, 
+                period_start = ?, 
+                period_end = ?, 
+                gross_pay = ?, 
+                basic_pay = ?, 
+                overtime_pay = ?, 
+                allowances = ?, 
+                bonus = ?, 
+                sss = ?, 
+                philhealth = ?, 
+                pagibig = ?, 
+                loans = ?, 
+                other_deductions = ?, 
+                total_deductions = ?, 
+                tax = ?, 
+                net_pay = ?, 
+                payment_method = ?, 
+                remarks = ? 
+                WHERE id = ?";
             
-            $stmt = $conn->prepare($dept_query);
-            $stmt->bind_param("ss", $from_date, $to_date);
-        } else {
-            $dept_query = "SELECT pr.department,
-                COUNT(DISTINCT p.employee_id) as employee_count,
-                SUM(p.gross_pay) as total_gross,
-                SUM(p.total_deductions) as total_deductions,
-                SUM(p.tax) as total_tax,
-                SUM(p.net_pay) as total_net
-            FROM payroll p 
-            JOIN personnel pr ON p.employee_id = pr.employee_id
-            WHERE p.date_generated BETWEEN ? AND ? AND pr.department = ?
-            GROUP BY pr.department";
+            $stmt = $conn->prepare($sql);
+            $stmt->bind_param("issdddddddddddddssi", 
+                $employee_id, $period_start, $period_end, $gross_pay, $basic_pay, 
+                $overtime_pay, $allowances, $bonus, $sss, $philhealth, $pagibig, 
+                $loans, $other_deductions, $total_deductions, $tax, $net_pay, 
+                $payment_method, $remarks, $payroll_id);
             
-            $stmt = $conn->prepare($dept_query);
-            $stmt->bind_param("sss", $from_date, $to_date, $department);
-        }
-        
-        $stmt->execute();
-        $dept_result = $stmt->get_result();
-        
-        echo "<div class='summary-box'>";
-        echo "<h4>Department Report (" . date('M d, Y', strtotime($from_date)) . " to " . date('M d, Y', strtotime($to_date)) . ")</h4>";
-        
-        if ($dept_result->num_rows > 0) {
-            while ($dept_row = $dept_result->fetch_assoc()) {
-                echo $dept_row['department'] . "<br>";
-                echo "Employee Count: " . $dept_row['employee_count'] . "<br>";
-                echo "Total Gross Pay: ₱" . number_format($dept_row['total_gross'], 2) . "<br>";
-                echo "Total Deductions: ₱" . number_format($dept_row['total_deductions'], 2) . "<br>";
-                echo "Total Tax: ₱" . number_format($dept_row['total_tax'], 2) . "<br>";
-                echo "Total Net Pay: ₱" . number_format($dept_row['total_net'], 2) . "<br>";
-                echo "<br>";
+            if ($stmt->execute()) {
+                $success_message = "Payroll entry updated successfully.";
+            } else {
+                $error_message = "Error updating payroll entry: " . $conn->error;
             }
         } else {
-            echo "No data found for the selected period.<br>";
+            // Add new payroll entry
+            $sql = "INSERT INTO payroll (
+                employee_id, period_start, period_end, gross_pay, basic_pay, 
+                overtime_pay, allowances, bonus, sss, philhealth, pagibig, 
+                loans, other_deductions, total_deductions, tax, net_pay, 
+                payment_method, remarks
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+            
+            $stmt = $conn->prepare($sql);
+            $stmt->bind_param("issddddddddddddss", 
+                $employee_id, $period_start, $period_end, $gross_pay, $basic_pay, 
+                $overtime_pay, $allowances, $bonus, $sss, $philhealth, $pagibig, 
+                $loans, $other_deductions, $total_deductions, $tax, $net_pay, 
+                $payment_method, $remarks);
+            
+            if ($stmt->execute()) {
+                $success_message = "Payroll entry added successfully.";
+            } else {
+                $error_message = "Error adding payroll entry: " . $conn->error;
+            }
         }
-        echo "</div>"; // Close the summary-box div
-    } // Close the if statement
+        $stmt->close();
+    }
+    
+    // Fetch all employees for dropdown
+    $employees_query = "SELECT e.employee_id, CONCAT(e.first_name, ' ', e.last_name) as employee_name 
+                       FROM employee e 
+                       WHERE e.status = 'active' 
+                       ORDER BY e.last_name, e.first_name";
+    $employees_result = $conn->query($employees_query);
+    $employees = [];
+    if ($employees_result && $employees_result->num_rows > 0) {
+        while ($row = $employees_result->fetch_assoc()) {
+            $employees[$row['employee_id']] = $row['employee_name'];
+        }
+    }
+    
+    // Set up filtering options
+    $filter_employee = isset($_GET['filter_employee']) ? $_GET['filter_employee'] : '';
+    $filter_period_start = isset($_GET['filter_period_start']) ? $_GET['filter_period_start'] : '';
+    $filter_period_end = isset($_GET['filter_period_end']) ? $_GET['filter_period_end'] : '';
+    $search = isset($_GET['search']) ? $_GET['search'] : '';
+    
+    // Construct the filter query
+    $filter_query = " WHERE 1=1";
+    $params = [];
+    $param_types = "";
+    
+    if (!empty($filter_employee)) {
+        $filter_query .= " AND p.employee_id = ?";
+        $params[] = $filter_employee;
+        $param_types .= "i";
+    }
+    
+    if (!empty($filter_period_start)) {
+        $filter_query .= " AND p.period_start >= ?";
+        $params[] = $filter_period_start;
+        $param_types .= "s";
+    }
+    
+    if (!empty($filter_period_end)) {
+        $filter_query .= " AND p.period_end <= ?";
+        $params[] = $filter_period_end;
+        $param_types .= "s";
+    }
+    
+    if (!empty($search)) {
+        $search_term = "%$search%";
+        $filter_query .= " AND (e.first_name LIKE ? OR e.last_name LIKE ? OR p.payment_method LIKE ?)";
+        $params[] = $search_term;
+        $params[] = $search_term;
+        $params[] = $search_term;
+        $param_types .= "sss";
+    }
+    
+    // Query to fetch payroll entries with employee names
+    $sql = "SELECT p.*, CONCAT(e.first_name, ' ', e.last_name) as employee_name 
+           FROM payroll p 
+           JOIN employee e ON p.employee_id = e.employee_id
+           $filter_query 
+           ORDER BY p.period_end DESC";
+    
+    $stmt = $conn->prepare($sql);
+    
+    if (!empty($params)) {
+        $stmt->bind_param($param_types, ...$params);
+    }
+    
+    $stmt->execute();
+    $result = $stmt->get_result();
+    $payroll_entries = [];
+    
+    if ($result && $result->num_rows > 0) {
+        while ($row = $result->fetch_assoc()) {
+            $payroll_entries[] = $row;
+        }
+    }
+    $stmt->close();
 ?>
 
 <!DOCTYPE html>
@@ -183,10 +208,97 @@
     <link rel="icon" href="images/Malaya_Logo.png" type="image/png">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible&display=swap" rel="stylesheet">
-    <link href="css/ms_payroll.css" rel="stylesheet">
     <link href="css/ms_sidebar.css" rel="stylesheet">
     <link href="css/ms_header.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <style>
+        .content-container {
+            padding: 20px;
+        }
+        .card {
+            margin-bottom: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .card-header {
+            background-color: #f8f9fa;
+            padding: 15px;
+            border-bottom: 1px solid #e7e7e7;
+        }
+        .form-group {
+            margin-bottom: 15px;
+        }
+        .table-responsive {
+            overflow-x: auto;
+        }
+        .table th {
+            background-color: #f8f9fa;
+        }
+        .btn-action {
+            margin-right: 5px;
+        }
+        .alert {
+            margin-bottom: 20px;
+        }
+        .payroll-stats {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+        .stat-card {
+            flex: 1;
+            min-width: 200px;
+            padding: 15px;
+            border-radius: 8px;
+            background-color: #fff;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .stat-card h3 {
+            margin: 0;
+            font-size: 14px;
+            color: #6c757d;
+        }
+        .stat-card p {
+            margin: 10px 0 0;
+            font-size: 24px;
+            font-weight: bold;
+        }
+        .filter-form {
+            padding: 15px;
+            margin-bottom: 20px;
+            background-color: #f8f9fa;
+            border-radius: 8px;
+        }
+        .form-section {
+            border: 1px solid #dee2e6;
+            border-radius: 8px;
+            padding: 15px;
+            margin-bottom: 15px;
+        }
+        .form-section-title {
+            font-weight: bold;
+            margin-bottom: 10px;
+            border-bottom: 1px solid #dee2e6;
+            padding-bottom: 5px;
+        }
+        #calculationSummary {
+            font-size: 16px;
+            margin-top: 15px;
+        }
+        .calculation-row {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 5px;
+        }
+        .calculation-row.total {
+            font-weight: bold;
+            border-top: 1px solid #dee2e6;
+            padding-top: 5px;
+            margin-top: 5px;
+        }
+    </style>
 </head>
 <body>
     <div class="sidebar" id="sidebar">
@@ -195,469 +307,863 @@
     
     <div class="content-area">
         <?php include 'header.php'; ?>
-
-        <div class="payroll-form">
-            <div class="tabs">
-                <div class="tab active" onclick="openTab('generate')">Generate Payroll</div>
-                <div class="tab" onclick="openTab('view')">View Payroll Records</div>
-                <div class="tab" onclick="openTab('reports')">Reports</div>
+        
+        <div class="content-container">
+            <?php if(!empty($success_message)): ?>
+                <div class="alert alert-success"><?php echo $success_message; ?></div>
+            <?php endif; ?>
+            
+            <?php if(!empty($error_message)): ?>
+                <div class="alert alert-danger"><?php echo $error_message; ?></div>
+            <?php endif; ?>
+            
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h1>Payroll Management</h1>
+                <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#payrollModal">
+                    <i class="fas fa-plus-circle me-2"></i>Add New Payroll Entry
+                </button>
             </div>
-
-            <div id="generate" class="tab-content active">
-                <form method="POST">
-                    <div class="search-container">
-                        <input type="text" id="employee_search" placeholder="Search employees by name, ID, or department..." onkeyup="searchEmployees()">
-                        <button type="button" onclick="searchEmployees()">Search</button>
-                    </div>
-
-                    <label>Select Employee:</label>
-                    <select name="employee_id" id="employee_select" required>
-                        <option value="">-- Select Employee --</option>
-                        <?php
-                        $employees = $conn->query("SELECT * FROM personnel WHERE status = 'Active' ORDER BY full_name");
-                        while($row = $employees->fetch_assoc()) {
-                            echo "<option value='{$row['employee_id']}' data-name='{$row['full_name']}' data-department='{$row['department']}'>{$row['full_name']} ({$row['department']})</option>";
-                        }
-                        ?>
-                    </select>
-
-                    <div class="form-row">
-                        <div class="form-col">
-                            <label>Period Start:</label>
-                            <input type="date" name="period_start" required>
-                        </div>
-                        <div class="form-col">
-                            <label>Period End:</label>
-                            <input type="date" name="period_end" required>
-                        </div>
-                    </div>
-
-                    <h3>Earnings</h3>
-                    <div class="form-row">
-                        <div class="form-col">
-                            <label>Overtime Hours:</label>
-                            <input type="number" name="overtime_hours" step="0.01" min="0" value="0">
-                        </div>
-                        <div class="form-col">
-                            <label>Overtime Rate:</label>
-                            <select name="overtime_rate">
-                                <option value="1.25">Regular (1.25x)</option>
-                                <option value="1.5" selected>Regular OT (1.5x)</option>
-                                <option value="1.3">Rest Day (1.3x)</option>
-                                <option value="2">Holiday (2x)</option>
-                            </select>
-                        </div>
-                    </div>
-
-                    <div class="form-row">
-                        <div class="form-col">
-                            <label>Allowances:</label>
-                            <input type="number" name="allowances" step="0.01" min="0" value="0">
-                        </div>
-                        <div class="form-col">
-                            <label>Bonus:</label>
-                            <input type="number" name="bonus" step="0.01" min="0" value="0">
-                        </div>
-                    </div>
-
-                    <h3>Deductions</h3>
-                    <div class="form-row">
-                        <div class="form-col">
-                            <label>Loans/Advances:</label>
-                            <input type="number" name="loans" step="0.01" min="0" value="0">
-                        </div>
-                        <div class="form-col">
-                            <label>Other Deductions:</label>
-                            <input type="number" name="other_deductions" step="0.01" min="0" value="0">
-                        </div>
-                    </div>
-
-                    <h3>Payment Details</h3>
-                    <div class="form-row">
-                        <div class="form-col">
-                            <label>Payment Method:</label>
-                            <select name="payment_method">
-                                <option value="Bank Transfer">Bank Transfer</option>
-                                <option value="Cash">Cash</option>
-                                <option value="Check">Check</option>
-                                <option value="E-wallet">E-wallet</option>
-                            </select>
-                        </div>
-                        <div class="form-col">
-                            <label>Remarks:</label>
-                            <input type="text" name="remarks" placeholder="Any additional notes...">
-                        </div>
-                    </div>
-
-                    <input type="submit" name="generate_payroll" value="Generate Payroll">
-                </form>
-            </div>
-
-            <div id="view" class="tab-content">
-                <div class="filter-container">
-                    <h3>Filter Payroll Records</h3>
-                    <form method="GET">
-                        <div class="form-row">
-                            <div class="form-col">
-                                <label>Employee Name:</label>
-                                <input type="text" name="filter_name" placeholder="Search by name..." 
-                                    value="<?php echo isset($_GET['filter_name']) ? htmlspecialchars($_GET['filter_name']) : ''; ?>">
-                            </div>
-                            <div class="form-col">
-                                <label>Department:</label>
-                                <select name="filter_department">
-                                    <option value="">All Departments</option>
-                                    <?php
-                                    $departments = $conn->query("SELECT DISTINCT department FROM personnel WHERE department != '' ORDER BY department");
-                                    while($dept = $departments->fetch_assoc()) {
-                                        $selected = (isset($_GET['filter_department']) && $_GET['filter_department'] == $dept['department']) ? 'selected' : '';
-                                        echo "<option value='{$dept['department']}' $selected>{$dept['department']}</option>";
-                                    }
-                                    ?>
-                                </select>
-                            </div>
-                        </div>
-                        <div class="form-row">
-                            <div class="form-col">
-                                <label>Date From:</label>
-                                <input type="date" name="filter_date_from"
-                                    value="<?php echo isset($_GET['filter_date_from']) ? $_GET['filter_date_from'] : ''; ?>">
-                            </div>
-                            <div class="form-col">
-                                <label>Date To:</label>
-                                <input type="date" name="filter_date_to"
-                                    value="<?php echo isset($_GET['filter_date_to']) ? $_GET['filter_date_to'] : ''; ?>">
-                            </div>
-                        </div>
-                        <input type="submit" value="Apply Filters">
-                    </form>
+            
+            <!-- Payroll Statistics Section -->
+            <div class="payroll-stats">
+                <div class="stat-card">
+                    <h3>Total Payroll Records</h3>
+                    <p><?php echo count($payroll_entries); ?></p>
                 </div>
-
-                <table>
-                    <tr>
-                        <th>Name</th>
-                        <th>Department</th>
-                        <th>Period</th>
-                        <th>Gross Pay</th>
-                        <th>Deductions</th>
-                        <th>Tax</th>
-                        <th>Net Pay</th>
-                        <th>Date Generated</th>
-                        <th>Actions</th>
-                    </tr>
-                    <?php
-                    // Build the query with filters
-                    $query = "SELECT p.*, pr.full_name, pr.department FROM payroll p 
-                            JOIN personnel pr ON p.employee_id = pr.employee_id WHERE 1=1";
-                    
-                    $params = [];
-                    $types = "";
-                    
-                    if (isset($_GET['filter_name']) && !empty($_GET['filter_name'])) {
-                        $query .= " AND pr.full_name LIKE ?";
-                        $name_param = '%' . $_GET['filter_name'] . '%';
-                        $params[] = $name_param;
-                        $types .= "s";
-                    }
-                    
-                    if (isset($_GET['filter_department']) && !empty($_GET['filter_department'])) {
-                        $query .= " AND pr.department = ?";
-                        $params[] = $_GET['filter_department'];
-                        $types .= "s";
-                    }
-                    
-                    if (isset($_GET['filter_date_from']) && !empty($_GET['filter_date_from'])) {
-                        $query .= " AND p.date_generated >= ?";
-                        $params[] = $_GET['filter_date_from'] . ' 00:00:00';
-                        $types .= "s";
-                    }
-                    
-                    if (isset($_GET['filter_date_to']) && !empty($_GET['filter_date_to'])) {
-                        $query .= " AND p.date_generated <= ?";
-                        $params[] = $_GET['filter_date_to'] . ' 23:59:59';
-                        $types .= "s";
-                    }
-                    
-                    $query .= " ORDER BY p.date_generated DESC";
-                    
-                    // Pagination
-                    $records_per_page = 10;
-                    $page = isset($_GET['page']) ? (int)$_GET['page'] : 1;
-                    $offset = ($page - 1) * $records_per_page;
-                    
-                    $query .= " LIMIT $offset, $records_per_page";
-                    
-                    // Prepare and execute the query
-                    $stmt = $conn->prepare($query);
-                    if (!empty($params)) {
-                        $stmt->bind_param($types, ...$params);
-                    }
-                    $stmt->execute();
-                    $result = $stmt->get_result();
-                    
-                    // Count total records for pagination
-                    $count_query = "SELECT COUNT(*) as total FROM payroll p 
-                                JOIN personnel pr ON p.employee_id = pr.employee_id WHERE 1=1";
-                    
-                    if (isset($_GET['filter_name']) && !empty($_GET['filter_name'])) {
-                        $count_query .= " AND pr.full_name LIKE ?";
-                    }
-                    
-                    if (isset($_GET['filter_department']) && !empty($_GET['filter_department'])) {
-                        $count_query .= " AND pr.department = ?";
-                    }
-                    
-                    if (isset($_GET['filter_date_from']) && !empty($_GET['filter_date_from'])) {
-                        $count_query .= " AND p.date_generated >= ?";
-                    }
-                    
-                    if (isset($_GET['filter_date_to']) && !empty($_GET['filter_date_to'])) {
-                        $count_query .= " AND p.date_generated <= ?";
-                    }
-                    
-                    $count_stmt = $conn->prepare($count_query);
-                    if (!empty($params)) {
-                        $count_stmt->bind_param($types, ...$params);
-                    }
-                    $count_stmt->execute();
-                    $count_result = $count_stmt->get_result();
-                    $count_row = $count_result->fetch_assoc();
-                    $total_records = $count_row['total'];
-                    $total_pages = ceil($total_records / $records_per_page);
-                    
-                    while ($row = $result->fetch_assoc()) {
-                        echo "<tr>
-                            <td>{$row['full_name']}</td>
-                            <td>{$row['department']}</td>
-                            <td>{$row['period_start']} to {$row['period_end']}</td>
-                            <td>₱" . number_format($row['gross_pay'], 2) . "</td>
-                            <td>₱" . number_format($row['total_deductions'], 2) . "</td>
-                            <td>₱" . number_format($row['tax'], 2) . "</td>
-                            <td><strong>₱" . number_format($row['net_pay'], 2) . "</strong></td>
-                            <td>{$row['date_generated']}</td>
-                            <td>
-                                <a href='#' class='btn' onclick='viewPayslip({$row['id']})'>View</a>
-                            </td>
-                        </tr>";
-                    }
-                    
-                    if ($result->num_rows == 0) {
-                        echo "<tr><td colspan='9' style='text-align:center'>No records found</td></tr>";
-                    }
-                    ?>
-                </table>
-                
-                <!-- Pagination links -->
-                <?php if ($total_pages > 1): ?>
-                <div class="pagination">
-                    <?php
-                    $filter_params = '';
-                    if (isset($_GET['filter_name'])) $filter_params .= "&filter_name=" . urlencode($_GET['filter_name']);
-                    if (isset($_GET['filter_department'])) $filter_params .= "&filter_department=" . urlencode($_GET['filter_department']);
-                    if (isset($_GET['filter_date_from'])) $filter_params .= "&filter_date_from=" . urlencode($_GET['filter_date_from']);
-                    if (isset($_GET['filter_date_to'])) $filter_params .= "&filter_date_to=" . urlencode($_GET['filter_date_to']);
-                    
-                    // Previous page link
-                    if ($page > 1) {
-                        echo "<a href='?page=" . ($page - 1) . $filter_params . "'>Previous</a>";
-                    }
-                    
-                    // Page numbers
-                    $start_page = max(1, $page - 2);
-                    $end_page = min($total_pages, $page + 2);
-                    
-                    for ($i = $start_page; $i <= $end_page; $i++) {
-                        $active = $i == $page ? 'active' : '';
-                        echo "<a class='$active' href='?page=$i$filter_params'>$i</a>";
-                    }
-                    
-                    // Next page link
-                    if ($page < $total_pages) {
-                        echo "<a href='?page=" . ($page + 1) . $filter_params . "'>Next</a>";
-                    }
-                    ?>
+                <div class="stat-card">
+                    <h3>Total Employees on Payroll</h3>
+                    <p><?php echo count($employees); ?></p>
+                </div>
+                <?php if(!empty($payroll_entries)): 
+                    $total_net_pay = array_sum(array_column($payroll_entries, 'net_pay'));
+                    $total_tax = array_sum(array_column($payroll_entries, 'tax'));
+                    $total_deductions = array_sum(array_column($payroll_entries, 'total_deductions'));
+                ?>
+                <div class="stat-card">
+                    <h3>Total Net Pay</h3>
+                    <p>₱<?php echo number_format($total_net_pay, 2); ?></p>
+                </div>
+                <div class="stat-card">
+                    <h3>Total Tax</h3>
+                    <p>₱<?php echo number_format($total_tax, 2); ?></p>
                 </div>
                 <?php endif; ?>
             </div>
-
-            <div id="reports" class="tab-content">
-                <h3>Payroll Reports</h3>
-                
-                <div class="form-row">
-                    <div class="form-col">
-                        <h4>Monthly Summary</h4>
-                        <form method="GET" action="#reports">
-                            <div class="form-row">
-                                <div class="form-col">
-                                    <label>Month:</label>
-                                    <select name="report_month" required>
-                                        <?php
-                                        for ($i = 1; $i <= 12; $i++) {
-                                            $month = date('F', mktime(0, 0, 0, $i, 1));
-                                            $selected = (isset($_GET['report_month']) && $_GET['report_month'] == $i) ? 'selected' : '';
-                                            echo "<option value='$i' $selected>$month</option>";
-                                        }
-                                        ?>
-                                    </select>
-                                </div>
-                                <div class="form-col">
-                                    <label>Year:</label>
-                                    <select name="report_year" required>
-                                        <?php
-                                        $current_year = date('Y');
-                                        for ($i = $current_year - 2; $i <= $current_year + 1; $i++) {
-                                            $selected = (isset($_GET['report_year']) && $_GET['report_year'] == $i) ? 'selected' : '';
-                                            echo "<option value='$i' $selected>$i</option>";
-                                        }
-                                        ?>
-                                    </select>
-                                </div>
-                            </div>
-                            <input type="submit" name="generate_monthly_report" value="Generate Report">
-                        </form>
-                        
-                        <?php
-                        if (isset($_GET['generate_monthly_report'])) {
-                            $month = $_GET['report_month'];
-                            $year = $_GET['report_year'];
-                            
-                            $start_date = "$year-$month-01";
-                            $end_date = date('Y-m-t', strtotime($start_date));
-                            
-                            $report_query = "SELECT 
-                                COUNT(DISTINCT employee_id) as employee_count,
-                                SUM(gross_pay) as total_gross,
-                                SUM(basic_pay) as total_basic,
-                                SUM(overtime_pay) as total_overtime,
-                                SUM(allowances) as total_allowances,
-                                SUM(bonus) as total_bonus,
-                                SUM(sss) as total_sss,
-                                SUM(philhealth) as total_philhealth,
-                                SUM(pagibig) as total_pagibig,
-                                SUM(loans) as total_loans,
-                                SUM(other_deductions) as total_other_deductions,
-                                SUM(tax) as total_tax,
-                                SUM(net_pay) as total_net
-                            FROM payroll 
-                            WHERE date_generated BETWEEN ? AND ?";
-                            
-                            $stmt = $conn->prepare($report_query);
-                            $stmt->bind_param("ss", $start_date, $end_date);
-                            $stmt->execute();
-                            $report_result = $stmt->get_result();
-                            $report = $report_result->fetch_assoc();
-                            
-                            echo "<div class='summary-box'>";
-                            echo "<h4>Monthly Summary for " . date('F Y', strtotime($start_date)) . "</h4>";
-                            echo "<p>Total Employees: {$report['employee_count']}</p>";
-                            echo "<p>Total Gross Pay: ₱" . number_format($report['total_gross'], 2) . "</p>";
-                            echo "<p>Total Basic Pay: ₱" . number_format($report['total_basic'], 2) . "</p>";
-                            echo "<p>Total Overtime Pay: ₱" . number_format($report['total_overtime'], 2) . "</p>";
-                            echo "<p>Total Allowances: ₱" . number_format($report['total_allowances'], 2) . "</p>";
-                            echo "<p>Total Bonus: ₱" . number_format($report['total_bonus'], 2) . "</p>";
-                            echo "<p>Total SSS Contributions: ₱" . number_format($report['total_sss'], 2) . "</p>";
-                            echo "<p>Total PhilHealth Contributions: ₱" . number_format($report['total_philhealth'], 2) . "</p>";
-                            echo "<p>Total Pag-IBIG Contributions: ₱" . number_format($report['total_pagibig'], 2) . "</p>";
-                            echo "<p>Total Loans/Advances: ₱" . number_format($report['total_loans'], 2) . "</p>";
-                            echo "<p>Total Other Deductions: ₱" . number_format($report['total_other_deductions'], 2) . "</p>";
-                            echo "<p>Total Tax Withheld: ₱" . number_format($report['total_tax'], 2) . "</p>";
-                            echo "<p><strong>Total Net Pay: ₱" . number_format($report['total_net'], 2) . "</strong></p>";
-                            echo "</div>";
-                        }
-                        ?>
-                    </div>
-                    
-                    <div class="form-col">
-                        <h4>Department Summary</h4>
-                        <form method="GET" action="#reports">
-                            <div class="form-row">
-                                <div class="form-col">
-                                    <label>Department:</label>
-                                    <select name="report_department" required>
-                                        <option value="all">All Departments</option>
-                                        <?php
-                                        $departments = $conn->query("SELECT DISTINCT department FROM personnel WHERE department != '' ORDER BY department");
-                                        while($dept = $departments->fetch_assoc()) {
-                                            $selected = (isset($_GET['report_department']) && $_GET['report_department'] == $dept['department']) ? 'selected' : '';
-                                            echo "<option value='{$dept['department']}' $selected>{$dept['department']}</option>";
-                                        }
-                                        ?>
-                                    </select>
-                                </div>
-                            </div>
-                            <div class="form-row">
-                                <div class="form-col">
-                                    <label>From:</label>
-                                    <input type="date" name="report_date_from" required 
-                                        value="<?php echo isset($_GET['report_date_from']) ? $_GET['report_date_from'] : ''; ?>">
-                                </div>
-                                <div class="form-col">
-                                    <label>To:</label>
-                                    <input type="date" name="report_date_to" required
-                                        value="<?php echo isset($_GET['report_date_to']) ? $_GET['report_date_to'] : ''; ?>">
-                                </div>
-                            </div>
-                            <input type="submit" name="generate_department_report" value="Generate Report">
-                        </form>?>
+            
+            <!-- Filter Form -->
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="mb-0">Filter Payroll Records</h5>
+                </div>
+                <div class="card-body">
+                    <form method="GET" class="row g-3">
+                        <div class="col-md-3">
+                            <label for="filter_employee" class="form-label">Employee</label>
+                            <select class="form-select" id="filter_employee" name="filter_employee">
+                                <option value="">All Employees</option>
+                                <?php foreach($employees as $id => $name): ?>
+                                    <option value="<?php echo $id; ?>" <?php echo ($filter_employee == $id) ? 'selected' : ''; ?>>
+                                        <?php echo $name; ?>
+                                    </option>
+                                <?php endforeach; ?>
+                            </select>
+                        </div>
+                        <div class="col-md-3">
+                            <label for="filter_period_start" class="form-label">Period Start</label>
+                            <input type="date" class="form-control" id="filter_period_start" name="filter_period_start" value="<?php echo $filter_period_start; ?>">
+                        </div>
+                        <div class="col-md-3">
+                            <label for="filter_period_end" class="form-label">Period End</label>
+                            <input type="date" class="form-control" id="filter_period_end" name="filter_period_end" value="<?php echo $filter_period_end; ?>">
+                        </div>
+                        <div class="col-md-3">
+                            <label for="search" class="form-label">Search</label>
+                            <input type="text" class="form-control" id="search" name="search" placeholder="Search..." value="<?php echo $search; ?>">
+                        </div>
+                        <div class="col-12">
+                            <button type="submit" class="btn btn-primary me-2">Apply Filters</button>
+                            <a href="ms_payroll.php" class="btn btn-outline-secondary">Clear Filters</a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+            
+            <!-- Payroll Records Table -->
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">Payroll Records</h5>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-hover table-striped">
+                            <thead>
+                                <tr>
+                                    <th>ID</th>
+                                    <th>Employee</th>
+                                    <th>Period</th>
+                                    <th>Gross Pay</th>
+                                    <th>Deductions</th>
+                                    <th>Tax</th>
+                                    <th>Net Pay</th>
+                                    <th>Payment Method</th>
+                                    <th>Date Generated</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <?php if(empty($payroll_entries)): ?>
+                                    <tr>
+                                        <td colspan="10" class="text-center">No payroll records found.</td>
+                                    </tr>
+                                <?php else: ?>
+                                    <?php foreach($payroll_entries as $entry): ?>
+                                        <tr>
+                                            <td><?php echo $entry['id']; ?></td>
+                                            <td><?php echo $entry['employee_name']; ?></td>
+                                            <td><?php echo date('M d, Y', strtotime($entry['period_start'])) . ' - ' . date('M d, Y', strtotime($entry['period_end'])); ?></td>
+                                            <td>₱<?php echo number_format($entry['gross_pay'], 2); ?></td>
+                                            <td>₱<?php echo number_format($entry['total_deductions'], 2); ?></td>
+                                            <td>₱<?php echo number_format($entry['tax'], 2); ?></td>
+                                            <td>₱<?php echo number_format($entry['net_pay'], 2); ?></td>
+                                            <td><?php echo $entry['payment_method']; ?></td>
+                                            <td><?php echo date('M d, Y', strtotime($entry['date_generated'])); ?></td>
+                                            <td>
+                                                <button class="btn btn-sm btn-info btn-action view-payroll" 
+                                                        data-id="<?php echo $entry['id']; ?>"
+                                                        data-employee="<?php echo $entry['employee_id']; ?>"
+                                                        data-period-start="<?php echo $entry['period_start']; ?>"
+                                                        data-period-end="<?php echo $entry['period_end']; ?>"
+                                                        data-gross="<?php echo $entry['gross_pay']; ?>"
+                                                        data-basic="<?php echo $entry['basic_pay']; ?>"
+                                                        data-overtime="<?php echo $entry['overtime_pay']; ?>"
+                                                        data-allowances="<?php echo $entry['allowances']; ?>"
+                                                        data-bonus="<?php echo $entry['bonus']; ?>"
+                                                        data-sss="<?php echo $entry['sss']; ?>"
+                                                        data-philhealth="<?php echo $entry['philhealth']; ?>"
+                                                        data-pagibig="<?php echo $entry['pagibig']; ?>"
+                                                        data-loans="<?php echo $entry['loans']; ?>"
+                                                        data-other-deductions="<?php echo $entry['other_deductions']; ?>"
+                                                        data-total-deductions="<?php echo $entry['total_deductions']; ?>"
+                                                        data-tax="<?php echo $entry['tax']; ?>"
+                                                        data-net="<?php echo $entry['net_pay']; ?>"
+                                                        data-payment="<?php echo $entry['payment_method']; ?>"
+                                                        data-remarks="<?php echo $entry['remarks']; ?>">
+                                                    <i class="fas fa-eye"></i>
+                                                </button>
+                                                <button class="btn btn-sm btn-warning btn-action edit-payroll"
+                                                        data-id="<?php echo $entry['id']; ?>"
+                                                        data-employee="<?php echo $entry['employee_id']; ?>"
+                                                        data-period-start="<?php echo $entry['period_start']; ?>"
+                                                        data-period-end="<?php echo $entry['period_end']; ?>"
+                                                        data-gross="<?php echo $entry['gross_pay']; ?>"
+                                                        data-basic="<?php echo $entry['basic_pay']; ?>"
+                                                        data-overtime="<?php echo $entry['overtime_pay']; ?>"
+                                                        data-allowances="<?php echo $entry['allowances']; ?>"
+                                                        data-bonus="<?php echo $entry['bonus']; ?>"
+                                                        data-sss="<?php echo $entry['sss']; ?>"
+                                                        data-philhealth="<?php echo $entry['philhealth']; ?>"
+                                                        data-pagibig="<?php echo $entry['pagibig']; ?>"
+                                                        data-loans="<?php echo $entry['loans']; ?>"
+                                                        data-other-deductions="<?php echo $entry['other_deductions']; ?>"
+                                                        data-total-deductions="<?php echo $entry['total_deductions']; ?>"
+                                                        data-tax="<?php echo $entry['tax']; ?>"
+                                                        data-net="<?php echo $entry['net_pay']; ?>"
+                                                        data-payment="<?php echo $entry['payment_method']; ?>"
+                                                        data-remarks="<?php echo $entry['remarks']; ?>">
+                                                    <i class="fas fa-edit"></i>
+                                                </button>
+                                                <button class="btn btn-sm btn-danger btn-action delete-payroll" data-id="<?php echo $entry['id']; ?>">
+                                                    <i class="fas fa-trash"></i>
+                                                </button>
+                                            </td>
+                                        </tr>
+                                    <?php endforeach; ?>
+                                <?php endif; ?>
+                            </tbody>
+                        </table>
                     </div>
                 </div>
             </div>
         </div>
     </div>
-
-    <script src="js/sidebar.js"></script>
-    <script src="js/header.js"></script>
-
+    
+    <!-- Payroll Modal (Add/Edit) -->
+    <div class="modal fade" id="payrollModal" tabindex="-1" aria-labelledby="payrollModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <form id="payrollForm" method="post">
+                    <div class="modal-header">
+                        <h5 class="modal-title" id="payrollModalLabel">Add New Payroll Entry</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body">
+                        <input type="hidden" id="payroll_id" name="payroll_id">
+                        
+                        <div class="form-section">
+                            <div class="form-section-title">Employee Information</div>
+                            <div class="row g-3">
+                                <div class="col-md-12">
+                                    <label for="employee_id" class="form-label">Employee</label>
+                                    <select class="form-select" id="employee_id" name="employee_id" required>
+                                        <option value="">Select Employee</option>
+                                        <?php foreach($employees as $id => $name): ?>
+                                            <option value="<?php echo $id; ?>"><?php echo $name; ?></option>
+                                        <?php endforeach; ?>
+                                    </select>
+                                </div>
+                                <div class="col-md-6">
+                                    <label for="period_start" class="form-label">Period Start</label>
+                                    <input type="date" class="form-control" id="period_start" name="period_start" required>
+                                </div>
+                                <div class="col-md-6">
+                                    <label for="period_end" class="form-label">Period End</label>
+                                    <input type="date" class="form-control" id="period_end" name="period_end" required>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="form-section">
+                            <div class="form-section-title">Earnings</div>
+                            <div class="row g-3">
+                                <div class="col-md-6">
+                                    <label for="basic_pay" class="form-label">Basic Pay</label>
+                                    <input type="number" step="0.01" class="form-control calculation" id="basic_pay" name="basic_pay" required>
+                                </div>
+                                <div class="col-md-6">
+                                    <label for="overtime_pay" class="form-label">Overtime Pay</label>
+                                    <input type="number" step="0.01" class="form-control calculation" id="overtime_pay" name="overtime_pay" value="0.00">
+                                </div>
+                                <div class="col-md-6">
+                                    <label for="allowances" class="form-label">Allowances</label>
+                                    <input type="number" step="0.01" class="form-control calculation" id="allowances" name="allowances" value="0.00">
+                                </div>
+                                <div class="col-md-6">
+                                    <label for="bonus" class="form-label">Bonus</label>
+                                    <input type="number" step="0.01" class="form-control calculation" id="bonus" name="bonus" value="0.00">
+                                </div>
+                                <div class="col-md-6">
+                                    <label for="gross_pay" class="form-label">Gross Pay</label>
+                                    <input type="number" step="0.01" class="form-control" id="gross_pay" name="gross_pay" readonly>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="form-section">
+                            <div class="form-section-title">Deductions</div>
+                            <div class="row g-3">
+                                <div class="col-md-4">
+                                    <label for="sss" class="form-label">SSS</label>
+                                    <input type="number" step="0.01" class="form-control calculation" id="sss" name="sss" required>
+                                </div>
+                                <div class="col-md-4">
+                                    <label for="philhealth" class="form-label">PhilHealth</label>
+                                    <input type="number" step="0.01" class="form-control calculation" id="philhealth" name="philhealth" required>
+                                </div>
+                                <div class="col-md-4">
+                                    <label for="pagibig" class="form-label">Pag-IBIG</label>
+                                    <input type="number" step="0.01" class="form-control calculation" id="pagibig" name="pagibig" required>
+                                </div>
+                                <div class="col-md-6">
+                                    <label for="loans" class="form-label">Loans</label>
+                                    <input type="number" step="0.01" class="form-control calculation" id="loans" name="loans" value="0.00">
+                                </div>
+                                <div class="col-md-6">
+                                    <label for="other_deductions" class="form-label">Other Deductions</label>
+                                    <input type="number" step="0.01" class="form-control calculation" id="other_deductions" name="other_deductions" value="0.00">
+                                </div>
+                                <div class="col-md-6">
+                                    <label for="total_deductions" class="form-label">Total Deductions</label>
+                                    <input type="number" step="0.01" class="form-control" id="total_deductions" name="total_deductions" readonly>
+                                </div>
+                                <div class="col-md-6">
+                                    <label for="tax" class="form-label">Tax</label>
+                                    <input type="number" step="0.01" class="form-control calculation" id="tax" name="tax" required>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="form-section">
+                            <div class="form-section-title">Payment Information</div>
+                            <div class="row g-3">
+                                <div class="col-md-6">
+                                    <label for="net_pay" class="form-label">Net Pay</label>
+                                    <input type="number" step="0.01" class="form-control" id="net_pay" name="net_pay" readonly>
+                                </div>
+                                <div class="col-md-6">
+                                    <label for="payment_method" class="form-label">Payment Method</label>
+                                    <select class="form-select" id="payment_method" name="payment_method" required>
+                                        <option value="Bank Transfer">Bank Transfer</option>
+                                        <option value="Check">Check</option>
+                                        <option value="Cash">Cash</option>
+                                    </select>
+                                </div>
+<div class="col-md-12">
+                                    <label for="remarks" class="form-label">Remarks</label>
+                                    <textarea class="form-control" id="remarks" name="remarks" rows="3"></textarea>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div id="calculationSummary" class="bg-light p-3 rounded">
+                            <h6>Payroll Summary</h6>
+                            <div class="calculation-row">
+                                <span>Basic Pay:</span>
+                                <span id="summary_basic">₱0.00</span>
+                            </div>
+                            <div class="calculation-row">
+                                <span>Overtime Pay:</span>
+                                <span id="summary_overtime">₱0.00</span>
+                            </div>
+                            <div class="calculation-row">
+                                <span>Allowances:</span>
+                                <span id="summary_allowances">₱0.00</span>
+                            </div>
+                            <div class="calculation-row">
+                                <span>Bonus:</span>
+                                <span id="summary_bonus">₱0.00</span>
+                            </div>
+                            <div class="calculation-row total">
+                                <span>Gross Pay:</span>
+                                <span id="summary_gross">₱0.00</span>
+                            </div>
+                            
+                            <div class="calculation-row mt-3">
+                                <span>SSS:</span>
+                                <span id="summary_sss">₱0.00</span>
+                            </div>
+                            <div class="calculation-row">
+                                <span>PhilHealth:</span>
+                                <span id="summary_philhealth">₱0.00</span>
+                            </div>
+                            <div class="calculation-row">
+                                <span>Pag-IBIG:</span>
+                                <span id="summary_pagibig">₱0.00</span>
+                            </div>
+                            <div class="calculation-row">
+                                <span>Loans:</span>
+                                <span id="summary_loans">₱0.00</span>
+                            </div>
+                            <div class="calculation-row">
+                                <span>Other Deductions:</span>
+                                <span id="summary_other_deductions">₱0.00</span>
+                            </div>
+                            <div class="calculation-row">
+                                <span>Tax:</span>
+                                <span id="summary_tax">₱0.00</span>
+                            </div>
+                            <div class="calculation-row total">
+                                <span>Total Deductions:</span>
+                                <span id="summary_deductions">₱0.00</span>
+                            </div>
+                            
+                            <div class="calculation-row total mt-3">
+                                <span>NET PAY:</span>
+                                <span id="summary_net">₱0.00</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                        <button type="submit" name="save_payroll" class="btn btn-primary">Save Payroll Entry</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+    
+    <!-- View Payroll Modal -->
+    <div class="modal fade" id="viewPayrollModal" tabindex="-1" aria-labelledby="viewPayrollModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="viewPayrollModalLabel">Payroll Details</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="row mb-4">
+                        <div class="col-md-12">
+                            <h6>Employee Information</h6>
+                            <table class="table table-bordered">
+                                <tr>
+                                    <th width="30%">Employee</th>
+                                    <td id="view_employee_name"></td>
+                                </tr>
+                                <tr>
+                                    <th>Payroll Period</th>
+                                    <td id="view_period"></td>
+                                </tr>
+                                <tr>
+                                    <th>Payment Method</th>
+                                    <td id="view_payment_method"></td>
+                                </tr>
+                            </table>
+                        </div>
+                    </div>
+                    
+                    <div class="row mb-4">
+                        <div class="col-md-6">
+                            <h6>Earnings</h6>
+                            <table class="table table-bordered">
+                                <tr>
+                                    <th>Basic Pay</th>
+                                    <td id="view_basic_pay"></td>
+                                </tr>
+                                <tr>
+                                    <th>Overtime Pay</th>
+                                    <td id="view_overtime_pay"></td>
+                                </tr>
+                                <tr>
+                                    <th>Allowances</th>
+                                    <td id="view_allowances"></td>
+                                </tr>
+                                <tr>
+                                    <th>Bonus</th>
+                                    <td id="view_bonus"></td>
+                                </tr>
+                                <tr class="table-secondary">
+                                    <th>Gross Pay</th>
+                                    <td id="view_gross_pay"></td>
+                                </tr>
+                            </table>
+                        </div>
+                        <div class="col-md-6">
+                            <h6>Deductions</h6>
+                            <table class="table table-bordered">
+                                <tr>
+                                    <th>SSS</th>
+                                    <td id="view_sss"></td>
+                                </tr>
+                                <tr>
+                                    <th>PhilHealth</th>
+                                    <td id="view_philhealth"></td>
+                                </tr>
+                                <tr>
+                                    <th>Pag-IBIG</th>
+                                    <td id="view_pagibig"></td>
+                                </tr>
+                                <tr>
+                                    <th>Loans</th>
+                                    <td id="view_loans"></td>
+                                </tr>
+                                <tr>
+                                    <th>Other Deductions</th>
+                                    <td id="view_other_deductions"></td>
+                                </tr>
+                                <tr>
+                                    <th>Tax</th>
+                                    <td id="view_tax"></td>
+                                </tr>
+                                <tr class="table-secondary">
+                                    <th>Total Deductions</th>
+                                    <td id="view_total_deductions"></td>
+                                </tr>
+                            </table>
+                        </div>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-12">
+                            <table class="table table-bordered">
+                                <tr class="table-primary">
+                                    <th width="30%">NET PAY</th>
+                                    <td id="view_net_pay"></td>
+                                </tr>
+                            </table>
+                        </div>
+                    </div>
+                    
+                    <div class="row mt-3">
+                        <div class="col-md-12">
+                            <h6>Remarks</h6>
+                            <div class="p-3 bg-light rounded" id="view_remarks"></div>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                    <button type="button" class="btn btn-primary" id="printPayrollSlip">Print Payslip</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Delete Confirmation Modal -->
+    <div class="modal fade" id="deleteModal" tabindex="-1" aria-labelledby="deleteModalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="deleteModalLabel">Confirm Delete</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    Are you sure you want to delete this payroll entry? This action cannot be undone.
+                </div>
+                <div class="modal-footer">
+                    <form method="post">
+                        <input type="hidden" id="delete_payroll_id" name="payroll_id">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                        <button type="submit" name="delete_payroll" class="btn btn-danger">Delete</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+    
     <script>
-        function openTab(tabName) {
-            // Hide all tab content
-            var tabContents = document.getElementsByClassName("tab-content");
-            for (var i = 0; i < tabContents.length; i++) {
-                tabContents[i].classList.remove("active");
+        document.addEventListener('DOMContentLoaded', function() {
+            // Toggle sidebar
+            const sidebar = document.getElementById('sidebar');
+            const toggleBtn = document.getElementById('toggleSidebar');
+            
+            if (toggleBtn) {
+                toggleBtn.addEventListener('click', function() {
+                    sidebar.classList.toggle('collapsed');
+                });
             }
             
-            // Remove active class from all tabs
-            var tabs = document.getElementsByClassName("tab");
-            for (var i = 0; i < tabs.length; i++) {
-                tabs[i].classList.remove("active");
-            }
+            // Toggle user dropdown menu
+            const userDropdownBtn = document.getElementById('userDropdownBtn');
+            const userDropdownMenu = document.getElementById('userDropdownMenu');
             
-            // Show the specific tab content
-            document.getElementById(tabName).classList.add("active");
-            
-            // Add active class to the clicked tab
-            var activeTab = document.querySelector(".tab[onclick=\"openTab('" + tabName + "')\"]");
-            if (activeTab) {
-                activeTab.classList.add("active");
-            }
-        }
-
-        // Function for employee search
-        function searchEmployees() {
-            var input = document.getElementById("employee_search").value.toLowerCase();
-            var select = document.getElementById("employee_select");
-            var options = select.getElementsByTagName("option");
-            
-            for (var i = 0; i < options.length; i++) {
-                var option = options[i];
-                var name = option.getAttribute("data-name") || "";
-                var department = option.getAttribute("data-department") || "";
-                var text = (name + " " + department).toLowerCase();
+            if (userDropdownBtn && userDropdownMenu) {
+                userDropdownBtn.addEventListener('click', function(e) {
+                    e.stopPropagation();
+                    userDropdownMenu.style.display = userDropdownMenu.style.display === 'block' ? 'none' : 'block';
+                });
                 
-                if (text.indexOf(input) > -1 || option.value === "") {
-                    option.style.display = "";
-                } else {
-                    option.style.display = "none";
-                }
+                // Close dropdown when clicking outside
+                document.addEventListener('click', function() {
+                    userDropdownMenu.style.display = 'none';
+                });
             }
-        }
-
-        // Function to view payslip (placeholder)
-        function viewPayslip(id) {
-            alert("Viewing payslip ID: " + id);
-            // You can replace this with your actual implementation
-            // For example, open a modal or navigate to a payslip detail page
-        }
+            
+            // Payroll form calculations for automatic updates
+            const calculationInputs = document.querySelectorAll('.calculation');
+            
+            calculationInputs.forEach(input => {
+                input.addEventListener('input', calculatePayroll);
+            });
+            
+            function calculatePayroll() {
+                // Get input values
+                const basicPay = parseFloat(document.getElementById('basic_pay').value) || 0;
+                const overtimePay = parseFloat(document.getElementById('overtime_pay').value) || 0;
+                const allowances = parseFloat(document.getElementById('allowances').value) || 0;
+                const bonus = parseFloat(document.getElementById('bonus').value) || 0;
+                
+                // Calculate gross pay
+                const grossPay = basicPay + overtimePay + allowances + bonus;
+                document.getElementById('gross_pay').value = grossPay.toFixed(2);
+                
+                // Get deduction values
+                const sss = parseFloat(document.getElementById('sss').value) || 0;
+                const philhealth = parseFloat(document.getElementById('philhealth').value) || 0;
+                const pagibig = parseFloat(document.getElementById('pagibig').value) || 0;
+                const loans = parseFloat(document.getElementById('loans').value) || 0;
+                const otherDeductions = parseFloat(document.getElementById('other_deductions').value) || 0;
+                const tax = parseFloat(document.getElementById('tax').value) || 0;
+                
+                // Calculate total deductions
+                const totalDeductions = sss + philhealth + pagibig + loans + otherDeductions;
+                document.getElementById('total_deductions').value = totalDeductions.toFixed(2);
+                
+                // Calculate net pay
+                const netPay = grossPay - totalDeductions - tax;
+                document.getElementById('net_pay').value = netPay.toFixed(2);
+                
+                // Update summary
+                document.getElementById('summary_basic').textContent = '₱' + basicPay.toFixed(2);
+                document.getElementById('summary_overtime').textContent = '₱' + overtimePay.toFixed(2);
+                document.getElementById('summary_allowances').textContent = '₱' + allowances.toFixed(2);
+                document.getElementById('summary_bonus').textContent = '₱' + bonus.toFixed(2);
+                document.getElementById('summary_gross').textContent = '₱' + grossPay.toFixed(2);
+                
+                document.getElementById('summary_sss').textContent = '₱' + sss.toFixed(2);
+                document.getElementById('summary_philhealth').textContent = '₱' + philhealth.toFixed(2);
+                document.getElementById('summary_pagibig').textContent = '₱' + pagibig.toFixed(2);
+                document.getElementById('summary_loans').textContent = '₱' + loans.toFixed(2);
+                document.getElementById('summary_other_deductions').textContent = '₱' + otherDeductions.toFixed(2);
+                document.getElementById('summary_tax').textContent = '₱' + tax.toFixed(2);
+                document.getElementById('summary_deductions').textContent = '₱' + (totalDeductions + tax).toFixed(2);
+                
+                document.getElementById('summary_net').textContent = '₱' + netPay.toFixed(2);
+            }
+            
+            // Format date as MMM DD, YYYY
+            function formatDate(dateString) {
+                const date = new Date(dateString);
+                const options = { year: 'numeric', month: 'short', day: 'numeric' };
+                return date.toLocaleDateString('en-US', options);
+            }
+            
+            // Format currency as ₱ with 2 decimal places
+            function formatCurrency(amount) {
+                return '₱' + parseFloat(amount).toFixed(2);
+            }
+            
+            // Handle View Payroll button clicks
+            const viewButtons = document.querySelectorAll('.view-payroll');
+            viewButtons.forEach(button => {
+                button.addEventListener('click', function() {
+                    // Get employee name
+                    const employeeId = this.getAttribute('data-employee');
+                    const employeeSelect = document.getElementById('filter_employee');
+                    let employeeName = '';
+                    
+                    for (let i = 0; i < employeeSelect.options.length; i++) {
+                        if (employeeSelect.options[i].value == employeeId) {
+                            employeeName = employeeSelect.options[i].text;
+                            break;
+                        }
+                    }
+                    
+                    // Set modal values
+                    document.getElementById('view_employee_name').textContent = employeeName;
+                    document.getElementById('view_period').textContent = 
+                        formatDate(this.getAttribute('data-period-start')) + ' to ' + 
+                        formatDate(this.getAttribute('data-period-end'));
+                    document.getElementById('view_payment_method').textContent = this.getAttribute('data-payment');
+                    
+                    document.getElementById('view_basic_pay').textContent = formatCurrency(this.getAttribute('data-basic'));
+                    document.getElementById('view_overtime_pay').textContent = formatCurrency(this.getAttribute('data-overtime'));
+                    document.getElementById('view_allowances').textContent = formatCurrency(this.getAttribute('data-allowances'));
+                    document.getElementById('view_bonus').textContent = formatCurrency(this.getAttribute('data-bonus'));
+                    document.getElementById('view_gross_pay').textContent = formatCurrency(this.getAttribute('data-gross'));
+                    
+                    document.getElementById('view_sss').textContent = formatCurrency(this.getAttribute('data-sss'));
+                    document.getElementById('view_philhealth').textContent = formatCurrency(this.getAttribute('data-philhealth'));
+                    document.getElementById('view_pagibig').textContent = formatCurrency(this.getAttribute('data-pagibig'));
+                    document.getElementById('view_loans').textContent = formatCurrency(this.getAttribute('data-loans'));
+                    document.getElementById('view_other_deductions').textContent = formatCurrency(this.getAttribute('data-other-deductions'));
+                    document.getElementById('view_tax').textContent = formatCurrency(this.getAttribute('data-tax'));
+                    document.getElementById('view_total_deductions').textContent = formatCurrency(this.getAttribute('data-total-deductions'));
+                    
+                    document.getElementById('view_net_pay').textContent = formatCurrency(this.getAttribute('data-net'));
+                    document.getElementById('view_remarks').textContent = this.getAttribute('data-remarks') || 'No remarks';
+                    
+                    // Show the modal
+                    const viewModal = new bootstrap.Modal(document.getElementById('viewPayrollModal'));
+                    viewModal.show();
+                });
+            });
+            
+            // Handle Edit Payroll button clicks
+            const editButtons = document.querySelectorAll('.edit-payroll');
+            editButtons.forEach(button => {
+                button.addEventListener('click', function() {
+                    // Set form values for editing
+                    document.getElementById('payrollModalLabel').textContent = 'Edit Payroll Entry';
+                    document.getElementById('payroll_id').value = this.getAttribute('data-id');
+                    document.getElementById('employee_id').value = this.getAttribute('data-employee');
+                    document.getElementById('period_start').value = this.getAttribute('data-period-start');
+                    document.getElementById('period_end').value = this.getAttribute('data-period-end');
+                    document.getElementById('basic_pay').value = this.getAttribute('data-basic');
+                    document.getElementById('overtime_pay').value = this.getAttribute('data-overtime');
+                    document.getElementById('allowances').value = this.getAttribute('data-allowances');
+                    document.getElementById('bonus').value = this.getAttribute('data-bonus');
+                    document.getElementById('sss').value = this.getAttribute('data-sss');
+                    document.getElementById('philhealth').value = this.getAttribute('data-philhealth');
+                    document.getElementById('pagibig').value = this.getAttribute('data-pagibig');
+                    document.getElementById('loans').value = this.getAttribute('data-loans');
+                    document.getElementById('other_deductions').value = this.getAttribute('data-other-deductions');
+                    document.getElementById('tax').value = this.getAttribute('data-tax');
+                    document.getElementById('payment_method').value = this.getAttribute('data-payment');
+                    document.getElementById('remarks').value = this.getAttribute('data-remarks');
+                    
+                    // Trigger calculations
+                    calculatePayroll();
+                    
+                    // Show the modal
+                    const payrollModal = new bootstrap.Modal(document.getElementById('payrollModal'));
+                    payrollModal.show();
+                });
+            });
+            
+            // Handle Delete Payroll button clicks
+            const deleteButtons = document.querySelectorAll('.delete-payroll');
+            deleteButtons.forEach(button => {
+                button.addEventListener('click', function() {
+                    document.getElementById('delete_payroll_id').value = this.getAttribute('data-id');
+                    
+                    // Show the confirmation modal
+                    const deleteModal = new bootstrap.Modal(document.getElementById('deleteModal'));
+                    deleteModal.show();
+                });
+            });
+            
+            // Handle Add New Payroll button click - reset form
+            document.querySelector('[data-bs-target="#payrollModal"]').addEventListener('click', function() {
+                document.getElementById('payrollModalLabel').textContent = 'Add New Payroll Entry';
+                document.getElementById('payrollForm').reset();
+                document.getElementById('payroll_id').value = '';
+                
+                // Reset summary values
+                const summaryElements = document.querySelectorAll('[id^="summary_"]');
+                summaryElements.forEach(element => {
+                    element.textContent = '₱0.00';
+                });
+            });
+            
+            // Print payslip functionality
+            document.getElementById('printPayrollSlip').addEventListener('click', function() {
+                const printWindow = window.open('', '_blank');
+                
+                const employeeName = document.getElementById('view_employee_name').textContent;
+                const payrollPeriod = document.getElementById('view_period').textContent;
+                const grossPay = document.getElementById('view_gross_pay').textContent;
+                const totalDeductions = document.getElementById('view_total_deductions').textContent;
+                const netPay = document.getElementById('view_net_pay').textContent;
+                
+                let printContent = `
+                <!DOCTYPE html>
+                <html>
+                <head>
+                    <title>Payslip - ${employeeName}</title>
+                    <style>
+                        body { font-family: Arial, sans-serif; margin: 0; padding: 20px; }
+                        .header { text-align: center; margin-bottom: 20px; }
+                        .company-name { font-size: 22px; font-weight: bold; }
+                        .payslip-title { font-size: 18px; margin: 10px 0; }
+                        .info-section { margin-bottom: 20px; }
+                        .info-row { display: flex; margin-bottom: 5px; }
+                        .info-label { width: 200px; font-weight: bold; }
+                        table { width: 100%; border-collapse: collapse; margin-bottom: 20px; }
+                        th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+                        th { background-color: #f2f2f2; }
+                        .summary { font-weight: bold; }
+                        .footer { margin-top: 50px; text-align: center; font-size: 12px; }
+                        @media print {
+                            body { padding: 0; margin: 0; }
+                            button { display: none; }
+                        }
+                    </style>
+                </head>
+                <body>
+                    <div class="header">
+                        <div class="company-name">MALAYA SOLAR ENERGIES INC.</div>
+                        <div class="payslip-title">EMPLOYEE PAYSLIP</div>
+                    </div>
+                    
+                    <div class="info-section">
+                        <div class="info-row">
+                            <div class="info-label">Employee Name:</div>
+                            <div>${employeeName}</div>
+                        </div>
+                        <div class="info-row">
+                            <div class="info-label">Pay Period:</div>
+                            <div>${payrollPeriod}</div>
+                        </div>
+                        <div class="info-row">
+                            <div class="info-label">Payment Method:</div>
+                            <div>${document.getElementById('view_payment_method').textContent}</div>
+                        </div>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col">
+                            <h4>Earnings</h4>
+                            <table>
+                                <tr>
+                                    <th>Description</th>
+                                    <th>Amount</th>
+                                </tr>
+                                <tr>
+                                    <td>Basic Pay</td>
+                                    <td>${document.getElementById('view_basic_pay').textContent}</td>
+                                </tr>
+                                <tr>
+                                    <td>Overtime Pay</td>
+                                    <td>${document.getElementById('view_overtime_pay').textContent}</td>
+                                </tr>
+                                <tr>
+                                    <td>Allowances</td>
+                                    <td>${document.getElementById('view_allowances').textContent}</td>
+                                </tr>
+                                <tr>
+                                    <td>Bonus</td>
+                                    <td>${document.getElementById('view_bonus').textContent}</td>
+                                </tr>
+                                <tr class="summary">
+                                    <td>Gross Pay</td>
+                                    <td>${grossPay}</td>
+                                </tr>
+                            </table>
+                        </div>
+                        
+                        <div class="col">
+                            <h4>Deductions</h4>
+                            <table>
+                                <tr>
+                                    <th>Description</th>
+                                    <th>Amount</th>
+                                </tr>
+                                <tr>
+                                    <td>SSS</td>
+                                    <td>${document.getElementById('view_sss').textContent}</td>
+                                </tr>
+                                <tr>
+                                    <td>PhilHealth</td>
+                                    <td>${document.getElementById('view_philhealth').textContent}</td>
+                                </tr>
+                                <tr>
+                                    <td>Pag-IBIG</td>
+                                    <td>${document.getElementById('view_pagibig').textContent}</td>
+                                </tr>
+                                <tr>
+                                    <td>Loans</td>
+                                    <td>${document.getElementById('view_loans').textContent}</td>
+                                </tr>
+                                <tr>
+                                    <td>Other Deductions</td>
+                                    <td>${document.getElementById('view_other_deductions').textContent}</td>
+                                </tr>
+                                <tr>
+                                    <td>Tax</td>
+                                    <td>${document.getElementById('view_tax').textContent}</td>
+                                </tr>
+                                <tr class="summary">
+                                    <td>Total Deductions</td>
+                                    <td>${totalDeductions}</td>
+                                </tr>
+                            </table>
+                        </div>
+                    </div>
+                    
+                    <table>
+                        <tr class="summary">
+                            <th>NET PAY</th>
+                            <th>${netPay}</th>
+                        </tr>
+                    </table>
+                    
+                    <div class="info-section">
+                        <h4>Remarks</h4>
+                        <div style="border: 1px solid #ddd; padding: 10px;">
+                            ${document.getElementById('view_remarks').textContent}
+                        </div>
+                    </div>
+                    
+                    <div class="footer">
+                        <p>This is a computer-generated document. No signature required.</p>
+                        <p>Malaya Solar Energies Inc. &copy; ${new Date().getFullYear()}</p>
+                    </div>
+                    
+                    <div style="text-align: center; margin-top: 20px;">
+                        <button onclick="window.print()">Print Payslip</button>
+                    </div>
+                </body>
+                </html>
+                `;
+                
+                printWindow.document.open();
+                printWindow.document.write(printContent);
+                printWindow.document.close();
+                
+                setTimeout(function() {
+                    printWindow.focus();
+                }, 500);
+            });
+        });
     </script>
 </body>
 </html>

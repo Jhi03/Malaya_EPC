@@ -24,12 +24,13 @@
     
     <div class="content-area">
         <?php include 'header.php'; ?>
-
-        <!-- Sections inside Content Pane -->
-        <div class="sections">
-            <div class="section">Section 1</div>
-            <div class="section">Section 2</div>
-            <div class="section">Section 3</div>
+        <div class="content-body">
+            <!-- Sections inside Content Pane -->
+            <div class="sections">
+                <div class="section">Section 1</div>
+                <div class="section">Section 2</div>
+                <div class="section">Section 3</div>
+            </div>
         </div>
     </div>
 

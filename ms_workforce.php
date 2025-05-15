@@ -168,112 +168,112 @@
         <?php include 'header.php'; ?>
                     
             <div class="content-body">
-
-            <div class="controls">
-                <form method="GET" action="">
-                    <input type="text" name="search" class="search-box" placeholder="Search employees..." value="<?php echo htmlspecialchars($search); ?>">
-                    <button type="submit" class="action-btn">Search</button>
-                    <?php if(!empty($search)): ?>
-                        <a href="<?php echo $_SERVER['PHP_SELF']; ?>" class="action-btn">Clear</a>
-                    <?php endif; ?>
-                </form>
-                <button class="add-btn" onclick="document.getElementById('addModal').style.display='block'">Add New Employee</button>
-            </div>
-            
-            <table>
-                <thead>
-                    <tr>
-                        <th>ID</th>
-                        <th>Full Name</th>
-                        <th>Department</th>
-                        <th>Position</th>
-                        <th>Salary</th>
-                        <th>Status</th>
-                        <th>Actions</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <?php
-                    if ($result->num_rows > 0) {
-                        while($row = $result->fetch_assoc()) {
-                            $status_class = '';
-                            if ($row['status'] == 'Active') {
-                                $status_class = 'status-active';
-                            } else if ($row['status'] == 'Resigned') {
-                                $status_class = 'status-resigned';
-                            } else if ($row['status'] == 'On Leave') {
-                                $status_class = 'status-leave';
+                <div class="controls">
+                    <form method="GET" action="">
+                        <input type="text" name="search" class="search-box" placeholder="Search employees..." value="<?php echo htmlspecialchars($search); ?>">
+                        <button type="submit" class="action-btn">Search</button>
+                        <?php if(!empty($search)): ?>
+                            <a href="<?php echo $_SERVER['PHP_SELF']; ?>" class="action-btn">Clear</a>
+                        <?php endif; ?>
+                    </form>
+                    <button class="add-btn" onclick="document.getElementById('addModal').style.display='block'">Add New Employee</button>
+                </div>
+                
+                <table>
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>Full Name</th>
+                            <th>Department</th>
+                            <th>Position</th>
+                            <th>Salary</th>
+                            <th>Status</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <?php
+                        if ($result->num_rows > 0) {
+                            while($row = $result->fetch_assoc()) {
+                                $status_class = '';
+                                if ($row['status'] == 'Active') {
+                                    $status_class = 'status-active';
+                                } else if ($row['status'] == 'Resigned') {
+                                    $status_class = 'status-resigned';
+                                } else if ($row['status'] == 'On Leave') {
+                                    $status_class = 'status-leave';
+                                }
+                                
+                                echo "<tr>";
+                                echo "<td>" . $row['employee_id'] . "</td>";
+                                echo "<td>" . htmlspecialchars($row['full_name']) . "</td>";
+                                echo "<td>" . htmlspecialchars($row['department']) . "</td>";
+                                echo "<td>" . htmlspecialchars($row['position']) . "</td>";
+                                echo "<td>₱" . number_format($row['salary'], 2) . "</td>";
+                                echo "<td class='" . $status_class . "'>" . htmlspecialchars($row['status']) . "</td>";
+                                echo "<td>
+                                        <button class='action-btn edit-btn' onclick='openEditModal(" . $row['employee_id'] . ", \"" . addslashes($row['full_name']) . "\", \"" . addslashes($row['department']) . "\", \"" . addslashes($row['position']) . "\", " . $row['salary'] . ", \"" . addslashes($row['status']) . "\")'>Edit</button>
+                                        <a href='" . $_SERVER['PHP_SELF'] . "?delete=" . $row['employee_id'] . "' class='action-btn delete-btn' onclick='return confirm(\"Are you sure you want to delete this employee?\")'>Delete</a>
+                                    </td>";
+                                echo "</tr>";
                             }
-                            
-                            echo "<tr>";
-                            echo "<td>" . $row['employee_id'] . "</td>";
-                            echo "<td>" . htmlspecialchars($row['full_name']) . "</td>";
-                            echo "<td>" . htmlspecialchars($row['department']) . "</td>";
-                            echo "<td>" . htmlspecialchars($row['position']) . "</td>";
-                            echo "<td>₱" . number_format($row['salary'], 2) . "</td>";
-                            echo "<td class='" . $status_class . "'>" . htmlspecialchars($row['status']) . "</td>";
-                            echo "<td>
-                                    <button class='action-btn edit-btn' onclick='openEditModal(" . $row['employee_id'] . ", \"" . addslashes($row['full_name']) . "\", \"" . addslashes($row['department']) . "\", \"" . addslashes($row['position']) . "\", " . $row['salary'] . ", \"" . addslashes($row['status']) . "\")'>Edit</button>
-                                    <a href='" . $_SERVER['PHP_SELF'] . "?delete=" . $row['employee_id'] . "' class='action-btn delete-btn' onclick='return confirm(\"Are you sure you want to delete this employee?\")'>Delete</a>
-                                  </td>";
-                            echo "</tr>";
+                        } else {
+                            echo "<tr><td colspan='7' style='text-align: center;'>No employees found</td></tr>";
                         }
-                    } else {
-                        echo "<tr><td colspan='7' style='text-align: center;'>No employees found</td></tr>";
+                        ?>
+                        </tbody>
+                    </table>
+                </div>
+                
+                <?php
+                // Pagination links
+                $sql = "SELECT COUNT(*) AS total FROM personnel";
+                if (!empty($search)) {
+                    $sql = "SELECT COUNT(*) AS total FROM personnel WHERE 
+                            full_name LIKE ? OR 
+                            department LIKE ? OR 
+                            position LIKE ? OR 
+                            status LIKE ?";
+                    $count_stmt = $conn->prepare($sql);
+                    $search_param = "%$search%";
+                    $count_stmt->bind_param("ssss", $search_param, $search_param, $search_param, $search_param);
+                } else {
+                    $count_stmt = $conn->prepare($sql);
+                }
+                
+                $count_stmt->execute();
+                $count_result = $count_stmt->get_result();
+                $row = $count_result->fetch_assoc();
+                $total_records = $row['total'];
+                $total_pages = ceil($total_records / $records_per_page);
+                
+                echo "<div class='pagination'>";
+                if($total_pages > 1) {
+                    if($page > 1) {
+                        echo "<a href='" . $_SERVER['PHP_SELF'] . "?page=" . ($page-1);
+                        if(!empty($search)) echo "&search=" . urlencode($search);
+                        echo "'>&laquo; Previous</a>";
                     }
-                    ?>
-                    </tbody>
-                </table>
-            </div>
-            
-            <?php
-            // Pagination links
-            $sql = "SELECT COUNT(*) AS total FROM personnel";
-            if (!empty($search)) {
-                $sql = "SELECT COUNT(*) AS total FROM personnel WHERE 
-                        full_name LIKE ? OR 
-                        department LIKE ? OR 
-                        position LIKE ? OR 
-                        status LIKE ?";
-                $count_stmt = $conn->prepare($sql);
-                $search_param = "%$search%";
-                $count_stmt->bind_param("ssss", $search_param, $search_param, $search_param, $search_param);
-            } else {
-                $count_stmt = $conn->prepare($sql);
-            }
-            
-            $count_stmt->execute();
-            $count_result = $count_stmt->get_result();
-            $row = $count_result->fetch_assoc();
-            $total_records = $row['total'];
-            $total_pages = ceil($total_records / $records_per_page);
-            
-            echo "<div class='pagination'>";
-            if($total_pages > 1) {
-                if($page > 1) {
-                    echo "<a href='" . $_SERVER['PHP_SELF'] . "?page=" . ($page-1);
-                    if(!empty($search)) echo "&search=" . urlencode($search);
-                    echo "'>&laquo; Previous</a>";
+                    
+                    for($i = 1; $i <= $total_pages; $i++) {
+                        echo "<a href='" . $_SERVER['PHP_SELF'] . "?page=" . $i;
+                        if(!empty($search)) echo "&search=" . urlencode($search);
+                        echo "' " . ($page == $i ? "class='active'" : "") . ">" . $i . "</a>";
+                    }
+                    
+                    if($page < $total_pages) {
+                        echo "<a href='" . $_SERVER['PHP_SELF'] . "?page=" . ($page+1);
+                        if(!empty($search)) echo "&search=" . urlencode($search);
+                        echo "'>Next &raquo;</a>";
+                    }
                 }
+                echo "</div>";
                 
-                for($i = 1; $i <= $total_pages; $i++) {
-                    echo "<a href='" . $_SERVER['PHP_SELF'] . "?page=" . $i;
-                    if(!empty($search)) echo "&search=" . urlencode($search);
-                    echo "' " . ($page == $i ? "class='active'" : "") . ">" . $i . "</a>";
-                }
-                
-                if($page < $total_pages) {
-                    echo "<a href='" . $_SERVER['PHP_SELF'] . "?page=" . ($page+1);
-                    if(!empty($search)) echo "&search=" . urlencode($search);
-                    echo "'>Next &raquo;</a>";
-                }
-            }
-            echo "</div>";
-            
-            $stmt->close();
-            $count_stmt->close();
-            $conn->close();
-            ?>
+                $stmt->close();
+                $count_stmt->close();
+                $conn->close();
+                ?>
+                </div>
             </div>
         </div>
     </div>

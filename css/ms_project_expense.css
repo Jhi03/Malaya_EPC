@@ -270,6 +270,50 @@ img {
     font-weight: bold;
 }
 
+/*Project detail editing form*/
+.edit-project-panel {
+    position: fixed;
+    top: 0;
+    right: -100%;
+    width: 35%;
+    height: 100%;
+    background: #fff;
+    box-shadow: -2px 0 10px rgba(0, 0, 0, 0.2);
+    overflow-y: auto;
+    z-index: 9999;
+    transition: right 0.4s ease;
+    padding: 20px;
+}
+
+.edit-project-panel.open {
+    right: 0;
+}
+
+.edit-project-panel .panel-header {
+    margin-bottom: 20px;
+}
+
+.edit-project-panel .form-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin-bottom: 15px;
+}
+
+.edit-project-panel .form-row input,
+.edit-project-panel .form-row textarea {
+    flex: 1;
+    min-width: 45%;
+    padding: 5px;
+}
+
+.edit-project-panel .panel-footer {
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+    padding-top: 20px;
+}
+
 /* Table Styling */
 .records-table-container {
     margin: 0 20px 20px;
