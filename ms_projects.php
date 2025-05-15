@@ -49,6 +49,7 @@
             LEFT JOIN employee creator ON creator_user.employee_id = creator.employee_id
             LEFT JOIN users editor_user ON p.edited_by = editor_user.user_id
             LEFT JOIN employee editor ON editor_user.employee_id = editor.employee_id
+            WHERE p.project_id != 1
             ORDER BY p.creation_date ASC
         ";
         $projectResult = $conn->query($projectQuery);
