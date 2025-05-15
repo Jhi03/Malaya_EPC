@@ -155,13 +155,14 @@
                                 <?php endwhile; ?>
                             </tbody>
                         </table>
-
-                        <!-- Floating delete button -->
-                        <button class="delete-selected-btn">
-                            <img src="icons/trash.svg" alt="TrashIcon" width="20">
-                        </button>
                     </div>
                 </div>
+
+                <!-- Floating delete button (moved here) -->
+                <button class="delete-selected-btn">
+                    <img src="icons/trash.svg" alt="TrashIcon" width="20">
+                </button>
+
                 <?php else: ?>
                     <p style='padding: 20px;'>There are no existing assets.</p>
                 <?php endif; ?>
@@ -193,8 +194,8 @@
 
                     <!-- Edit Button -->
                     <div class="edit-button" id="editButton" style="display: none;">
-                        <button class="btn btn-primary" onclick="openEditAssetModal()">
-                            Edit <img src="icons/edit.svg" width="20">
+                        <button onclick="openEditAssetModal()">
+                            Edit <img src="icons/pencil.svg" width="14">
                         </button>
                     </div>
                 </div>

@@ -245,15 +245,6 @@ table.table td i {
     border: 1px solid rgba(255, 255, 255, 0.3);
 }
 
-/* Specific margins */
-.asset-list {
-    margin-left: 20px;
-}
-
-.asset-details {
-    margin-right: 20px;
-}
-
 .asset-list-header {
     background-color: #333;
     border-radius: 20px;
@@ -379,9 +370,9 @@ table.table td i {
 }
 
 .delete-selected-btn {
-    position: fixed;
+    position: absolute;
     bottom: 20px;
-    right: 30px;
+    right: 20px;
     background: #e74c3c;
     border: none;
     border-radius: 50%;
@@ -389,12 +380,14 @@ table.table td i {
     height: 50px;
     box-shadow: 0 4px 12px rgba(0,0,0,0.2);
     cursor: pointer;
-    z-index: 1000;
-    display: none;
+    z-index: 100;
+    display: none; /* Show this with JS when items are selected */
 }
 
 .delete-selected-btn img {
     vertical-align: middle;
+    display: inline-block;
+    transform: translateY(-3px);
 }
 
 .delete-selected-btn:hover {
@@ -410,6 +403,7 @@ table.table td i {
     padding: 25px;
     border-radius: 12px;
     border: 1px solid rgba(255, 255, 255, 0.3);
+    position: relative; /* Needed for absolute positioning */
 }
 
 /* Asset Details Styling */
@@ -418,7 +412,6 @@ table.table td i {
     color: #111827;
     font-weight: 600;
 }
-
 /* Asset Placeholder */
 #assetPlaceholder {
     display: flex;
@@ -453,12 +446,13 @@ table.table td i {
 
 /* Edit Button */
 .edit-button {
-    text-align: right;
-    margin-top: 20px;
+    position: absolute;
+    bottom: 20px;
+    right: 25px;
 }
 
 .edit-button button {
-    background: linear-gradient(135deg, #facc15, #eab308);
+    background-color: #3498db;
     color: #fff;
     border: none;
     padding: 10px 24px;
@@ -466,17 +460,18 @@ table.table td i {
     font-size: 12px;
     font-weight: 600;
     cursor: pointer;
-    transition: all 0.2s ease;
+    transition: background-color 0.2s ease, transform 0.2s ease;
     text-transform: uppercase;
-    box-shadow: 0 4px 10px rgba(234, 179, 8, 0.3);
+    box-shadow: 0 4px 10px rgba(52, 152, 219, 0.3);
     display: inline-flex;
     align-items: center;
     gap: 8px;
 }
 
 .edit-button button:hover {
+    background-color: #2f89c6; /* Slightly darker shade */
     transform: translateY(-2px);
-    box-shadow: 0 6px 15px rgba(234, 179, 8, 0.4);
+    box-shadow: 0 6px 15px rgba(52, 152, 219, 0.4);
 }
 
 /* Modern Modal Styling */
