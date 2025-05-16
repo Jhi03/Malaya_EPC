@@ -482,3 +482,29 @@ img {
     background-color: #333;
     border: none;
 }
+
+/* View Expense Modal Styling */
+/* Modal Dialog Size */
+#viewExpenseModal .modal-dialog {
+max-width: 40vw;    /* 40% of viewport width */
+display: flex;
+flex-direction: column;
+}
+/* Modal Header */
+.modal-title {
+padding: 8px 15px;
+}
+/* Modal Section Headers */
+.modal-body h6 {
+font-weight: 600;
+margin-bottom: 10px;
+}
+#printExpenseDetails:hover {
+background-color: #212121;
+box-shadow: 0 4px 8px rgba(0, 0, 0, 0.05);
+transform: translateY(-2px);
+}
+table th.viewRecord {
+    width: 5%;
+    text-align: left;
+}

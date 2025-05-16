@@ -104,7 +104,7 @@ if ($project_id > 0) {
     $stmt->close();
 
     if ($project) {
-        $rec_stmt = $conn->prepare("SELECT * FROM project_expense WHERE project_id = ?");
+        $rec_stmt = $conn->prepare("SELECT * FROM expense WHERE project_id = ?");
         $rec_stmt->bind_param("i", $project_id);
         $rec_stmt->execute();
         $rec_result = $rec_stmt->get_result();
