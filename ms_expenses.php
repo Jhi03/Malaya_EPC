@@ -294,7 +294,7 @@
                                     </td>
                                     <td><?= date("M d, Y", strtotime($row['purchase_date'])) ?></td>
                                     <td>
-                                        <button type="button" class="btn btn-sm btn-info view-btn"
+                                        <button class="btn btn-info btn-sm view-btn"
                                             data-id="<?= $row['record_id'] ?>"
                                             data-category="<?= htmlspecialchars($row['category']) ?>"
                                             data-subcategory="<?= htmlspecialchars($row['subcategory']) ?>"
@@ -306,8 +306,9 @@
                                             data-remarks="<?= htmlspecialchars($row['remarks']) ?>"
                                             data-rental_rate="<?= $row['rental_rate'] ?>"
                                             data-tax="<?= $row['tax'] ?>"
+                                            data-variance="<?= $row['variance'] ?>"
                                             data-invoice_no="<?= htmlspecialchars($row['invoice_no']) ?>">
-                                            <img src="icons/eye.svg" width="16" alt="Edit">
+                                            <img src="icons/eye.svg" width="16" alt="View">
                                         </button>
                                         <button type="button" class="btn btn-sm btn-primary edit-btn"
                                             data-id="<?= $row['record_id'] ?>"
@@ -337,8 +338,7 @@
                 </table>
             </div>
 
-            <!--ANALYTICS VIEW -->
-            
+            <!--ANALYTICS VIEW -->  
             <div class="analytics-view container py-4" style="display: none;">
                 <div class="mb-4">
                     <div class="row">
@@ -530,10 +530,158 @@
         </div>
     </div>
 
+    <!-- View Expense Modal -->
+    <div class="modal fade" id="viewExpenseModal" tabindex="-1" aria-labelledby="viewExpenseModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="viewExpenseModalLabel">Expense Details</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="row mb-4">
+                        <div class="col-md-12">
+                            <h6>Basic Information</h6>
+                            <table class="table table-bordered">
+                                <tr>
+                                    <th class="viewRecord" style="width: 5%; text-align: left;">Category</th>
+                                    <td id="view_category"></td>
+                                </tr>
+                                <tr>
+                                    <th class="viewRecord" style="width: 5%; text-align: left;">Subcategory</th>
+                                    <td id="view_subcategory"></td>
+                                </tr>
+                                <tr>
+                                    <th class="viewRecord" style="width: 5%; text-align: left;">Purchase Date</th>
+                                    <td id="view_purchase_date"></td>
+                                </tr>
+                                <tr>
+                                    <th class="viewRecord" style="width: 5%; text-align: left;">Description</th>
+                                    <td id="view_description"></td>
+                                </tr>
+                            </table>
+                        </div>
+                    </div>
+                    
+                    <div class="row mb-4">
+                        <div class="col-md-6">
+                            <h6>Financial Details</h6>
+                            <table class="table table-bordered">
+                                <tr>
+                                    <th class="viewRecord" style="width: 5%; text-align: left;">Budget</th>
+                                    <td id="view_budget"></td>
+                                </tr>
+                                <tr>
+                                    <th class="viewRecord" style="width: 5%; text-align: left;">Expense</th>
+                                    <td id="view_expense"></td>
+                                </tr>
+                                <tr>
+                                    <th class="viewRecord" style="width: 5%; text-align: left;">Variance</th>
+                                    <td id="view_variance"></td>
+                                </tr>
+                                <tr class="table-secondary">
+                                    <th class="viewRecord" style="width: 5%; text-align: left;">Rental Rate</th>
+                                    <td id="view_rental_rate"></td>
+                                </tr>
+                                <tr>
+                                    <th class="viewRecord" style="width: 5%; text-align: left;">Tax</th>
+                                    <td id="view_tax"></td>
+                                </tr>
+                            </table>
+                        </div>
+
+                        <div class="col-md-6">
+                            <h6>Payment Information</h6>
+                            <table class="table table-bordered">
+                                <tr>
+                                    <th class="viewRecord" style="width: 5%; text-align: left;">Payee</th>
+                                    <td id="view_payee"></td>
+                                </tr>
+                                <tr>
+                                    <th class="viewRecord" style="width: 5%; text-align: left;">Invoice No.</th>
+                                    <td id="view_invoice_no"></td>
+                                </tr>
+                            </table>
+                        </div>
+                    </div>
+
+                    <div class="row mt-3">
+                        <div class="col-md-12">
+                            <h6>Remarks</h6>
+                            <div class="p-3 bg-light rounded" id="view_remarks"></div>
+                        </div>
+                    </div>
+                    
+                    <div class="row mt-4">
+                        <div class="col-md-12">
+                            <h6>Record Information</h6>
+                            <table class="table table-bordered">
+                                <tr>
+                                    <th class="viewRecord" style="width: 5%; text-align: left;">Created By</th>
+                                    <td id="view_created_by"></td>
+                                </tr>
+                                <tr>
+                                    <th class="viewRecord" style="width: 5%; text-align: left;">Creation Date</th>
+                                    <td id="view_creation_date"></td>
+                                </tr>
+                                <tr>
+                                    <th class="viewRecord" style="width: 5%; text-align: left;">Last Edited By</th>
+                                    <td id="view_edited_by"></td>
+                                </tr>
+                                <tr>
+                                    <th class="viewRecord" style="width: 5%; text-align: left;">Last Edit Date</th>
+                                    <td id="view_edit_date"></td>
+                                </tr>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+
     <script src="js/sidebar.js"></script>
     <script src="js/header.js"></script>
+    
+    <script>
+            $(document).ready(function () {
+                $(document).on('click', '.view-btn', function () {
+                    const modal = new bootstrap.Modal(document.getElementById('viewExpenseModal'));
 
-    <script>//Project Summary Dropdown EDIT and DELETE
+                    $('#view_category').text($(this).data('category') || 'N/A');
+                    $('#view_subcategory').text($(this).data('subcategory') || 'N/A');
+                    $('#view_purchase_date').text($(this).data('date') || 'N/A');
+                    $('#view_description').text($(this).data('record_description') || 'N/A');
+                    $('#view_budget').text('₱' + parseFloat($(this).data('budget') || 0).toFixed(2));
+                    $('#view_expense').text('₱' + parseFloat($(this).data('expense') || 0).toFixed(2));
+                    $('#view_variance').text('₱' + parseFloat($(this).data('variance') || 0).toFixed(2));
+                    $('#view_rental_rate').text('₱' + parseFloat($(this).data('rental_rate') || 0).toFixed(2));
+                    $('#view_tax').text('₱' + parseFloat($(this).data('tax') || 0).toFixed(2));
+                    $('#view_payee').text($(this).data('payee') || 'N/A');
+                    $('#view_invoice_no').text($(this).data('invoice_no') || 'N/A');
+                    $('#view_remarks').text($(this).data('remarks') || 'No remarks');
+
+                    $.post('get_expense_details.php', {
+                    record_id: $(this).data('id')
+                    }, function (response) {
+                    if (response.success) {
+                        $('#view_created_by').text(response.created_by_name || 'Unknown');
+                        $('#view_creation_date').text(response.creation_date || 'N/A');
+                        $('#view_edited_by').text(response.edited_by_name || 'N/A');
+                        $('#view_edit_date').text(response.edit_date || 'N/A');
+                    }
+                    }, 'json');
+
+                    modal.show();
+                });
+            });
+        </script>
+        <script>//Project Summary Dropdown EDIT and DELETE
         // Toggle dropdown visibility
         function toggleDropdown(button) {
             // Find the dropdown-menu sibling of the clicked button

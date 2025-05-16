@@ -1,25 +1,21 @@
 <?php
     include('validate_login.php');
     $page_title = "PROJECTS";
-
     // Database connection
     $host = 'localhost';
     $user = 'root';
     $password = '';
     $database = 'malayasol';
     $conn = new mysqli($host, $user, $password, $database);
-
     // Check connection
     if ($conn->connect_error) {
         die("Connection failed: " . $conn->connect_error);
     }
-
     // Ensure user is logged in
     if (!isset($_SESSION['user_id'])) {
         header("Location: ms_login.php");
         exit();
     }
-
     $user_id = $_SESSION['user_id'];
 
     // Get user name from joined users & employee table
@@ -42,9 +38,67 @@
 
     // Get project_id from URL
     $project_id = isset($_GET['projectId']) ? intval($_GET['projectId']) : 0;
-
     $records = [];
     $project = null;
+
+    // Handle POST updates or deletion
+    $response = '';
+    if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+        // Delete project
+        if (isset($_POST['delete_project_id'])) {
+            $del_id = intval($_POST['delete_project_id']);
+            $del_stmt = $conn->prepare("DELETE FROM projects WHERE project_id = ?");
+            $del_stmt->bind_param("i", $del_id);
+            if ($del_stmt->execute()) {
+                echo "success";
+            } else {
+                echo "Failed to delete project.";
+            }
+            $del_stmt->close();
+            exit;
+        }
+
+        // Update project
+        if (isset($_POST['update_project']) && $project_id > 0) {
+            // Sanitize and prepare update
+            $project_name = $_POST['project_name'] ?? '';
+            $project_code = $_POST['project_code'] ?? '';
+            $first_name = $_POST['first_name'] ?? '';
+            $last_name = $_POST['last_name'] ?? '';
+            $contact = $_POST['contact'] ?? '';
+            $email = $_POST['email'] ?? '';
+            $company_name = $_POST['company_name'] ?? '';
+            $unit_building_no = $_POST['unit_building_no'] ?? '';
+            $street = $_POST['street'] ?? '';
+            $barangay = $_POST['barangay'] ?? '';
+            $city = $_POST['city'] ?? '';
+            $country = $_POST['country'] ?? '';
+            $description = $_POST['description'] ?? '';
+            $edit_date = date('Y-m-d H:i:s');
+            $edited_by = $user_id;
+
+            $update_stmt = $conn->prepare("
+                UPDATE projects SET 
+                    project_name = ?, project_code = ?, first_name = ?, last_name = ?, contact = ?, email = ?, company_name = ?,
+                    unit_building_no = ?, street = ?, barangay = ?, city = ?, country = ?, description = ?, 
+                    edit_date = ?, edited_by = ?
+                WHERE project_id = ?
+            ");
+            $update_stmt->bind_param(
+                "ssssssssssssssii",
+                $project_name, $project_code, $first_name, $last_name, $contact, $email, $company_name,
+                $unit_building_no, $street, $barangay, $city, $country, $description,
+                $edit_date, $edited_by,
+                $project_id
+            );
+            if ($update_stmt->execute()) {
+                $response = "Project updated successfully.";
+            } else {
+                $response = "Failed to update project.";
+            }
+            $update_stmt->close();
+        }
+    }
 
     if ($project_id > 0) {
         // Get project details
@@ -53,7 +107,7 @@
                 p.project_id, p.project_name, p.project_code, p.first_name, p.last_name,
                 p.company_name, p.description, p.creation_date, 
                 p.created_by, p.edit_date, p.edited_by,
-                p.email, p.contact
+                p.email, p.contact, p.unit_building_no, p.street, p.barangay, p.city, p.country
             FROM projects p
             WHERE p.project_id = ?
         ");
@@ -64,16 +118,18 @@
             $project = $project_result->fetch_assoc();
         }
         $project_stmt->close();
-
+        
         // Get expense records for the project
-        $stmt = $conn->prepare("SELECT * FROM expense WHERE project_id = ?");
-        $stmt->bind_param("i", $project['project_id']);
-        $stmt->execute();
-        $result = $stmt->get_result();
-        while ($row = $result->fetch_assoc()) {
-            $records[] = $row;
+        if ($project) {
+            $stmt = $conn->prepare("SELECT * FROM expense WHERE project_id = ?");
+            $stmt->bind_param("i", $project['project_id']);
+            $stmt->execute();
+            $result = $stmt->get_result();
+            while ($row = $result->fetch_assoc()) {
+                $records[] = $row;
+            }
+            $stmt->close();
         }
-        $stmt->close();
     }
 
     // Fetch categories
@@ -237,7 +293,7 @@
                             <img src="icons/ellipsis-vertical.svg" alt="Options">
                         </button>
                         <div class="dropdown-menu" style="display:none;">
-                            <button class="dropdown-edit">Edit</button>
+                            <button class="dropdown-edit" onclick="openEditModal()">Edit</button>
                             <button class="dropdown-delete" onclick="deleteProject(<?= $project['project_id'] ?>)">Delete</button>
                         </div>
                     </div>
@@ -254,7 +310,7 @@
                             <p><strong>EMAIL:</strong> <?= htmlspecialchars($project['email']) ?></p>
                             <p><strong>CONTACT:</strong> <?= htmlspecialchars($project['contact']) ?></p>
                         </div>
-                        </div>
+                    </div>
                     <div class="summary-right">
                         <p><strong>CREATION DATE:</strong> <?= date('m-d-Y', strtotime($project['creation_date'])) ?></p>
                         <p><strong>DESCRIPTION:</strong> <?= htmlspecialchars($project['description']) ?></p>
@@ -330,19 +386,19 @@
                                     <td><?= date("M d, Y", strtotime($row['purchase_date'])) ?></td>
                                     <td>
                                         <button class="btn btn-info btn-sm view-btn"
-                                                data-id="<?= $row['record_id'] ?>"
-                                                data-category="<?= htmlspecialchars($row['category']) ?>"
-                                                data-subcategory="<?= htmlspecialchars($row['subcategory']) ?>"
-                                                data-date="<?= $row['purchase_date'] ?>"
-                                                data-budget="<?= $row['budget'] ?>"
-                                                data-expense="<?= $row['expense'] ?>"
-                                                data-payee="<?= htmlspecialchars($row['payee']) ?>"
-                                                data-record_description="<?= htmlspecialchars($row['record_description']) ?>"
-                                                data-remarks="<?= htmlspecialchars($row['remarks']) ?>"
-                                                data-rental_rate="<?= $row['rental_rate'] ?>"
-                                                data-tax="<?= $row['tax'] ?>"
-                                                data-variance="<?= $row['variance'] ?>"
-                                                data-invoice_no="<?= htmlspecialchars($row['invoice_no']) ?>">
+                                            data-id="<?= $row['record_id'] ?>"
+                                            data-category="<?= htmlspecialchars($row['category']) ?>"
+                                            data-subcategory="<?= htmlspecialchars($row['subcategory']) ?>"
+                                            data-date="<?= $row['purchase_date'] ?>"
+                                            data-budget="<?= $row['budget'] ?>"
+                                            data-expense="<?= $row['expense'] ?>"
+                                            data-payee="<?= htmlspecialchars($row['payee']) ?>"
+                                            data-record_description="<?= htmlspecialchars($row['record_description']) ?>"
+                                            data-remarks="<?= htmlspecialchars($row['remarks']) ?>"
+                                            data-rental_rate="<?= $row['rental_rate'] ?>"
+                                            data-tax="<?= $row['tax'] ?>"
+                                            data-variance="<?= $row['variance'] ?>"
+                                            data-invoice_no="<?= htmlspecialchars($row['invoice_no']) ?>">
                                             <img src="icons/eye.svg" width="16" alt="View">
                                         </button>
                                         <button type="button" class="btn btn-sm btn-primary edit-btn"
@@ -423,9 +479,10 @@
                     </div>
                 </div>
             </div>
-            <?php include('edit_project_modal.php'); ?>
         </div>
     </div>
+    
+    <?php include('edit_project_modal.php'); ?>
 
     <!-- ADD/EDIT RECORD MODAL -->
     <div class="modal fade" id="expenseModal" tabindex="-1" aria-labelledby="expenseModalLabel" aria-hidden="true">
@@ -479,22 +536,22 @@
                         <div class="form-section">
                             <div class="form-section-title">Budget and Expense</div>
                             <div class="row g-3">
-                                <div class="col-md-6">
-                                    <label for="budget" class="form-label">Budget</label>
-                                    <input type="number" step="0.01" class="form-control calculation" id="budget" name="budget" value="0.00">
+                                <div class="d-flex align-items-center mb-2">
+                                    <input type="checkbox" id="is_rental" class="form-check-input me-2">
+                                    <label for="is_rental" class="form-check-label">Is Rental?</label>
+                                </div>
+                                <div id="expense_input">
+                                    <label for="expense" class="form-label">Expense</label>
+                                    <input type="number" step="0.01" class="form-control calculation" id="expense" name="expense" required value="0.00">
+                                </div>
+                                <div id="rental_input" style="display: none;">
+                                    <label for="rental_rate" class="form-label">Rental Rate</label>
+                                    <input type="number" step="0.01" class="form-control calculation" id="rental_rate" name="rental_rate" value="0.00">
                                 </div>
                                 <div class="col-md-6">
-                                    <div class="d-flex align-items-center mb-2">
-                                        <input type="checkbox" id="is_rental" class="form-check-input me-2">
-                                        <label for="is_rental" class="form-check-label">Is Rental?</label>
-                                    </div>
-                                    <div id="expense_input">
-                                        <label for="expense" class="form-label">Expense</label>
-                                        <input type="number" step="0.01" class="form-control calculation" id="expense" name="expense" required value="0.00">
-                                    </div>
-                                    <div id="rental_input" style="display: none;">
-                                        <label for="rental_rate" class="form-label">Rental Rate</label>
-                                        <input type="number" step="0.01" class="form-control calculation" id="rental_rate" name="rental_rate" value="0.00">
+                                    <div class="col-md-6">
+                                        <label for="budget" class="form-label">Budget</label>
+                                        <input type="number" step="0.01" class="form-control calculation" id="budget" name="budget" value="0.00">
                                     </div>
                                 </div>
                                 <div class="col-md-6">
@@ -681,6 +738,7 @@
     </div>
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.2.3/dist/js/bootstrap.bundle.min.js"></script>
 
     <script src="js/sidebar.js"></script>
     <script src="js/header.js"></script>
@@ -720,26 +778,25 @@
     </script>
 
     <script>//Project Summary Dropdown EDIT and DELETE
-        // Toggle dropdown visibility
+        // Toggle dropdown menu
         function toggleDropdown(button) {
-            // Find the dropdown-menu sibling of the clicked button
-            const dropdown = button.nextElementSibling;
-            if (!dropdown) return;
-            
-            // Toggle visibility
-            dropdown.style.display = (dropdown.style.display === 'block') ? 'none' : 'block';
+            const menu = button.nextElementSibling;
+            if (menu.style.display === 'block') {
+                menu.style.display = 'none';
+            } else {
+                // Close any other dropdowns open on the page first
+                document.querySelectorAll('.dropdown-menu').forEach(m => m.style.display = 'none');
+                menu.style.display = 'block';
+            }
         }
 
         // Close dropdown if clicked outside
-        window.addEventListener('click', function(e) {
-            const dropdowns = document.querySelectorAll('.dropdown-menu');
-            dropdowns.forEach(menu => {
-                // If click is NOT inside menu or its button, hide it
-                if (!menu.contains(e.target) && !menu.previousElementSibling.contains(e.target)) {
-                    menu.style.display = 'none';
-                }
-            });
+        document.addEventListener('click', function(event) {
+            if (!event.target.closest('.project-options')) {
+                document.querySelectorAll('.dropdown-menu').forEach(menu => menu.style.display = 'none');
+            }
         });
+
 
         // Attach handlers for edit/delete buttons
         document.querySelectorAll('.dropdown-edit').forEach(button => {
@@ -756,34 +813,30 @@
             document.getElementById('editProjectPanel').classList.remove('open');
         }
 
-        //DELETE Button
+        // Delete project with confirmation & AJAX
         function deleteProject(projectId) {
-            if (!projectId) {
-                alert("Project ID not found.");
+            if (!confirm('Are you sure you want to delete this project?')) {
                 return;
             }
 
-            if (confirm("Are you sure you want to delete this project?")) {
-                const formData = new FormData();
-                formData.append("delete_project_id", projectId);
+            const xhr = new XMLHttpRequest();
+            xhr.open('POST', window.location.href, true);
+            xhr.setRequestHeader('Content-Type', 'application/x-www-form-urlencoded');
 
-                fetch("", {
-                    method: "POST",
-                    body: formData
-                })
-                .then(response => response.text())
-                .then(data => {
-                    if (data.trim() === "success") {
-                        window.location.href = "ms_projects.php"; // redirect after deletion
+            xhr.onload = function() {
+                if (xhr.status === 200) {
+                    if (xhr.responseText.trim() === 'success') {
+                        alert('Project deleted successfully.');
+                        window.location.href = 'ms_projects.php'; // Redirect to projects list page
                     } else {
-                        alert("Error: " + data);
+                        alert('Failed to delete project: ' + xhr.responseText);
                     }
-                })
-                .catch(error => {
-                    console.error("Delete error:", error);
-                    alert("An error occurred.");
-                });
-            }
+                } else {
+                    alert('Request failed. Returned status of ' + xhr.status);
+                }
+            };
+
+            xhr.send('delete_project_id=' + encodeURIComponent(projectId));
         }
     </script>
     <script>

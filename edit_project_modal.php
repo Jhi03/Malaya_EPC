@@ -121,171 +121,137 @@ if ($project_id > 0) {
 <head>
 <meta charset="UTF-8" />
 <title><?= htmlspecialchars($page_title) ?></title>
+<link rel="stylesheet" href="ms_payroll.css" />
 <link rel="stylesheet" href="styles.css" />
-<style>
-/* Basic styling for the edit panel and dropdown */
-.edit-project-panel {
-    position: fixed;
-    top: 0; right: -400px;
-    width: 400px; height: 100%;
-    background: #f4f4f4;
-    box-shadow: -2px 0 8px rgba(0,0,0,0.3);
-    overflow-y: auto;
-    transition: right 0.3s ease;
-    z-index: 9999;
-    padding: 20px;
-}
-.edit-project-panel.open {
-    right: 0;
-}
-.panel-header h4 {
-    margin: 0 0 20px 0;
-}
-.form-row {
-    margin-bottom: 15px;
-}
-.form-row label {
-    display: block;
-    font-weight: bold;
-}
-.form-row input, .form-row textarea {
-    width: 100%;
-    padding: 6px 8px;
-    box-sizing: border-box;
-}
-.panel-footer {
-    margin-top: 20px;
-    text-align: right;
-}
-.panel-footer button {
-    margin-left: 10px;
-    padding: 8px 12px;
-}
-.project-summary {
-    border: 1px solid #ccc;
-    padding: 15px;
-    margin-bottom: 20px;
-    position: relative;
-    display: flex;
-    justify-content: space-between;
-}
-.project-options {
-    position: absolute;
-    top: 10px; right: 10px;
-}
-.ellipsis-btn {
-    background: none;
-    border: none;
-    cursor: pointer;
-}
-.dropdown-menu {
-    position: absolute;
-    top: 30px; right: 0;
-    background: white;
-    border: 1px solid #ccc;
-    box-shadow: 0 2px 6px rgba(0,0,0,0.2);
-    display: none;
-    z-index: 10;
-}
-.dropdown-menu button {
-    display: block;
-    width: 100%;
-    padding: 8px 15px;
-    border: none;
-    background: none;
-    text-align: left;
-    cursor: pointer;
-}
-.dropdown-menu button:hover {
-    background-color: #eee;
-}
-</style>
 </head>
 <body>
 
 <?php if ($project): ?>
+<!-- Project content would go here -->
 <?php else: ?>
     <p class="text-danger text-center">Project not found.</p>
 <?php endif; ?>
 
-<!-- Slide-in Edit Project Panel -->
-<div id="editProjectPanel" class="edit-project-panel" aria-hidden="true">
-    <form method="post" action="" id="editProjectForm">
-        <input type="hidden" name="project_id" value="<?= $project_id ?>">
-        <div class="panel-header">
-            <h4>Edit Project</h4>
+<!-- Edit Project Modal - Styled to match ms_payroll modals -->
+<div class="modal fade" id="editProjectModal" tabindex="-1" aria-labelledby="editProjectModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <form id="editProjectForm" method="post">
+                <input type="hidden" name="project_id" value="<?= $project_id ?>">
+                
+                <div class="modal-header">
+                    <h5 class="modal-title" id="editProjectModalLabel">Edit Project</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                
+                <div class="modal-body">
+                    <div class="form-section">
+                        <div class="form-section-title">Project Information</div>
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                <label for="project_name" class="form-label">Project Name</label>
+                                <input type="text" class="form-control" id="project_name" name="project_name" 
+                                       value="<?= htmlspecialchars($project['project_name'] ?? '') ?>" required>
+                            </div>
+                            <div class="col-md-6">
+                                <label for="project_code" class="form-label">Project Code</label>
+                                <input type="text" class="form-control" id="project_code" name="project_code" 
+                                       value="<?= htmlspecialchars($project['project_code'] ?? '') ?>" required>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="form-section">
+                        <div class="form-section-title">Client Information</div>
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                <label for="first_name" class="form-label">First Name</label>
+                                <input type="text" class="form-control" id="first_name" name="first_name" 
+                                       value="<?= htmlspecialchars($project['first_name'] ?? '') ?>" required>
+                            </div>
+                            <div class="col-md-6">
+                                <label for="last_name" class="form-label">Last Name</label>
+                                <input type="text" class="form-control" id="last_name" name="last_name" 
+                                       value="<?= htmlspecialchars($project['last_name'] ?? '') ?>" required>
+                            </div>
+                            <div class="col-md-6">
+                                <label for="contact" class="form-label">Contact</label>
+                                <input type="text" class="form-control" id="contact" name="contact" 
+                                       value="<?= htmlspecialchars($project['contact'] ?? '') ?>">
+                            </div>
+                            <div class="col-md-6">
+                                <label for="email" class="form-label">Email</label>
+                                <input type="email" class="form-control" id="email" name="email" 
+                                       value="<?= htmlspecialchars($project['email'] ?? '') ?>">
+                            </div>
+                            <div class="col-md-12">
+                                <label for="company_name" class="form-label">Company</label>
+                                <input type="text" class="form-control" id="company_name" name="company_name" 
+                                       value="<?= htmlspecialchars($project['company_name'] ?? '') ?>">
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="form-section">
+                        <div class="form-section-title">Address</div>
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                <label for="unit_building_no" class="form-label">Unit/Building No.</label>
+                                <input type="text" class="form-control" id="unit_building_no" name="unit_building_no" 
+                                       value="<?= htmlspecialchars($project['unit_building_no'] ?? '') ?>">
+                            </div>
+                            <div class="col-md-6">
+                                <label for="street" class="form-label">Street</label>
+                                <input type="text" class="form-control" id="street" name="street" 
+                                       value="<?= htmlspecialchars($project['Street'] ?? '') ?>">
+                            </div>
+                            <div class="col-md-6">
+                                <label for="barangay" class="form-label">Barangay</label>
+                                <input type="text" class="form-control" id="barangay" name="barangay" 
+                                       value="<?= htmlspecialchars($project['barangay'] ?? '') ?>">
+                            </div>
+                            <div class="col-md-6">
+                                <label for="city" class="form-label">City</label>
+                                <input type="text" class="form-control" id="city" name="city" 
+                                       value="<?= htmlspecialchars($project['city'] ?? '') ?>">
+                            </div>
+                            <div class="col-md-12">
+                                <label for="country" class="form-label">Country</label>
+                                <input type="text" class="form-control" id="country" name="country" 
+                                       value="<?= htmlspecialchars($project['country'] ?? '') ?>">
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="form-section">
+                        <div class="form-section-title">Additional Information</div>
+                        <div class="row g-3">
+                            <div class="col-md-12">
+                                <label for="description" class="form-label">Description</label>
+                                <textarea class="form-control" id="description" name="description" rows="4"><?= htmlspecialchars($project['description'] ?? '') ?></textarea>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" name="update_project" value="1" class="btn btn-primary">Update</button>
+                </div>
+            </form>
         </div>
-        <div class="panel-body">
-            <div class="form-row">
-                <label for="project_name">Project Name</label>
-                <input type="text" id="project_name" name="project_name" value="<?= htmlspecialchars($project['project_name'] ?? '') ?>" required>
-            </div>
+    </div>
+</div>
 
-            <div class="form-row">
-                <label for="project_code">Project Code</label>
-                <input type="text" id="project_code" name="project_code" value="<?= htmlspecialchars($project['project_code'] ?? '') ?>" required>
-            </div>
-
-            <div class="form-row">
-                <label for="first_name">Client First Name</label>
-                <input type="text" id="first_name" name="first_name" value="<?= htmlspecialchars($project['first_name'] ?? '') ?>" required>
-            </div>
-
-            <div class="form-row">
-                <label for="last_name">Client Last Name</label>
-                <input type="text" id="last_name" name="last_name" value="<?= htmlspecialchars($project['last_name'] ?? '') ?>" required>
-            </div>
-
-            <div class="form-row">
-                <label for="contact">Contact</label>
-                <input type="text" id="contact" name="contact" value="<?= htmlspecialchars($project['contact'] ?? '') ?>">
-            </div>
-
-            <div class="form-row">
-                <label for="email">Email</label>
-                <input type="email" id="email" name="email" value="<?= htmlspecialchars($project['email'] ?? '') ?>">
-            </div>
-
-            <div class="form-row">
-                <label for="company_name">Company</label>
-                <input type="text" id="company_name" name="company_name" value="<?= htmlspecialchars($project['company_name'] ?? '') ?>">
-            </div>
-
-            <div class="form-row">
-                <label for="unit_building_no">Unit/Building No.</label>
-                <input type="text" id="unit_building_no" name="unit_building_no" value="<?= htmlspecialchars($project['unit_building_no'] ?? '') ?>">
-            </div>
-
-            <div class="form-row">
-                <label for="street">Street</label>
-                <input type="text" id="street" name="street" value="<?= htmlspecialchars($project['Street'] ?? '') ?>">
-            </div>
-
-            <div class="form-row">
-                <label for="barangay">Barangay</label>
-                <input type="text" id="barangay" name="barangay" value="<?= htmlspecialchars($project['barangay'] ?? '') ?>">
-            </div>
-
-            <div class="form-row">
-                <label for="city">City</label>
-                <input type="text" id="city" name="city" value="<?= htmlspecialchars($project['city'] ?? '') ?>">
-            </div>
-
-            <div class="form-row">
-                <label for="country">Country</label>
-                <input type="text" id="country" name="country" value="<?= htmlspecialchars($project['country'] ?? '') ?>">
-            </div>
-
-            <div class="form-row">
-                <label for="description">Description</label>
-                <textarea id="description" name="description" rows="4"><?= htmlspecialchars($project['description'] ?? '') ?></textarea>
-            </div>
-        </div>
-        <div class="panel-footer">
-            <button type="button" onclick="closeEditPanel()">Cancel</button>
-            <button type="submit" name="update_project" value="1">Update</button>
-        </div>
-    </form>
+<!-- Project options dropdown -->
+<div class="project-options">
+    <button class="ellipsis-btn" onclick="toggleDropdown(this)">
+        <img src="assets/icons/three-dots.svg" alt="Options">
+    </button>
+    <div class="dropdown-menu">
+        <button class="dropdown-edit" onclick="openEditModal()">Edit Project</button>
+        <button class="dropdown-delete" onclick="deleteProject(<?= $project_id ?>)">Delete Project</button>
+    </div>
 </div>
 
 <script>
@@ -308,22 +274,11 @@ document.addEventListener('click', function(event) {
     }
 });
 
-// Show edit panel
-document.querySelector('.dropdown-edit')?.addEventListener('click', () => {
-    openEditPanel();
+// Show edit modal
+function openEditModal() {
+    const modal = new bootstrap.Modal(document.getElementById('editProjectModal'));
+    modal.show();
     document.querySelectorAll('.dropdown-menu').forEach(menu => menu.style.display = 'none');
-});
-
-// Open edit panel
-function openEditPanel() {
-    document.getElementById('editProjectPanel').classList.add('open');
-    document.getElementById('editProjectPanel').setAttribute('aria-hidden', 'false');
-}
-
-// Close edit panel
-function closeEditPanel() {
-    document.getElementById('editProjectPanel').classList.remove('open');
-    document.getElementById('editProjectPanel').setAttribute('aria-hidden', 'true');
 }
 
 // Delete project with confirmation & AJAX
@@ -351,13 +306,6 @@ function deleteProject(projectId) {
 
     xhr.send('delete_project_id=' + encodeURIComponent(projectId));
 }
-
-// Optional: close edit panel on ESC key
-document.addEventListener('keydown', function(e) {
-    if (e.key === 'Escape') {
-        closeEditPanel();
-    }
-});
 </script>
 
 </body>
