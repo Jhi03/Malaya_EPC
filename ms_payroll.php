@@ -254,12 +254,12 @@
                                     <input type="date" class="form-control" id="filter_period_start" name="filter_period_start" value="<?php echo $filter_period_start; ?>">
                                 </div>
                                 <div class="col-md-6">
-                                    <label for="filter_period_end" class="form-label">Period End</label>
-                                    <input type="date" class="form-control" id="filter_period_end" name="filter_period_end" value="<?php echo $filter_period_end; ?>">
-                                </div>
-                                <div class="col-md-6">
                                     <label for="search" class="form-label">Search</label>
                                     <input type="text" class="form-control" id="search" name="search" placeholder="Search..." value="<?php echo $search; ?>">
+                                </div>
+                                <div class="col-md-6">
+                                    <label for="filter_period_end" class="form-label">Period End</label>
+                                    <input type="date" class="form-control" id="filter_period_end" name="filter_period_end" value="<?php echo $filter_period_end; ?>">
                                 </div>
                             </form>
 
