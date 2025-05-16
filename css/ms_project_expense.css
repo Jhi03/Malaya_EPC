@@ -10,7 +10,7 @@ body {
 }
 
 .content-body {
-    padding: 20px;
+    padding: 20px 40px 20px 40px;
     flex: 1;
     overflow-x: hidden;
     display: flex;
@@ -42,8 +42,8 @@ body {
     border-radius: 16px;
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
     border: 1px solid #eee;
-    margin: 0px 20px;
     gap: 12px;
+    margin-bottom: 5px;
 }
 
 .left-controls {
@@ -175,7 +175,6 @@ img {
     border: 1px solid #e5e7eb;
     border-radius: 12px;
     padding: 20px;
-    margin: 10px 20px;
     font-size: 12px;
     line-height: 1.6;
     flex-wrap: wrap;
@@ -310,13 +309,13 @@ img {
     padding-top: 20px;
 }
 
-/* Table Styling */
-.records-table-container {
-    margin: 0 20px 20px;
+/* Responsive table */
+.table-responsive {
     overflow-x: auto;
 }
 
-table.table {
+/* Table Base Style */
+.table {
     width: 100%;
     margin-top: 10px;
     border-collapse: collapse;
@@ -328,74 +327,79 @@ table.table {
     overflow: hidden;
 }
 
-table.table th,
-table.table td {
+/* Table Head Styling - darker gray */
+.table thead th {
+    background-color: #e5e7eb; /* darker gray */
+    font-weight: 600;
+    text-align: center;
+    border: 1px solid #d1d5db;
+    padding: 10px 12px;
+}
+
+/* Table Body Styling */
+.table td {
     border: 1px solid #e5e7eb;
     padding: 10px 12px;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
-}
-
-table.table th {
-    background-color: #f3f4f6;
-    font-weight: 600;
-    text-align: center;
-}
-
-table.table td {
     text-align: left;
 }
 
-table.table tr:hover {
-    background-color: #f9fafb;
+/* First row white, alternating starts with white */
+.table tbody tr:nth-child(odd) {
+    background-color: #ffffff;
 }
-
-table.table td i {
-    cursor: pointer;
-    font-size: 14px;
-}
-
-table.table tr:hover {
+.table tbody tr:nth-child(even) {
     background-color: #f9f9f9;
 }
 
-/* Column-specific widths and alignments */
-table.table th {
-    text-align: center !important; /* Center all headers */
-}
-table.table td {
-    text-align: left;   /* Default left alignment for data */
+/* Hover effect */
+.table tbody tr:hover {
+    background-color: #f1f5f9;
 }
 
 /* Column Widths & Specific Alignments */
-table.table th:nth-child(1),
-table.table td:nth-child(1) { width: 30px; }   /* Record ID */
-table.table th:nth-child(2),
-table.table td:nth-child(2) { width: 70px; }  /* Category */
-table.table th:nth-child(3),
-table.table td:nth-child(3) { width: 180px; }  /* Description */
-table.table th:nth-child(4),
-table.table td:nth-child(4) { width: 90px; text-align: right; } /* Budget */
-table.table th:nth-child(5),
-table.table td:nth-child(5) { width: 90px; text-align: right; } /* Actual */
-table.table th:nth-child(6),
-table.table td:nth-child(6) { width: 90px; }  /* Payee */
-table.table th:nth-child(7),
-table.table td:nth-child(7) { width: 70px; text-align: right; } /* Variance */
-table.table th:nth-child(8),
-table.table td:nth-child(8) { width: 60px; text-align: right; } /* Tax */
-table.table th:nth-child(9),
-table.table td:nth-child(9) { width: 160px; }  /* Remarks */
-table.table th:nth-child(10),
-table.table td:nth-child(10) { width: 100px;  }  /* Date */
-table.table th:nth-child(11),
-table.table td:nth-child(11) { width: 35px; text-align: center; }  /* Edit */
-table.table th:nth-child(12),
-table.table td:nth-child(12) { width: 35px; text-align: center; }  /* Delete */
+.table th:nth-child(1),
+.table td:nth-child(1) {
+  width: 30px; /* Fixed width */
+}
+
+.table th:nth-child(2),
+.table td:nth-child(2) {
+  width: 8%; /* Category */
+}
+
+.table th:nth-child(3),
+.table td:nth-child(3),
+.table th:nth-child(4),
+.table td:nth-child(4) {
+  width: 12%; /* Description and Budget */
+}
+
+.table th:nth-child(9),
+.table td:nth-child(9),
+.table th:nth-child(10),
+.table td:nth-child(10),
+.table th:nth-child(11),
+.table td:nth-child(11) {
+  width: 10%; /* Remarks, Date, Edit */
+}
+
+.table th:nth-child(5),
+.table td:nth-child(5),
+.table th:nth-child(6),
+.table td:nth-child(6),
+.table th:nth-child(7),
+.table td:nth-child(7),
+.table th:nth-child(8),
+.table td:nth-child(8) {
+  width: auto; /* These will take up remaining space */
+}
+
 
 /* Optional: style tooltips on hover */
-table.table td[title]:hover::after {
+.table td[title]:hover::after {
     content: attr(title);
     position: absolute;
     background: #333;
@@ -452,4 +456,29 @@ table.table td[title]:hover::after {
     max-width: 40vw;    /* 40% of viewport width */
     display: flex;
     flex-direction: column;
+}
+
+.btn.btn-sm.btn-info.view-btn
+.btn.btn-sm.btn-danger.delete-btn
+.btn.btn-sm.btn-primary.edit-btn{
+    padding: 6px 12px 6px 12px !important;
+    font-size: 14px;
+}
+
+.btn.btn-secondary {
+    background-color: #333 !important;
+    color: white !important;
+    border: none !important;
+    border-radius: 8px !important;
+}
+
+.btn.btn-secondary:hover {
+    background-color: #212121 !important;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.05) !important;
+    transform: translateY(-2px) !important;
+}
+
+.btn.btn-sm.btn-info.view-btn{
+    background-color: #333;
+    border: none;
 }

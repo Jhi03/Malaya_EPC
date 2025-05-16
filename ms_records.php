@@ -103,7 +103,7 @@
         $purchase_date = $_POST['purchase_date'] ?? date('Y-m-d');
         $budget = floatval($_POST['budget'] ?? 0);
         $payee = $_POST['payee'] ?? '';
-        $description = $_POST['description'] ?? '';
+        $record_description = $_POST['record_description'] ?? '';
         $remarks = $_POST['remarks'] ?? '';
         
         // Handle special fields
@@ -124,13 +124,13 @@
             // UPDATE EXISTING RECORD
             $stmt = $conn->prepare("UPDATE expense SET 
                 category = ?, subcategory = ?, purchase_date = ?, budget = ?, expense = ?, 
-                payee = ?, description = ?, remarks = ?, variance = ?, tax = ?, 
+                payee = ?, record_description = ?, remarks = ?, variance = ?, tax = ?, 
                 rental_rate = ?, invoice_no = ?, edited_by = ?, edit_date = NOW()
                 WHERE record_id = ?");
             $stmt->bind_param(
                 "sssddsssddssii",
                 $category, $subcategory, $purchase_date, $budget, $expense, 
-                $payee, $description, $remarks, $variance, $tax,
+                $payee, $record_description, $remarks, $variance, $tax,
                 $rental_rate, $invoice_no, $user_id, $edit_id
             );
             $stmt->execute();
@@ -141,13 +141,13 @@
             // ADD NEW RECORD
             $stmt = $conn->prepare("INSERT INTO expense (
                 project_id, user_id, category, subcategory, purchase_date, budget, expense, 
-                payee, description, remarks, variance, tax, rental_rate, invoice_no, 
+                payee, record_description, remarks, variance, tax, rental_rate, invoice_no, 
                 created_by, creation_date
             ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())");
             $stmt->bind_param(
                 "iisssddsssddsis",
                 $project_id, $user_id, $category, $subcategory, $purchase_date, $budget, $expense,
-                $payee, $description, $remarks, $variance, $tax, $rental_rate, $invoice_no,
+                $payee, $record_description, $remarks, $variance, $tax, $rental_rate, $invoice_no,
                 $user_id
             );
             // your insert logic here
@@ -293,21 +293,20 @@
 
             <!-- RECORDS VIEW -->
             <!-- Expense Records Table -->
-            <div class="records-table-container">
-                <table class="table">
+            <div class="table-responsive">
+                <table class="table table-hover">
                     <thead>
                         <tr>
                             <th> </th>
                             <th>Category</th>
                             <th>Description</th>
+                            <th>Payee</th>
                             <th>Budget</th>
                             <th>Expense</th>
-                            <th>Payee</th>
                             <th>Variance</th>
                             <th>Tax</th>
                             <th>Remarks</th>
                             <th>Date</th>
-                            <th> </th>
                             <th> </th>
                         </tr>
                     </thead>
@@ -317,22 +316,20 @@
                                 <tr>
                                     <td><?= $i + 1 ?></td>
                                     <td><?= htmlspecialchars($row['category']) ?></td>
-                                    <td title="<?= htmlspecialchars($row['description']) ?>">
-                                        <?= htmlspecialchars($row['description']) ?>
+                                    <td title="<?= htmlspecialchars($row['record_description']) ?>">
+                                        <?= htmlspecialchars($row['record_description']) ?>
                                     </td>
-                                    <td><?= number_format($row['budget'], 2) ?></td>
-                                    <td><?= number_format($row['expense'], 2) ?></td>
-                                    <td title="<?= htmlspecialchars($row['payee']) ?>">
-                                        <?= htmlspecialchars($row['payee']) ?>
-                                    </td>
-                                    <td><?= number_format($row['variance'], 2) ?></td>
-                                    <td><?= number_format($row['tax'], 2) ?></td>
+                                    <td><?= htmlspecialchars($row['payee']) ?></td>
+                                    <td>₱<?= number_format($row['budget'], 2) ?></td>
+                                    <td>₱<?= number_format($row['expense'], 2) ?></td>
+                                    <td>₱<?= number_format($row['variance'], 2) ?></td>
+                                    <td>₱<?= number_format($row['tax'], 2) ?></td>
                                     <td title="<?= htmlspecialchars($row['remarks']) ?>">
                                         <?= htmlspecialchars($row['remarks']) ?>
                                     </td>
-                                    <td><?= date("m-d-Y", strtotime($row['purchase_date'])) ?></td>
+                                    <td><?= date("M d, Y", strtotime($row['purchase_date'])) ?></td>
                                     <td>
-                                        <button type="button" class="btn btn-sm btn-warning edit-btn"
+                                        <button type="button" class="btn btn-sm btn-info view-btn"
                                             data-id="<?= $row['record_id'] ?>"
                                             data-category="<?= htmlspecialchars($row['category']) ?>"
                                             data-subcategory="<?= htmlspecialchars($row['subcategory']) ?>"
@@ -340,24 +337,36 @@
                                             data-budget="<?= $row['budget'] ?>"
                                             data-expense="<?= $row['expense'] ?>"
                                             data-payee="<?= htmlspecialchars($row['payee']) ?>"
-                                            data-description="<?= htmlspecialchars($row['description']) ?>"
+                                            data-record_description="<?= htmlspecialchars($row['record_description']) ?>"
                                             data-remarks="<?= htmlspecialchars($row['remarks']) ?>"
                                             data-rental_rate="<?= $row['rental_rate'] ?>"
                                             data-tax="<?= $row['tax'] ?>"
-                                            data-invoice_no="<?= htmlspecialchars($row['invoice_no']) ?>"
-                                        >
-                                            <img src="icons/pencil.svg" width="18" alt="Edit">
+                                            data-invoice_no="<?= htmlspecialchars($row['invoice_no']) ?>">
+                                            <img src="icons/eye.svg" width="16" alt="Edit">
                                         </button>
-                                    </td>
-                                    <td>
-                                        <a href="#" class="delete-btn" data-id="<?= htmlspecialchars($row['record_id']) ?>">
-                                            <img src="icons/x-circle.svg" alt="Delete" width="18">
-                                        </a>
+                                        <button type="button" class="btn btn-sm btn-primary edit-btn"
+                                            data-id="<?= $row['record_id'] ?>"
+                                            data-category="<?= htmlspecialchars($row['category']) ?>"
+                                            data-subcategory="<?= htmlspecialchars($row['subcategory']) ?>"
+                                            data-date="<?= $row['purchase_date'] ?>"
+                                            data-budget="<?= $row['budget'] ?>"
+                                            data-expense="<?= $row['expense'] ?>"
+                                            data-payee="<?= htmlspecialchars($row['payee']) ?>"
+                                            data-record_description="<?= htmlspecialchars($row['record_description']) ?>"
+                                            data-remarks="<?= htmlspecialchars($row['remarks']) ?>"
+                                            data-rental_rate="<?= $row['rental_rate'] ?>"
+                                            data-tax="<?= $row['tax'] ?>"
+                                            data-invoice_no="<?= htmlspecialchars($row['invoice_no']) ?>">
+                                            <img src="icons/pencil.svg" width="16" alt="Edit">
+                                        </button>
+                                        <button type="button" class="btn btn-sm btn-danger delete-btn" onclick="deleteExpense(<?= $row['record_id'] ?>)">
+                                            <img src="icons/trash.svg" alt="Delete" width="16">
+                                        </button>
                                     </td>
                                 </tr>
                             <?php endforeach; ?>
                         <?php else: ?>
-                            <tr><td colspan="12" class="text-center">No records available for this project.</td></tr>
+                            <tr><td colspan="11" class="text-center">No records available for this project.</td></tr>
                         <?php endif; ?>
                     </tbody>
                 </table>
@@ -421,7 +430,7 @@
     <div class="modal fade" id="expenseModal" tabindex="-1" aria-labelledby="expenseModalLabel" aria-hidden="true">
         <div class="modal-dialog modal-lg">
             <div class="modal-content">
-                <form id="expenseForm" method="post" action="">
+                <form id="expenseForm" method="post">
                     <div class="modal-header">
                         <h5 class="modal-title" id="expenseModalLabel">Add Expense</h5>
                         <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
@@ -436,7 +445,7 @@
                             <div class="row g-3">
                                 <div class="col-md-6">
                                     <label for="category" class="form-label">Category</label>
-                                    <select id="category" name="category" required>
+                                    <select id="category" name="category" class="form-select" required>
                                         <option value="">Select Category</option>
                                         <?php foreach ($categories as $cat): ?>
                                             <option value="<?php echo htmlspecialchars($cat['category_name']); ?>">
@@ -447,7 +456,7 @@
                                 </div>
                                 <div class="col-md-6">
                                     <label for="subcategory" class="form-label">Subcategory</label>
-                                    <select id="subcategory" name="subcategory" disabled required>
+                                    <select id="subcategory" name="subcategory" class="form-select" disabled required>
                                         <option value="">Select Subcategory</option>
                                     </select>
                                 </div>
@@ -460,8 +469,8 @@
                                     <input type="text" class="form-control" id="payee" name="payee" required>
                                 </div>
                                 <div class="col-md-12">
-                                    <label for="description" class="form-label">Description</label>
-                                    <input type="text" class="form-control" id="description" name="description" required>
+                                    <label for="record_description" class="form-label">Description</label>
+                                    <input type="text" class="form-control" id="record_description" name="record_description" required>
                                 </div>
                             </div>
                         </div>
@@ -471,7 +480,7 @@
                             <div class="row g-3">
                                 <div class="col-md-6">
                                     <label for="budget" class="form-label">Budget</label>
-                                    <input type="number" step="0.01" class="form-control calculation" id="budget" name="budget" required value="0.00">
+                                    <input type="number" step="0.01" class="form-control calculation" id="budget" name="budget" value="0.00">
                                 </div>
                                 <div class="col-md-6">
                                     <div class="d-flex align-items-center mb-2">
@@ -549,8 +558,8 @@
                         </div>
                     </div>
                     <div class="modal-footer">
-                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                        <button type="submit" name="save_expense" class="btn btn-primary">Save</button>
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">CANCEL</button>
+                        <button type="submit" name="save_expense" class="btn btn-primary">SAVE</button>
                     </div>
                 </form>
             </div>
@@ -669,7 +678,7 @@
                     budget: this.getAttribute('data-budget'),
                     expense: this.getAttribute('data-expense'),
                     payee: this.getAttribute('data-payee'),
-                    description: this.getAttribute('data-description'),
+                    record_description: this.getAttribute('data-record_description'),
                     remarks: this.getAttribute('data-remarks'),
                     rental_rate: this.getAttribute('data-rental_rate') || 0,
                     tax: this.getAttribute('data-tax') || 0,
@@ -686,24 +695,23 @@
             const subcategories = <?php echo json_encode($subcategories); ?>;
 
             // Category dropdown change handler
-            document.getElementById('category').addEventListener('change', function() {
+            document.getElementById('category').addEventListener('change', function () {
                 const categorySelect = document.getElementById('category');
                 const subcategorySelect = document.getElementById('subcategory');
                 const selectedCategoryName = categorySelect.value;
 
-                // Clear existing options
+                // Clear previous options
                 subcategorySelect.innerHTML = '<option value="">Select Subcategory</option>';
 
-                if (selectedCategoryName) {
-                    // Enable subcategory dropdown
+                // Filter subcategories by category_name
+                const filteredSubcategories = subcategories.filter(item =>
+                    item.category_name === selectedCategoryName
+                );
+
+                if (filteredSubcategories.length > 0) {
                     subcategorySelect.disabled = false;
+                    subcategorySelect.setAttribute('required', 'required');
 
-                    // Filter subcategories by category_name
-                    const filteredSubcategories = subcategories.filter(item => 
-                        item.category_name === selectedCategoryName
-                    );
-
-                    // Add filtered subcategories to dropdown
                     filteredSubcategories.forEach(subcategory => {
                         const option = document.createElement('option');
                         option.value = subcategory.subcategory_name;
@@ -711,11 +719,12 @@
                         subcategorySelect.appendChild(option);
                     });
                 } else {
-                    // Disable subcategory dropdown if no category selected
+                    // No subcategories — disable and make it not required
                     subcategorySelect.disabled = true;
+                    subcategorySelect.removeAttribute('required');
                 }
             });
-            
+
             // Checkbox event listeners
             document.getElementById('is_rental').addEventListener('change', function() {
                 const expenseInput = document.getElementById('expense_input');
@@ -841,7 +850,8 @@
                     
                     document.getElementById('purchase_date').value = recordData.date;
                     document.getElementById('payee').value = recordData.payee;
-                    document.getElementById('description').value = recordData.description;
+                    
+                    document.getElementById('record_description').value = recordData.record_description;
                     document.getElementById('budget').value = recordData.budget;
                     document.getElementById('remarks').value = recordData.remarks;
                     
@@ -881,7 +891,6 @@
             
             // Handle form submission
             document.getElementById('expenseForm').addEventListener('submit', function(e) {
-                e.preventDefault();
                 
                 // Form validation
                 if (!this.checkValidity()) {
@@ -896,7 +905,7 @@
         });
 
         // Function to edit expense record
-        function editExpense(id, category, subcategory, date, budget, expense, payee, description, remarks, rental_rate, tax, invoice_no) {
+        function editExpense(id, category, subcategory, date, budget, expense, payee, record_description, remarks, rental_rate, tax, invoice_no) {
             openExpenseModal('edit', {
                 id: id,
                 category: category,
@@ -905,7 +914,7 @@
                 budget: budget,
                 expense: expense,
                 payee: payee,
-                description: description,
+                record_description: record_description,
                 remarks: remarks,
                 rental_rate: rental_rate,
                 tax: tax,
