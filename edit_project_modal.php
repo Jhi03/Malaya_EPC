@@ -1,9 +1,9 @@
 <?php
 // DB connection
 $host = 'localhost';
-$user = 'root';
-$password = '';
-$database = 'malayasol';
+$user = 'u188693564_adminsolar';
+$password = '@Malayasolarenergies1';
+$database = 'u188693564_malayasol';
 $conn = new mysqli($host, $user, $password, $database);
 if ($conn->connect_error) {
     die("Connection failed: " . $conn->connect_error);

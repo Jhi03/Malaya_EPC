@@ -4,9 +4,9 @@
 
     // Database connection
     $host = 'localhost';
-    $user = 'root';
+    $user = 'u188693564_adminsolar';
     $password = '';
-    $database = 'malayasol';
+    $database = 'u188693564_malayasol';
     $conn = new mysqli($host, $user, $password, $database);
 
     // Check connection
