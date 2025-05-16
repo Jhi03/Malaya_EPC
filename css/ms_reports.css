@@ -1,161 +1,150 @@
+/* CSS styles for the reports page */
 body {
-    font-family: 'Atkinson Hyperlegible', sans-serif;
+    font-family: 'IBM Plex Sans', 'Atkinson Hyperlegible', sans-serif;
     margin: 0;
     display: flex;
-    height: 100vh; /* Full viewport height */
-    overflow: hidden; /* Prevent overall page scroll */
-}
-
-/* Sidebar styles */
-.sidebar {
-    width: 210px;
-    background-color: #333;
-    color: white;
     height: 100vh;
-    padding: 15px;
-    display: flex;
-    flex-direction: column;
-    justify-content: flex-start;
-    position: fixed;
-    top: 0;
-    left: 0;
-    z-index: 1000;
-    transform: translateX(0); /* visible by default */
-    transition: transform 0.3s ease-in-out;
+    overflow: hidden;
+    background-color: #f9fafb;
+    color: #333;
 }
 
-/* Slide sidebar out to the left */
-.sidebar.collapsed {
-    transform: translateX(-100%);
-}
-
-/* Content area shifts accordingly */
-.content-area {
-    margin-left: 210px;
+.content-body {
+    padding: 20px;
     flex: 1;
+    overflow-x: hidden;
     display: flex;
     flex-direction: column;
-    overflow-y: auto;
-    height: 100vh;
-    transition: margin-left 0.3s ease-in-out;
+    width: 100%;
+    margin-left: auto;
+    margin-right: auto;
+    background: rgba(242, 242, 242, 0.8);
+    background-image: repeating-linear-gradient(
+        45deg,
+        rgba(255, 255, 255, 0.700) 0px,
+        rgba(255, 255, 255, 0.500) 1px,
+        transparent 1px,
+        transparent 20px
+    );
+    backdrop-filter: blur(12px) saturate(180%);
+    -webkit-backdrop-filter: blur(12px) saturate(180%);
 }
 
-/* When sidebar is collapsed, content takes full width */
-.sidebar.collapsed ~ .content-area {
-    margin-left: 0;
-}
-
-.logo {
-    display: flex;
-    align-items: center;
-    font-size: 14px;
-    font-weight: bold;
+/* Card styling */
+.card {
+    border-radius: 10px;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    transition: all 0.3s ease;
+    border: none;
     margin-bottom: 20px;
 }
 
-.logo img {
-    width: 40px;
-    margin-right: 10px;
+.card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 8px 15px rgba(0, 0, 0, 0.1);
 }
 
-.nav-buttons a {
-    text-decoration: none; /* Removes the underline */
-}
-
-.nav-buttons button {
-    background: none;
-    border: none;
-    color: white;
-    text-align: left;
-    font-size: 12px;
-    padding: 10px;
-    width: 100%;
-    display: flex;
-    justify-content: space-between;
-    cursor: pointer;
-}
-
-.nav-buttons a.active button {
-    color: #f4c542;
+.card-header {
+    border-radius: 10px 10px 0 0 !important;
     font-weight: bold;
 }
 
-/* Content Pane */
-.content-area {
-    margin-left: 210px; /* equal to sidebar width */
-    flex: 1;
-    overflow-x: hidden;
+/* Button styling */
+.btn {
+    border-radius: 5px;
+    font-weight: 600;
+    padding: 8px 16px;
+    transition: all 0.3s ease;
 }
 
-/* Header */
-.top-bar {
-    position: sticky;
-    top: 0;
-    background-color: #fff; /* or match your theme */
-    z-index: 900; /* below sidebar (1000), but above content */
-    padding: 10px 20px;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    border-bottom: 1px solid #ddd;
+.btn-primary {
+    background-color: #3498db;
+    border-color: #3498db;
 }
 
-.hamburger {
-    background: none;
-    border: none;
-    font-size: 24px;
-    cursor: pointer;
+.btn-primary:hover {
+    background-color: #2980b9;
+    border-color: #2980b9;
 }
 
-.page-title {
-    font-size: 16px;
-    font-weight: bold;
-    margin: 0;
+.btn-success {
+    background-color: #2ecc71;
+    border-color: #2ecc71;
 }
 
-/*User Menu*/
-.user-icon {
-    background: none;
-    border: none;
-    font-size: 24px;
-    cursor: pointer;
+.btn-success:hover {
+    background-color: #27ae60;
+    border-color: #27ae60;
 }
 
-.user-dropdown {
-    position: relative;
-    display: inline-block;
-}
-  
-.dropdown-menu {
-    display: none;
-    position: absolute;
-    right: 0;
-    background-color: #fff;
-    border-radius: 10px;
-    box-shadow: 0 8px 16px rgba(0,0,0,0.2);
-    min-width: 150px;
-    z-index: 100;
-    margin-top: 10px;
-    overflow: hidden;
+/* Form controls */
+.form-select, .form-control {
+    border-radius: 5px;
+    border: 1px solid #ddd;
+    padding: 8px 12px;
+    transition: all 0.3s ease;
 }
 
-.dropdown-item {
-    display: block;
-    padding: 10px 20px;
-    color: #333;
-    text-decoration: none;
-    font-size: 0.9rem;
+.form-select:focus, .form-control:focus {
+    box-shadow: 0 0 0 0.25rem rgba(52, 152, 219, 0.25);
+    border-color: #3498db;
 }
 
-.dropdown-item:hover {
-    background-color: #f6f6f6;
+/* Guide section styling */
+.card-body ul {
+    padding-left: 20px;
 }
 
-.logout-btn {
-    color: red;
-    font-weight: bold;
+.card-body ul li {
+    margin-bottom: 8px;
 }
 
-.logout-btn:hover {
-    color: darkred;
+/* Responsive adjustments */
+@media (max-width: 768px) {
+    .content-body {
+        padding: 10px;
+    }
+    
+    .card {
+        margin-bottom: 15px;
+    }
+}
+
+/* Header styling */
+h2.text-center {
+    color: #2c3e50;
+    margin-bottom: 30px;
+    font-weight: 700;
+}
+
+/* Background color for different card headers */
+.bg-primary {
+    background-color: #3498db !important;
+}
+
+.bg-success {
+    background-color: #2ecc71 !important;
+}
+
+.bg-info {
+    background-color: #3498db !important;
+    opacity: 0.8;
+}
+
+/* Custom scrollbar for better experience */
+::-webkit-scrollbar {
+    width: 8px;
+}
+
+::-webkit-scrollbar-track {
+    background: #f1f1f1;
+}
+
+::-webkit-scrollbar-thumb {
+    background: #888;
+    border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: #555;
 }

@@ -3,6 +3,7 @@
     $page_title = "ASSETS";
 
     // DATABASE CONNECTION
+<<<<<<< HEAD
     $servername = "localhost";  
     $username = "u188693564_adminsolar";           
     $password = "@Malayasolarenergies1";            
@@ -12,37 +13,37 @@
     $conn = new mysqli($servername, $username, $password, $dbname);
 
     // Check connection
+=======
+    $conn = new mysqli("localhost", "root", "", "malayasol");
+>>>>>>> 53a8b739bac1fa34eb692d96a52277e24a81f2ec
     if ($conn->connect_error) {
         die("Connection failed: " . $conn->connect_error);
     }
 
-    // For Categories dropdown
+    // CATEGORY DROPDOWN
     $categoryOptions = '';
-    $categoryQuery = "SELECT project_id FROM projects";
+    $categoryQuery = "SELECT project_name FROM projects";
     $categoryResult = $conn->query($categoryQuery);
     if ($categoryResult->num_rows > 0) {
         while ($cat = $categoryResult->fetch_assoc()) {
-            $categoryOptions .= '<option value="' . htmlspecialchars($cat['project_id']) . '">' . htmlspecialchars($cat['project_id']) . '</option>';
+            $categoryOptions .= '<option value="' . htmlspecialchars($cat['project_name']) . '">' . htmlspecialchars($cat['project_name']) . '</option>';
         }
     }
 
-    // ADD or EDIT Modal
+    // ADD / EDIT / DELETE HANDLER
     if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         if (isset($_POST['delete_assets'])) {
-            // Handle deletion logic
-            if (isset($_POST['asset_ids']) && !empty($_POST['asset_ids'])) {
-                $asset_ids = explode(',', $_POST['asset_ids']);  // Convert comma-separated string to array
+            if (!empty($_POST['asset_ids'])) {
+                $asset_ids = explode(',', $_POST['asset_ids']);
                 foreach ($asset_ids as $asset_id) {
                     $stmt = $conn->prepare("DELETE FROM assets WHERE asset_id = ?");
                     $stmt->bind_param("i", $asset_id);
                     $stmt->execute();
                 }
-                // Redirect after deletion
                 echo "<script>window.location = 'ms_assets.php';</script>";
                 exit();
             }
         } else {
-            // Handle add/edit asset logic
             $asset_id = $_POST['asset_id'];
             $category = $_POST['category'];
             $description = $_POST['asset_description'];
@@ -61,11 +62,9 @@
             }
 
             if ($asset_id) {
-                // Update asset
                 $stmt = $conn->prepare("UPDATE assets SET category=?, asset_description=?, value=?, purchase_date=?, rental_rate=?, tax=?, remarks=?, asset_image=? WHERE asset_id=?");
                 $stmt->bind_param("ssdsddssi", $category, $description, $value, $purchase_date, $rental_rate, $tax, $remarks, $imagePath, $asset_id);
             } else {
-                // Insert new asset
                 $stmt = $conn->prepare("INSERT INTO assets (category, asset_description, value, purchase_date, rental_rate, tax, remarks, asset_image) VALUES (?, ?, ?, ?, ?, ?, ?, ?)");
                 $stmt->bind_param("ssdsddss", $category, $description, $value, $purchase_date, $rental_rate, $tax, $remarks, $imagePath);
             }
@@ -132,27 +131,30 @@
         <div class="asset-content">
             <!-- Left Section: List of Assets -->
             <div class="asset-list">
-                <div class="asset-list-header">Assets</div> <!-- Header Bar inside asset list -->
+                <div class="asset-list-header">Assets</div>
 
                 <?php
                 $query = "SELECT * FROM assets ORDER BY asset_id ASC";
-                $result = mysqli_query($conn, $query);
-
-                if (mysqli_num_rows($result) > 0):
+                $result = $conn->query($query);
+                if ($result->num_rows > 0):
                     $counter = 1;
                 ?>
-                    <div class="asset-list-table-container">
-                        <table class="table">
-                            <thead>
-                                <tr>
-                                    <th>#</th>
-                                    <th>Description</th>
-                                    <th>Category</th>
-                                    <th>Value</th>
-                                </tr>
-                            </thead>
+                <div class="asset-list-table-wrapper">
+                    <table class="asset-list-table">
+                        <thead>
+                            <tr>
+                                <th style="width: 5%;"></th>
+                                <th style="width: 45%;">Description</th>
+                                <th style="width: 25%;">Category</th>
+                                <th style="width: 25%;">Value</th>
+                            </tr>
+                        </thead>
+                    </table>
+
+                    <div class="asset-list-table-body-container">
+                        <table class="asset-list-table">
                             <tbody>
-                                <?php while ($row = mysqli_fetch_assoc($result)): ?>
+                                <?php while ($row = $result->fetch_assoc()): ?>
                                     <tr data-id="<?= $row['asset_id'] ?>" data-json='<?= json_encode($row) ?>'>
                                         <td class="row-index-cell">
                                             <span class="row-number"><?= $counter++ ?></span>
@@ -163,12 +165,16 @@
                                         <td>₱<?= number_format($row['value'], 2) ?></td>
                                     </tr>
                                 <?php endwhile; ?>
-                                </tbody>
+                            </tbody>
                         </table>
-                        <button class="delete-selected-btn" style="display: none;">
-                            <img src="icons/trash.svg" alt="TrashIcon" width="20">
-                        </button>
                     </div>
+                </div>
+
+                <!-- Floating delete button (moved here) -->
+                <button class="delete-selected-btn">
+                    <img src="icons/trash.svg" alt="TrashIcon" width="20">
+                </button>
+
                 <?php else: ?>
                     <p style='padding: 20px;'>There are no existing assets.</p>
                 <?php endif; ?>
@@ -200,8 +206,8 @@
 
                     <!-- Edit Button -->
                     <div class="edit-button" id="editButton" style="display: none;">
-                        <button class="btn btn-primary" onclick="openEditAssetModal()">
-                            Edit <img src="icons/edit.svg" width="20">
+                        <button onclick="openEditAssetModal()">
+                            Edit <img src="icons/pencil.svg" width="14">
                         </button>
                     </div>
                 </div>
@@ -210,18 +216,15 @@
     </div>
 
     <!-- Deletion Modal -->
-    <div id="deleteModal" class="custom-modal-overlay">
-        <div class="custom-modal">
-            <div class="modal-header">
-                <h5>Confirm Deletion</h5>
-            </div>
-            <div class="modal-body">
-                <p id="deleteMessage"></p>
-            </div>
-            <div class="modal-footer">
-                <button id="confirmDeleteBtn" class="btn-add">YES</button>
-                <button class="btn-cancel" onclick="closeDeleteModal()">Cancel</button>
-            </div>
+    <div id="deleteModal" class="modal" style="display:none;">
+        <div class="modal-content">
+            <p id="deleteMessage">Are you sure you want to delete?</p>
+            <form id="deleteAssetsForm" method="POST">
+                <input type="hidden" name="asset_ids" id="delete-asset-ids">
+                <input type="hidden" name="delete_assets" value="1">
+                <button type="button" id="confirmDeleteBtn">Yes, Delete</button>
+                <button type="button" onclick="document.getElementById('deleteModal').style.display='none'">Cancel</button>
+            </form>
         </div>
     </div>
 
@@ -244,7 +247,7 @@
                         <div class="form-group">
                             <label>Category</label>
                             <select name="category" id="category" required>
-                                <option value="">-- Select Project ID --</option>
+                                <option value="">-- Select Project --</option>
                                 <?= $categoryOptions ?>
                             </select>
                         </div>
@@ -393,10 +396,15 @@
         const deleteModal = document.getElementById('deleteModal');
         const deleteAssetIdsInput = document.getElementById('delete-asset-ids');
 
-        // Toggle Select Mode
+        function updateDeleteBtnVisibility() {
+            const anyChecked = document.querySelectorAll('.row-checkbox:checked').length > 0;
+            deleteBtn.style.display = anyChecked ? 'block' : 'none';
+        }
+
         function toggleSelectMode(enable) {
             selectMode = enable;
             selectBtn.textContent = enable ? 'CANCEL' : 'SELECT';
+            selectBtn.classList.toggle('active', enable);
             deleteBtn.style.display = 'none';
 
             rows.forEach(row => {
@@ -406,51 +414,37 @@
                 if (enable) {
                     checkbox.style.display = 'inline-block';
                     number.style.display = 'none';
+                    checkbox.addEventListener('change', updateDeleteBtnVisibility);
                 } else {
                     checkbox.checked = false;
                     checkbox.style.display = 'none';
                     number.style.display = 'inline-block';
+                    checkbox.removeEventListener('change', updateDeleteBtnVisibility);
                 }
             });
 
-            // Bind click event to show asset details only when select mode is not enabled
             rows.forEach(row => {
-                row.onclick = enable
-                    ? e => e.stopPropagation() // Prevent asset details display in select mode
-                    : () => showAssetDetails(JSON.parse(row.dataset.json)); // Display asset details
+                if (enable) {
+                    row.onclick = e => {
+                        if (e.target.classList.contains('row-checkbox')) return;
+                        const checkbox = row.querySelector('.row-checkbox');
+                        checkbox.checked = !checkbox.checked;
+                        updateDeleteBtnVisibility();
+                    };
+                } else {
+                    row.onclick = () => showAssetDetails(JSON.parse(row.dataset.json));
+                }
             });
         }
 
-        // Toggle button
-        selectBtn.addEventListener('click', () => toggleSelectMode(!selectMode));
-
-        // ESC key support
         document.addEventListener('keydown', e => {
-            if (e.key === 'Escape' && selectMode) {
-                toggleSelectMode(false);
-            }
+            if (e.key === 'Escape' && selectMode) toggleSelectMode(false);
         });
 
-        // Checkbox change
-        rows.forEach(row => {
-            row.onclick = enable
-                ? e => e.stopPropagation() // Prevent asset details display in select mode
-                : e => {
-                    // Prevent opening asset details if the click is on a modal-triggering element (e.g., edit/delete buttons)
-                    const target = e.target;
-                    if (
-                        target.closest('.edit-btn') || 
-                        target.closest('.delete-btn') || 
-                        target.closest('.row-checkbox')
-                    ) {
-                        return; // Do nothing if clicking on buttons or checkbox
-                    }
+        if (selectBtn) {
+            selectBtn.addEventListener('click', () => toggleSelectMode(!selectMode));
+        }
 
-                    showAssetDetails(JSON.parse(row.dataset.json));
-                };
-        });
-
-        // Delete action
         deleteBtn.addEventListener('click', () => {
             const selected = [...document.querySelectorAll('.row-checkbox')]
                 .filter(cb => cb.checked)
@@ -462,31 +456,18 @@
                 ? 'Are you sure you want to delete this record?'
                 : 'Are you sure you want to delete these records?';
 
-            // Update message in the modal
             document.getElementById('deleteMessage').textContent = confirmMsg;
-
-            // Pass selected IDs to the hidden input
             deleteAssetIdsInput.value = selected.join(',');
-
-            // Show the modal
             deleteModal.style.display = 'block';
         });
 
-        // Confirm deletion and submit the form
-        document.getElementById('confirmDeleteBtn').addEventListener('click', function() {
-            // Trigger form submission
+        document.getElementById('confirmDeleteBtn').addEventListener('click', () => {
             document.getElementById('deleteAssetsForm').submit();
         });
 
-        // Close Modal
-        function closeDeleteModal() {
-            deleteModal.style.display = 'none';
-        }
-
-        // Close modal if user clicks outside
         window.onclick = function(event) {
             if (event.target == deleteModal) {
-                closeDeleteModal();
+                deleteModal.style.display = 'none';
             }
         };
     </script>

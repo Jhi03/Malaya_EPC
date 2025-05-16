@@ -70,7 +70,8 @@ body {
     display: flex;
     align-items: center;
     flex-wrap: wrap;
-    padding: 16px 24px;
+    padding: 13px 24px 13px 24px;
+    margin: 0px 15px 0px 15px;
     background-color: #fff;
     border-radius: 16px;
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
@@ -85,7 +86,7 @@ body {
 
 .search-input {
     width: 100%;
-    padding: 2px 14px;
+    padding: 6px 14px;
     border: 1px solid #ccc;
     border-radius: 20px;
     font-size: 12px;
