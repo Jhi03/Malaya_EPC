@@ -66,7 +66,7 @@
         $project_stmt->close();
 
         // Get expense records for the project
-        $stmt = $conn->prepare("SELECT * FROM project_expense WHERE project_id = ?");
+        $stmt = $conn->prepare("SELECT * FROM expense WHERE project_id = ?");
         $stmt->bind_param("i", $project['project_id']);
         $stmt->execute();
         $result = $stmt->get_result();
@@ -77,114 +77,129 @@
     }
 
     // Fetch categories
-    $categories = [];
-    $cat_result = $conn->query("SELECT category_id, category_name FROM categories ORDER BY category_name");
-    while ($row = $cat_result->fetch_assoc()) {
-        $categories[] = $row;
-    }
+        $categories = [];
+        $result = $conn->query("SELECT category_id, category_name FROM categories");
+        while ($row = $result->fetch_assoc()) {
+            $categories[] = $row;
+        }
 
-    // Fetch subcategories
-    $subcategories = [];
-    $subcat_result = $conn->query("SELECT subcategory_id, subcategory_name, category_name FROM subcategories ORDER BY subcategory_name");
-    while ($row = $subcat_result->fetch_assoc()) {
-        $subcategories[] = $row;
-    }
-
+        // Fetch subcategories
+        $subcategories = [];
+        $result = $conn->query("SELECT subcategory_id, category_name, subcategory_name FROM subcategories");
+        while ($row = $result->fetch_assoc()) {
+            $subcategories[] = $row;
+        }
     // Prepare data for analytics if needed
     $category_totals = [];
     $monthly_totals = [];
 
-    foreach ($records as $record) {
-        $cat = $record['category'];
-        $category_totals[$cat] = ($category_totals[$cat] ?? 0) + $record['actual'];
-
-        $month = date('F Y', strtotime($record['record_date']));
-        $monthly_totals[$month] = ($monthly_totals[$month] ?? 0) + $record['actual'];
-    }
-
-    // Handle form submission
-    if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['form_mode'])) {
+    if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['save_expense'])) {
+        error_log("POST request received");
+        $form_mode = $_POST['form_mode'];
         $edit_id = isset($_POST['edit_id']) ? intval($_POST['edit_id']) : 0;
-
+        
         $category = $_POST['category'] ?? '';
         $subcategory = $_POST['subcategory'] ?? '';
-        $record_date = $_POST['record_date'] ?? date('Y-m-d');
+        $purchase_date = $_POST['purchase_date'] ?? date('Y-m-d');
         $budget = floatval($_POST['budget'] ?? 0);
-        $actual = floatval($_POST['actual'] ?? 0);
         $payee = $_POST['payee'] ?? '';
         $description = $_POST['description'] ?? '';
         $remarks = $_POST['remarks'] ?? '';
-        $variance = $budget - $actual;
-        $tax = round($actual * 0.12, 2); // Assuming 12% VAT
-
-        if ($edit_id > 0) {
+        
+        // Handle special fields
+        $is_rental = isset($_POST['is_rental']) && $_POST['is_rental'] == 'on';
+        $has_tax = isset($_POST['has_tax']) && $_POST['has_tax'] == 'on';
+        $has_invoice = isset($_POST['has_invoice']) && $_POST['has_invoice'] == 'on';
+        
+        $expense = $is_rental ? 0 : floatval($_POST['expense'] ?? 0);
+        $rental_rate = $is_rental ? floatval($_POST['rental_rate'] ?? 0) : 0;
+        $tax = $has_tax ? floatval($_POST['tax'] ?? 0) : 0;
+        $invoice_no = $has_invoice ? $_POST['invoice_no'] ?? '' : '';
+        
+        // Calculate variance
+        $expense_amount = $is_rental ? $rental_rate : $expense;
+        $variance = $budget - $expense_amount;
+        
+        if ($form_mode === 'edit' && $edit_id > 0) {
             // UPDATE EXISTING RECORD
-            $stmt = $conn->prepare("UPDATE project_expense SET 
-                category = ?, subcategory = ?, record_date = ?, budget = ?, actual = ?, payee = ?, description = ?, remarks = ?, 
-                variance = ?, tax = ?, edited_by = ?, edit_date = NOW()
-                WHERE record_id = ? AND project_id = ?");
+            $stmt = $conn->prepare("UPDATE expense SET 
+                category = ?, subcategory = ?, purchase_date = ?, budget = ?, expense = ?, 
+                payee = ?, description = ?, remarks = ?, variance = ?, tax = ?, 
+                rental_rate = ?, invoice_no = ?, edited_by = ?, edit_date = NOW()
+                WHERE record_id = ?");
             $stmt->bind_param(
-                "sssddsssdsdii",
-                $category, $subcategory, $record_date, $budget, $actual, $payee, $description, $remarks,
-                $variance, $tax, $user_id, $edit_id, $project_id
+                "sssddsssddssii",
+                $category, $subcategory, $purchase_date, $budget, $expense, 
+                $payee, $description, $remarks, $variance, $tax,
+                $rental_rate, $invoice_no, $user_id, $edit_id
             );
             $stmt->execute();
             $stmt->close();
         } else {
+            error_log("Form submitted");
+
             // ADD NEW RECORD
-            $stmt = $conn->prepare("INSERT INTO project_expense (
-                project_id, category, subcategory, record_date, budget, actual, payee, description, remarks, 
-                variance, tax, created_by, creation_date
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())");
+            $stmt = $conn->prepare("INSERT INTO expense (
+                project_id, user_id, category, subcategory, purchase_date, budget, expense, 
+                payee, description, remarks, variance, tax, rental_rate, invoice_no, 
+                created_by, creation_date
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())");
             $stmt->bind_param(
-                "isssddssssds",
-                $project_id, $category, $subcategory, $record_date, $budget, $actual, $payee, $description, $remarks,
-                $variance, $tax, $user_id
+                "iisssddsssddsis",
+                $project_id, $user_id, $category, $subcategory, $purchase_date, $budget, $expense,
+                $payee, $description, $remarks, $variance, $tax, $rental_rate, $invoice_no,
+                $user_id
             );
+            // your insert logic here
+            if ($insert_success) {
+                error_log("Insert succeeded");
+            } else {
+                error_log("Insert failed: " . mysqli_error($conn));
+            }
+
             $stmt->execute();
             $stmt->close();
         }
-
         // Redirect to avoid form resubmission
         header("Location: ms_records.php?projectId=$project_id");
         exit();
+     } else {
+        error_log("No POST request");
     }
 
-    // Delete record
+    // For existing delete record handling, ensure it works with expense table as well
     if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['delete_record'])) {
         $id = $_POST['record_id'];
-    
-        $stmt = $conn->prepare("DELETE FROM project_expense WHERE record_id = ?");
+
+        $stmt = $conn->prepare("DELETE FROM expense WHERE record_id = ?");
         $stmt->bind_param("i", $id);
         $stmt->execute();
         $stmt->close();
-    
+
         header("Location: ms_records.php?projectId=" . $project_id);
         exit();
-    }    
+    }
 
-    // Handle project deletion
-    if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['delete_project_id'])) {
-        $delete_project_id = intval($_POST['delete_project_id']);
-
-        // First, delete related records from project_expense
-        $stmt = $conn->prepare("DELETE FROM project_expense WHERE project_id = ?");
-        $stmt->bind_param("i", $delete_project_id);
-        $stmt->execute();
-        $stmt->close();
-
-        // Then, delete the project itself
-        $stmt = $conn->prepare("DELETE FROM projects WHERE project_id = ?");
-        $stmt->bind_param("i", $delete_project_id);
-        if ($stmt->execute()) {
-            echo "success";
-        } else {
-            echo "Error deleting project: " . $stmt->error;
+    // Add these lines to fetch expense records for the project
+    $expense_records = [];
+    if ($project_id > 0) {
+        $expense_stmt = $conn->prepare("
+            SELECT e.*, 
+                CONCAT(emp.first_name, ' ', emp.last_name) as creator_name,
+                CONCAT(emp2.first_name, ' ', emp2.last_name) as editor_name
+            FROM expense e
+            LEFT JOIN employee emp ON e.created_by = emp.employee_id
+            LEFT JOIN employee emp2 ON e.edited_by = emp2.employee_id
+            WHERE e.project_id = ?
+            ORDER BY e.purchase_date DESC
+        ");
+        $expense_stmt->bind_param("i", $project_id);
+        $expense_stmt->execute();
+        $expense_result = $expense_stmt->get_result();
+        while ($row = $expense_result->fetch_assoc()) {
+            $expense_records[] = $row;
         }
-        $stmt->close();
-
-        // Stop further rendering
-        exit();
+        $expense_stmt->close();
     }
 
     $conn->close();
@@ -253,7 +268,7 @@
             <div class="search-filter-bar">
                 <!-- Left group: Add, Search, Filter -->
                 <div class="left-controls">
-                    <button onclick="openRecordModal('add')" class="add-record-btn">ADD RECORD</button>
+                    <button onclick="openExpenseModal('add')" class="add-record-btn">ADD RECORD</button>
 
                     <div class="search-container">
                         <input type="text" class="search-input" placeholder="SEARCH">
@@ -286,7 +301,7 @@
                             <th>Category</th>
                             <th>Description</th>
                             <th>Budget</th>
-                            <th>Actual</th>
+                            <th>Expense</th>
                             <th>Payee</th>
                             <th>Variance</th>
                             <th>Tax</th>
@@ -306,7 +321,7 @@
                                         <?= htmlspecialchars($row['description']) ?>
                                     </td>
                                     <td><?= number_format($row['budget'], 2) ?></td>
-                                    <td><?= number_format($row['actual'], 2) ?></td>
+                                    <td><?= number_format($row['expense'], 2) ?></td>
                                     <td title="<?= htmlspecialchars($row['payee']) ?>">
                                         <?= htmlspecialchars($row['payee']) ?>
                                     </td>
@@ -315,24 +330,24 @@
                                     <td title="<?= htmlspecialchars($row['remarks']) ?>">
                                         <?= htmlspecialchars($row['remarks']) ?>
                                     </td>
-                                    <td><?= date("m-d-Y", strtotime($row['record_date'])) ?></td>
+                                    <td><?= date("m-d-Y", strtotime($row['purchase_date'])) ?></td>
                                     <td>
-                                        <a href="#" class="edit-btn"
+                                        <button type="button" class="btn btn-sm btn-warning edit-btn"
                                             data-id="<?= $row['record_id'] ?>"
                                             data-category="<?= htmlspecialchars($row['category']) ?>"
                                             data-subcategory="<?= htmlspecialchars($row['subcategory']) ?>"
-                                            data-date="<?= $row['record_date'] ?>"
+                                            data-date="<?= $row['purchase_date'] ?>"
                                             data-budget="<?= $row['budget'] ?>"
-                                            data-actual="<?= $row['actual'] ?>"
+                                            data-expense="<?= $row['expense'] ?>"
                                             data-payee="<?= htmlspecialchars($row['payee']) ?>"
                                             data-description="<?= htmlspecialchars($row['description']) ?>"
                                             data-remarks="<?= htmlspecialchars($row['remarks']) ?>"
-                                            data-created_by="<?= htmlspecialchars($row['created_by']) ?>"
-                                            data-creation_date="<?= $row['creation_date'] ?>"
-                                            data-edited_by="<?= htmlspecialchars($row['edited_by']) ?>"
-                                            data-edit_date="<?= $row['edit_date'] ?>">
-                                            <img src="icons/edit.svg" width="18">
-                                        </a>
+                                            data-rental_rate="<?= $row['rental_rate'] ?>"
+                                            data-tax="<?= $row['tax'] ?>"
+                                            data-invoice_no="<?= htmlspecialchars($row['invoice_no']) ?>"
+                                        >
+                                            <img src="icons/pencil.svg" width="18" alt="Edit">
+                                        </button>
                                     </td>
                                     <td>
                                         <a href="#" class="delete-btn" data-id="<?= htmlspecialchars($row['record_id']) ?>">
@@ -360,12 +375,12 @@
                                 <p class="fs-5 fw-bold text-black">₱<?= number_format(array_sum(array_column($records, 'budget')), 2) ?></p>
                             </div>
                             <div class="card shadow rounded-4 p-3 mb-3">
-                                <h6>Total Actual</h6>
-                                <p class="fs-5 fw-bold text-black">₱<?= number_format(array_sum(array_column($records, 'actual')), 2) ?></p>
+                                <h6>Total Expense</h6>
+                                <p class="fs-5 fw-bold text-black">₱<?= number_format(array_sum(array_column($records, 'expense')), 2) ?></p>
                             </div>
                             <div class="card shadow rounded-4 p-3 mb-3">
                                 <h6>Total Variance</h6>
-                                <p class="fs-5 fw-bold text-black">₱<?= number_format(array_sum(array_column($records, 'budget')) - array_sum(array_column($records, 'actual')), 2) ?></p>
+                                <p class="fs-5 fw-bold text-black">₱<?= number_format(array_sum(array_column($records, 'budget')) - array_sum(array_column($records, 'expense')), 2) ?></p>
                             </div>
                             <div class="card shadow rounded-4 p-3">
                                 <h6>Total Tax</h6>
@@ -378,7 +393,7 @@
                             <div class="row g-4">
                                 <div class="col-md-8">
                                     <div class="card shadow rounded-4 p-3 h-100">
-                                        <h6 class="text-center">Weekly Budget vs Actual</h6>
+                                        <h6 class="text-center">Weekly Budget vs Expense</h6>
                                         <canvas id="weeklyChart" height="200"></canvas>
                                     </div>
                                 </div>
@@ -403,107 +418,140 @@
     </div>
 
     <!-- ADD/EDIT RECORD MODAL -->
-    <div id="recordModal" class="custom-modal-overlay" style="display:none;">
-        <div class="custom-modal">
-            <div class="modal-header">
-                <h5 id="recordModalHeader">ADD RECORD</h5>
-            </div>
-            <form method="POST" action="ms_records.php?projectId=<?= $project_id ?>">
-                <input type="hidden" name="edit_id" id="edit_id">
-                <div class="modal-body">
-                    <div class="input-row">
-                        <div class="form-group">
-                            <label for="category">Category</label>
-                            <select class="form-control" id="category" name="category" required>
-                                <option value="">-- Select Category --</option>
-                                <?php foreach ($categories as $cat): ?>
-                                    <option value="<?= htmlspecialchars($cat['category_name']) ?>" data-id="<?= htmlspecialchars($cat['category_id']) ?>">
-                                        <?= htmlspecialchars($cat['category_name']) ?>
-                                    </option>
-                                <?php endforeach; ?>
-                            </select>
+    <div class="modal fade" id="expenseModal" tabindex="-1" aria-labelledby="expenseModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <form id="expenseForm" method="post" action="">
+                    <div class="modal-header">
+                        <h5 class="modal-title" id="expenseModalLabel">Add Expense</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body">
+                        <input type="hidden" id="record_id" name="record_id">
+                        <input type="hidden" id="form_mode" name="form_mode" value="add">
+                        <input type="hidden" id="edit_id" name="edit_id" value="0">
+                        
+                        <div class="form-section">
+                            <div class="form-section-title">Expense Information</div>
+                            <div class="row g-3">
+                                <div class="col-md-6">
+                                    <label for="category" class="form-label">Category</label>
+                                    <select id="category" name="category" required>
+                                        <option value="">Select Category</option>
+                                        <?php foreach ($categories as $cat): ?>
+                                            <option value="<?php echo htmlspecialchars($cat['category_name']); ?>">
+                                                <?php echo htmlspecialchars($cat['category_name']); ?>
+                                            </option>
+                                        <?php endforeach; ?>
+                                    </select>
+                                </div>
+                                <div class="col-md-6">
+                                    <label for="subcategory" class="form-label">Subcategory</label>
+                                    <select id="subcategory" name="subcategory" disabled required>
+                                        <option value="">Select Subcategory</option>
+                                    </select>
+                                </div>
+                                <div class="col-md-6">
+                                    <label for="purchase_date" class="form-label">Date</label>
+                                    <input type="date" class="form-control" id="purchase_date" name="purchase_date" required value="<?php echo date('Y-m-d'); ?>">
+                                </div>
+                                <div class="col-md-6">
+                                    <label for="payee" class="form-label">Payee</label>
+                                    <input type="text" class="form-control" id="payee" name="payee" required>
+                                </div>
+                                <div class="col-md-12">
+                                    <label for="description" class="form-label">Description</label>
+                                    <input type="text" class="form-control" id="description" name="description" required>
+                                </div>
+                            </div>
                         </div>
-                        <div class="form-group">
-                            <label for="subcategory">Subcategory</label>
-                            <select class="form-control" id="subcategory" name="subcategory" disabled>
-                                <option value="">-- Select Subcategory --</option>
-                                <?php foreach ($subcategories as $subcat): ?>
-                                    <option value="<?= htmlspecialchars($subcat['subcategory_name']) ?>" 
-                                            data-category="<?= htmlspecialchars($subcat['category_name']) ?>">
-                                        <?= htmlspecialchars($subcat['subcategory_name']) ?>
-                                    </option>
-                                <?php endforeach; ?>
-                            </select>
+                        
+                        <div class="form-section">
+                            <div class="form-section-title">Budget and Expense</div>
+                            <div class="row g-3">
+                                <div class="col-md-6">
+                                    <label for="budget" class="form-label">Budget</label>
+                                    <input type="number" step="0.01" class="form-control calculation" id="budget" name="budget" required value="0.00">
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="d-flex align-items-center mb-2">
+                                        <input type="checkbox" id="is_rental" class="form-check-input me-2">
+                                        <label for="is_rental" class="form-check-label">Is Rental?</label>
+                                    </div>
+                                    <div id="expense_input">
+                                        <label for="expense" class="form-label">Expense</label>
+                                        <input type="number" step="0.01" class="form-control calculation" id="expense" name="expense" required value="0.00">
+                                    </div>
+                                    <div id="rental_input" style="display: none;">
+                                        <label for="rental_rate" class="form-label">Rental Rate</label>
+                                        <input type="number" step="0.01" class="form-control calculation" id="rental_rate" name="rental_rate" value="0.00">
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <label for="variance" class="form-label">Variance</label>
+                                    <input type="number" step="0.01" class="form-control" id="variance" name="variance" readonly>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="form-section">
+                            <div class="form-section-title">Additional Information</div>
+                            <div class="row g-3">
+                                <div class="col-md-6">
+                                    <div class="d-flex align-items-center mb-2">
+                                        <input type="checkbox" id="has_tax" class="form-check-input me-2">
+                                        <label for="has_tax" class="form-check-label">Include Tax?</label>
+                                    </div>
+                                    <div id="tax_input" style="display: none;">
+                                        <label for="tax" class="form-label">Tax</label>
+                                        <input type="number" step="0.01" class="form-control calculation" id="tax" name="tax" value="0.00">
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="d-flex align-items-center mb-2">
+                                        <input type="checkbox" id="has_invoice" class="form-check-input me-2">
+                                        <label for="has_invoice" class="form-check-label">Has Invoice?</label>
+                                    </div>
+                                    <div id="invoice_input" style="display: none;">
+                                        <label for="invoice_no" class="form-label">Invoice No.</label>
+                                        <input type="text" class="form-control" id="invoice_no" name="invoice_no">
+                                    </div>
+                                </div>
+                                <div class="col-md-12">
+                                    <label for="remarks" class="form-label">Remarks</label>
+                                    <textarea class="form-control" id="remarks" name="remarks" rows="3"></textarea>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div id="expenseSummary" class="bg-light p-3 rounded">
+                            <h6>Expense Summary</h6>
+                            <div class="calculation-row">
+                                <span>Budget Amount:</span>
+                                <span id="summary_budget">₱0.00</span>
+                            </div>
+                            <div class="calculation-row" id="summary_expense_row">
+                                <span>Expense Amount:</span>
+                                <span id="summary_expense">₱0.00</span>
+                            </div>
+                            <div class="calculation-row" id="summary_rental_row" style="display: none;">
+                                <span>Rental Rate:</span>
+                                <span id="summary_rental">₱0.00</span>
+                            </div>
+                            <div class="calculation-row" id="summary_tax_row" style="display: none;">
+                                <span>Tax Amount:</span>
+                                <span id="summary_tax">₱0.00</span>
+                            </div>
+                            <div class="calculation-row total">
+                                <span>Variance:</span>
+                                <span id="summary_variance">₱0.00</span>
+                            </div>
                         </div>
                     </div>
-
-                    <div class="form-group full-width">
-                        <label>Description</label>
-                        <input type="text" name="description" id="description" required> 
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                        <button type="submit" name="save_expense" class="btn btn-primary">Save</button>
                     </div>
-
-                    <div class="form-group full-width">
-                        <div class="form-group">
-                            <label>Date</label>
-                            <input type="date" name="record_date" id="record_date" value="<?= date('Y-m-d') ?>">
-                        </div>
-                    </div>
-
-                    <div class="input-row">
-                        <div class="form-group">
-                            <label>Budget</label>
-                            <input type="number" name="budget" id="budget" value="0" step="0.01">
-                        </div>
-                        <div class="form-group">
-                            <label>Amount</label>
-                            <input type="number" name="actual" id="actual" step="0.01" required>
-                        </div>
-                    </div>
-
-                    <div class="form-group full-width">
-                        <label>Payee</label>
-                        <input type="text" name="payee" id="payee" required>
-                    </div>
-
-                    <div class="form-group full-width">
-                        <label>Remarks</label>
-                        <textarea name="remarks" id="remarks" rows="3"></textarea>
-                    </div>
-                </div>
-
-                <!-- Display metadata (added/edited info) -->
-                <div id="recordMeta" class="record-meta" style="display: none;">
-                    <div style="display: inline-flex; gap: 20px; width: 100%;">
-                        <div class="meta-left">
-                            <div>Added by: <strong id="createdBy"></strong></div>
-                            <div>Edited by: <strong id="editedBy"></strong></div>
-                        </div>
-                        <div class="meta-right">
-                            <div>Added on: <strong id="createdDate"></strong></div>
-                            <div>Edited on: <strong id="editedDate"></strong></div>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="modal-footer">
-                    <button type="submit" name="form_mode" id="recordSubmitBtn" class="btn-add">ADD</button>
-                    <button type="button" class="btn-cancel" onclick="closeModal()">CANCEL</button>
-                </div>
-            </form>
-        </div>
-    </div>
-
-    <!-- Delete Confirmation Modal -->
-    <div id="deleteConfirmModal" class="custom-modal-overlay" style="display:none;">
-        <div class="custom-modal">
-            <div class="modal-header">
-                <h5>Delete Record?</h5>
-            </div>
-            <div class="modal-footer">
-                <form method="POST" action="ms_records.php?projectId=<?= $project_id ?>">
-                    <input type="hidden" name="record_id" id="delete_id">
-                    <button type="submit" name="delete_record" class="btn-save-delete">YES</button>
-                    <button type="button" class="btn-cancel" onclick="closeDeleteModal()">NO</button>
                 </form>
             </div>
         </div>
@@ -607,142 +655,322 @@
         if (defaultView === 'analytics') {
             btnAnalytics.click(); // simulate button click
         }
-
-        function openAddModal() {
-            document.getElementById('recordModalHeader').textContent = "ADD RECORD";
-            document.getElementById('recordSubmitBtn').textContent = "ADD";
-            document.getElementById('recordMeta').style.display = 'none';
-
-            // Reset form
-            document.getElementById('edit_id').value = '';
-            document.getElementById('category').value = '';
-            document.getElementById('subcategory').value = '';
-            document.getElementById('record_date').value = '<?= date('Y-m-d') ?>';
-            document.getElementById('budget').value = '0';
-            document.getElementById('actual').value = '';
-            document.getElementById('payee').value = '';
-            document.getElementById('description').value = '';
-            document.getElementById('remarks').value = '';
-
-            document.getElementById('recordModal').style.display = 'flex';
-        }
-
-        function openEditModal(btn) {
-            document.getElementById('recordModalHeader').textContent = "EDIT RECORD";
-            document.getElementById('recordSubmitBtn').textContent = "SAVE"; // Keep as ADD per requirement
-            document.getElementById('recordMeta').style.display = 'flex';
-
-            document.getElementById('edit_id').value = btn.dataset.id;
-            document.getElementById('category').value = btn.dataset.category;
-            document.getElementById('subcategory').value = btn.dataset.subcategory;
-            document.getElementById('record_date').value = btn.dataset.date;
-            document.getElementById('budget').value = btn.dataset.budget;
-            document.getElementById('actual').value = btn.dataset.actual;
-            document.getElementById('payee').value = btn.dataset.payee;
-            document.getElementById('description').value = btn.dataset.description;
-            document.getElementById('remarks').value = btn.dataset.remarks;
-
-            document.getElementById('createdBy').textContent = btn.dataset.created_by || 'Unknown';
-            document.getElementById('editedBy').textContent = btn.dataset.edited_by || '—';
-            document.getElementById('createdDate').textContent = btn.dataset.creation_date || '—';
-            document.getElementById('editedDate').textContent = btn.dataset.edit_date || '—';
-
-            document.getElementById('recordModal').style.display = 'flex';
-        }
-
-        function closeModal() {
-            document.getElementById('recordModal').style.display = 'none';
-        }
-
-        // Event delegation for edit buttons
-        document.addEventListener('DOMContentLoaded', () => {
-            document.querySelector('.add-record-btn').addEventListener('click', openAddModal);
-            document.querySelectorAll('.edit-btn').forEach(btn => {
-                btn.addEventListener('click', (e) => {
-                    e.preventDefault();
-                    openEditModal(btn);
-                });
-            });
-        });
-
-        // Close modal when clicking outside the modal box
-        document.getElementById('recordModal').addEventListener('click', function(event) {
-            const modalBox = document.querySelector('.custom-modal');
-            if (!modalBox.contains(event.target)) {
-                closeModal();
-            }
-        });
-
-        // Close modal on ESC key press
-        document.addEventListener('keydown', function(event) {
-            if (event.key === "Escape") {
-                closeModal();
-            }
-        });
-
-        // Close modal function
-        function closeModal() {
-            document.getElementById('recordModal').style.display = 'none';
-            document.getElementById('recordModalHeader').innerText = 'ADD RECORD';
-            document.getElementById('recordSubmitBtn').innerText = 'ADD';
-            document.getElementById('recordMeta').style.display = 'none';
-
-            // Optional: Clear the form on close
-            document.querySelector('#recordModal form').reset();
-            document.getElementById('edit_id').value = '';
-        }
-
-        // DELETE
-        const deleteModal = document.getElementById("deleteConfirmModal");
-        
-        document.querySelectorAll(".delete-btn").forEach(btn => {
-            btn.addEventListener("click", e => {
-                e.preventDefault();
-                document.getElementById("delete_id").value = btn.dataset.id;
-                deleteModal.style.display = "flex";
-            });
-        });
-
-        function closeDeleteModal() {
-            deleteModal.style.display = "none";
-        }
-
-        // ESC / Outside for Delete Modal
-        window.addEventListener("click", function(e) {
-            if (e.target === deleteModal) closeDeleteModal();
-        });
-
-        window.addEventListener("keydown", function(e) {
-            if (e.key === "Escape" && deleteModal.style.display === "flex") closeDeleteModal();
-        });
     </script>
     <script>
-        document.addEventListener('DOMContentLoaded', function () {
+        document.querySelectorAll('.edit-btn').forEach(button => {
+            button.addEventListener('click', function(e) {
+                e.preventDefault();
+                
+                const recordData = {
+                    id: this.getAttribute('data-id'),
+                    category: this.getAttribute('data-category'),
+                    subcategory: this.getAttribute('data-subcategory'),
+                    date: this.getAttribute('data-date'),
+                    budget: this.getAttribute('data-budget'),
+                    expense: this.getAttribute('data-expense'),
+                    payee: this.getAttribute('data-payee'),
+                    description: this.getAttribute('data-description'),
+                    remarks: this.getAttribute('data-remarks'),
+                    rental_rate: this.getAttribute('data-rental_rate') || 0,
+                    tax: this.getAttribute('data-tax') || 0,
+                    invoice_no: this.getAttribute('data-invoice_no') || ''
+                };
+
+                // Call your existing modal open function in edit mode
+                openExpenseModal('edit', recordData);
+            });
+        });
+
+        document.addEventListener('DOMContentLoaded', function() {
+            // Store all subcategories from PHP in a JavaScript variable
+            const subcategories = <?php echo json_encode($subcategories); ?>;
+
+            // Category dropdown change handler
+            document.getElementById('category').addEventListener('change', function() {
+                const categorySelect = document.getElementById('category');
+                const subcategorySelect = document.getElementById('subcategory');
+                const selectedCategoryName = categorySelect.value;
+
+                // Clear existing options
+                subcategorySelect.innerHTML = '<option value="">Select Subcategory</option>';
+
+                if (selectedCategoryName) {
+                    // Enable subcategory dropdown
+                    subcategorySelect.disabled = false;
+
+                    // Filter subcategories by category_name
+                    const filteredSubcategories = subcategories.filter(item => 
+                        item.category_name === selectedCategoryName
+                    );
+
+                    // Add filtered subcategories to dropdown
+                    filteredSubcategories.forEach(subcategory => {
+                        const option = document.createElement('option');
+                        option.value = subcategory.subcategory_name;
+                        option.textContent = subcategory.subcategory_name;
+                        subcategorySelect.appendChild(option);
+                    });
+                } else {
+                    // Disable subcategory dropdown if no category selected
+                    subcategorySelect.disabled = true;
+                }
+            });
+            
+            // Checkbox event listeners
+            document.getElementById('is_rental').addEventListener('change', function() {
+                const expenseInput = document.getElementById('expense_input');
+                const rentalInput = document.getElementById('rental_input');
+                const summaryExpenseRow = document.getElementById('summary_expense_row');
+                const summaryRentalRow = document.getElementById('summary_rental_row');
+                
+                if (this.checked) {
+                    expenseInput.style.display = 'none';
+                    rentalInput.style.display = 'block';
+                    document.getElementById('expense').value = '0.00';
+                    summaryExpenseRow.style.display = 'none';
+                    summaryRentalRow.style.display = 'flex';
+                } else {
+                    expenseInput.style.display = 'block';
+                    rentalInput.style.display = 'none';
+                    document.getElementById('rental_rate').value = '0.00';
+                    summaryExpenseRow.style.display = 'flex';
+                    summaryRentalRow.style.display = 'none';
+                }
+                updateCalculations();
+            });
+            
+            document.getElementById('has_tax').addEventListener('change', function() {
+                const taxInput = document.getElementById('tax_input');
+                const summaryTaxRow = document.getElementById('summary_tax_row');
+                
+                if (this.checked) {
+                    taxInput.style.display = 'block';
+                    summaryTaxRow.style.display = 'flex';
+                } else {
+                    taxInput.style.display = 'none';
+                    document.getElementById('tax').value = '0.00';
+                    summaryTaxRow.style.display = 'none';
+                }
+                updateCalculations();
+            });
+            
+            document.getElementById('has_invoice').addEventListener('change', function() {
+                const invoiceInput = document.getElementById('invoice_input');
+                
+                if (this.checked) {
+                    invoiceInput.style.display = 'block';
+                } else {
+                    invoiceInput.style.display = 'none';
+                    document.getElementById('invoice_no').value = '';
+                }
+            });
+            
+            // Input calculation event listeners
+            const calculationInputs = document.querySelectorAll('.calculation');
+            calculationInputs.forEach(input => {
+                input.addEventListener('input', updateCalculations);
+            });
+            
+            // Function to update all calculations
+            function updateCalculations() {
+                const budget = parseFloat(document.getElementById('budget').value) || 0;
+                const isRental = document.getElementById('is_rental').checked;
+                const expense = isRental ? 
+                    (parseFloat(document.getElementById('rental_rate').value) || 0) : 
+                    (parseFloat(document.getElementById('expense').value) || 0);
+                const hasTax = document.getElementById('has_tax').checked;
+                const tax = hasTax ? (parseFloat(document.getElementById('tax').value) || 0) : 0;
+                
+                // Calculate variance
+                const variance = budget - expense;
+                document.getElementById('variance').value = variance.toFixed(2);
+                
+                // Update summary display
+                document.getElementById('summary_budget').textContent = '₱' + budget.toFixed(2);
+                
+                if (isRental) {
+                    document.getElementById('summary_rental').textContent = '₱' + expense.toFixed(2);
+                } else {
+                    document.getElementById('summary_expense').textContent = '₱' + expense.toFixed(2);
+                }
+                
+                if (hasTax) {
+                    document.getElementById('summary_tax').textContent = '₱' + tax.toFixed(2);
+                }
+                
+                document.getElementById('summary_variance').textContent = '₱' + variance.toFixed(2);
+            }
+            
+            // Function to open the expense modal (add or edit mode)
+            window.openExpenseModal = function(mode, recordData = null) {
+                const modal = document.getElementById('expenseModal');
+                const modalTitle = document.getElementById('expenseModalLabel');
+                const formMode = document.getElementById('form_mode');
+                const editId = document.getElementById('edit_id');
+                
+                // Reset form
+                document.getElementById('expenseForm').reset();
+                
+                // Reset all inputs to default state
+                document.getElementById('expense_input').style.display = 'block';
+                document.getElementById('rental_input').style.display = 'none';
+                document.getElementById('tax_input').style.display = 'none';
+                document.getElementById('invoice_input').style.display = 'none';
+                document.getElementById('summary_expense_row').style.display = 'flex';
+                document.getElementById('summary_rental_row').style.display = 'none';
+                document.getElementById('summary_tax_row').style.display = 'none';
+                
+                if (mode === 'add') {
+                    modalTitle.textContent = 'Add New Expense Record';
+                    formMode.value = 'add';
+                    editId.value = '0';
+                    document.getElementById('purchase_date').value = new Date().toISOString().split('T')[0]; // Today's date
+                } else if (mode === 'edit' && recordData) {
+                    modalTitle.textContent = 'Edit Expense Record';
+                    formMode.value = 'edit';
+                    editId.value = recordData.id;
+                    
+                    // Fill the form with existing data
+                    document.getElementById('category').value = recordData.category;
+                    // Trigger category change to load subcategories
+                    document.getElementById('category').dispatchEvent(new Event('change'));
+                    
+                    setTimeout(() => {
+                        document.getElementById('subcategory').value = recordData.subcategory;
+                    }, 100);
+                    
+                    document.getElementById('purchase_date').value = recordData.date;
+                    document.getElementById('payee').value = recordData.payee;
+                    document.getElementById('description').value = recordData.description;
+                    document.getElementById('budget').value = recordData.budget;
+                    document.getElementById('remarks').value = recordData.remarks;
+                    
+                    // Handle special fields
+                    if (recordData.rental_rate && recordData.rental_rate > 0) {
+                        document.getElementById('is_rental').checked = true;
+                        document.getElementById('rental_rate').value = recordData.rental_rate;
+                        document.getElementById('expense_input').style.display = 'none';
+                        document.getElementById('rental_input').style.display = 'block';
+                        document.getElementById('summary_expense_row').style.display = 'none';
+                        document.getElementById('summary_rental_row').style.display = 'flex';
+                    } else {
+                        document.getElementById('expense').value = recordData.expense;
+                    }
+                    
+                    if (recordData.tax && recordData.tax > 0) {
+                        document.getElementById('has_tax').checked = true;
+                        document.getElementById('tax').value = recordData.tax;
+                        document.getElementById('tax_input').style.display = 'block';
+                        document.getElementById('summary_tax_row').style.display = 'flex';
+                    }
+                    
+                    if (recordData.invoice_no) {
+                        document.getElementById('has_invoice').checked = true;
+                        document.getElementById('invoice_no').value = recordData.invoice_no;
+                        document.getElementById('invoice_input').style.display = 'block';
+                    }
+                    
+                    // Update calculations
+                    updateCalculations();
+                }
+                
+                // Show the modal
+                const bsModal = new bootstrap.Modal(modal);
+                bsModal.show();
+            };
+            
+            // Handle form submission
+            document.getElementById('expenseForm').addEventListener('submit', function(e) {
+                e.preventDefault();
+                
+                // Form validation
+                if (!this.checkValidity()) {
+                    e.stopPropagation();
+                    this.classList.add('was-validated');
+                    return;
+                }
+                
+                // Submit the form
+                this.submit();
+            });
+        });
+
+        // Function to edit expense record
+        function editExpense(id, category, subcategory, date, budget, expense, payee, description, remarks, rental_rate, tax, invoice_no) {
+            openExpenseModal('edit', {
+                id: id,
+                category: category,
+                subcategory: subcategory,
+                date: date,
+                budget: budget,
+                expense: expense,
+                payee: payee,
+                description: description,
+                remarks: remarks,
+                rental_rate: rental_rate,
+                tax: tax,
+                invoice_no: invoice_no
+            });
+        }
+
+        // Function to delete expense record
+        function deleteExpense(id) {
+            if (confirm('Are you sure you want to delete this expense record?')) {
+                const form = document.createElement('form');
+                form.method = 'POST';
+                form.style.display = 'none';
+                
+                const idInput = document.createElement('input');
+                idInput.type = 'hidden';
+                idInput.name = 'record_id';
+                idInput.value = id;
+                
+                const deleteInput = document.createElement('input');
+                deleteInput.type = 'hidden';
+                deleteInput.name = 'delete_record';
+                deleteInput.value = '1';
+                
+                form.appendChild(idInput);
+                form.appendChild(deleteInput);
+                document.body.appendChild(form);
+                
+                form.submit();
+            }
+        }
+    </script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const subcategories = <?php echo json_encode($subcategories); ?>;
+
             const categorySelect = document.getElementById('category');
             const subcategorySelect = document.getElementById('subcategory');
 
-            // Store all subcategories initially
-            const allSubOptions = Array.from(subcategorySelect.querySelectorAll('option[data-category]'));
-
-            categorySelect.addEventListener('change', function () {
-                const selectedCategory = categorySelect.value;
-
-                // Reset and disable if no category selected
-                if (!selectedCategory) {
+            categorySelect.addEventListener('change', function() {
+                const selectedCategoryName = this.value;
+                
+                // Clear existing subcategory options
+                subcategorySelect.innerHTML = '<option value="">Select Subcategory</option>';
+                
+                if (selectedCategoryName) {
+                    // Enable subcategory dropdown
+                    subcategorySelect.disabled = false;
+                    
+                    // Filter subcategories by category_name (string)
+                    const filteredSubcategories = subcategories.filter(subcat => 
+                        subcat.category_name === selectedCategoryName
+                    );
+                    
+                    // Populate subcategory dropdown
+                    filteredSubcategories.forEach(subcat => {
+                        const option = document.createElement('option');
+                        option.value = subcat.subcategory_name;
+                        option.textContent = subcat.subcategory_name;
+                        subcategorySelect.appendChild(option);
+                    });
+                } else {
+                    // Disable subcategory dropdown if no category selected
                     subcategorySelect.disabled = true;
-                    subcategorySelect.innerHTML = '<option value="">-- Select Subcategory --</option>';
-                    return;
                 }
-
-                subcategorySelect.disabled = false;
-                subcategorySelect.innerHTML = '<option value="">-- Select Subcategory --</option>';
-
-                // Filter subcategories by category name
-                allSubOptions.forEach(option => {
-                    if (option.getAttribute('data-category') === selectedCategory) {
-                        subcategorySelect.appendChild(option.cloneNode(true));
-                    }
-                });
             });
         });
     </script>
@@ -758,12 +986,12 @@
         $week_counter = 1;
         $week_labels = [];
         $weekly_budget_data = [];
-        $weekly_actual_data = [];
+        $weekly_expense_data = [];
 
         $temp_buckets = [];
 
         foreach ($records as $r) {
-            $timestamp = strtotime($r['record_date']);
+            $timestamp = strtotime($r['purchase_date']);
             $week_num = date('W', $timestamp);
             $year = date('o', $timestamp);
 
@@ -777,24 +1005,24 @@
             $label = "Week $week_counter\n$range";
 
             if (!isset($temp_buckets[$key])) {
-                $temp_buckets[$key] = ['budget' => 0, 'actual' => 0, 'label' => $label];
+                $temp_buckets[$key] = ['budget' => 0, 'expense' => 0, 'label' => $label];
                 $week_counter++;
             }
 
             $temp_buckets[$key]['budget'] += $r['budget'];
-            $temp_buckets[$key]['actual'] += $r['actual'];
+            $temp_buckets[$key]['expense'] += $r['expense'];
         }
 
         foreach ($temp_buckets as $entry) {
             $week_labels[] = $entry['label'];
             $weekly_budget_data[] = $entry['budget'];
-            $weekly_actual_data[] = $entry['actual'];
+            $weekly_expense_data[] = $entry['expense'];
         }
         ?>
 
         const weekLabels = <?= json_encode($week_labels) ?>;
         const weeklyBudgetData = <?= json_encode($weekly_budget_data) ?>;
-        const weeklyActualData = <?= json_encode($weekly_actual_data) ?>;
+        const weeklyExpenseData = <?= json_encode($weekly_expense_data) ?>;
 
         // Bar Chart
         new Chart(weeklyCtx, {
@@ -808,8 +1036,8 @@
                         backgroundColor: 'rgba(54, 162, 235, 0.7)'
                     },
                     {
-                        label: 'Actual',
-                        data: weeklyActualData,
+                        label: 'Expense',
+                        data: weeklyExpenseData,
                         backgroundColor: 'rgba(255, 99, 132, 0.7)'
                     }
                 ]
@@ -891,8 +1119,8 @@
             doc.text("Project Analytics Report", 10, 10);
             doc.text("Project: <?= addslashes($project['project_name']) ?>", 10, 20);
             doc.text("Total Budget: ₱<?= number_format(array_sum(array_column($records, 'budget')), 2) ?>", 10, 30);
-            doc.text("Total Actual: ₱<?= number_format(array_sum(array_column($records, 'actual')), 2) ?>", 10, 40);
-            doc.text("Variance: ₱<?= number_format(array_sum(array_column($records, 'budget')) - array_sum(array_column($records, 'actual')), 2) ?>", 10, 50);
+            doc.text("Total Expense: ₱<?= number_format(array_sum(array_column($records, 'expense')), 2) ?>", 10, 40);
+            doc.text("Variance: ₱<?= number_format(array_sum(array_column($records, 'budget')) - array_sum(array_column($records, 'expense')), 2) ?>", 10, 50);
             doc.text("Tax: ₱<?= number_format(array_sum(array_column($records, 'tax')), 2) ?>", 10, 60);
             doc.save("analytics-report.pdf");
         });

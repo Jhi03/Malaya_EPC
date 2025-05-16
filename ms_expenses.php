@@ -1,6 +1,6 @@
 <?php
     include('validate_login.php');
-    $page_title = "PROJECT ID 1 - EXPENSES";
+    $page_title = "EXPENSES";
 
     // Database connection
     $host = 'localhost';
@@ -40,37 +40,45 @@
         $stmt->close();
     }
 
-    // Set project_id to 1 explicitly
+    // Get project_id from URL
     $project_id = 1;
+
     $records = [];
     $project = null;
 
-    // Get expense records for project_id = 1
-    $stmt = $conn->prepare("SELECT * FROM project_expense WHERE project_id = 1");
-    $stmt->execute();
-    $result = $stmt->get_result();
-    while ($row = $result->fetch_assoc()) {
-        $records[] = $row;
-    }
-    $stmt->close();
+    if ($project_id > 0) {
+        // Get project details
+        $project_stmt = $conn->prepare("
+            SELECT 
+                p.project_id, p.project_name, p.project_code, p.first_name, p.last_name,
+                p.company_name, p.description, p.creation_date, 
+                p.created_by, p.edit_date, p.edited_by
+            FROM projects p
+            WHERE p.project_id = ?
+        ");
+        $project_stmt->bind_param("i", $project_id);
+        $project_stmt->execute();
+        $project_result = $project_stmt->get_result();
+        if ($project_result && $project_result->num_rows > 0) {
+            $project = $project_result->fetch_assoc();
+        }
+        $project_stmt->close();
 
-    // Fetch categories
-    $categories = [];
-    $cat_result = $conn->query("SELECT category_id, category_name FROM categories ORDER BY category_name");
-    while ($row = $cat_result->fetch_assoc()) {
-        $categories[] = $row;
+        // Get expense records for the project
+        $stmt = $conn->prepare("SELECT * FROM project_expense WHERE project_id = ?");
+        $stmt->bind_param("i", $project['project_id']);
+        $stmt->execute();
+        $result = $stmt->get_result();
+        while ($row = $result->fetch_assoc()) {
+            $records[] = $row;
+        }
+        $stmt->close();
     }
 
-    // Fetch subcategories
-    $subcategories = [];
-    $subcat_result = $conn->query("SELECT subcategory_id, subcategory_name, category_name FROM subcategories ORDER BY subcategory_name");
-    while ($row = $subcat_result->fetch_assoc()) {
-        $subcategories[] = $row;
-    }
-
-    // Prepare analytics
+    // Prepare data for analytics if needed
     $category_totals = [];
     $monthly_totals = [];
+
     foreach ($records as $record) {
         $cat = $record['category'];
         $category_totals[$cat] = ($category_totals[$cat] ?? 0) + $record['actual'];
@@ -79,12 +87,11 @@
         $monthly_totals[$month] = ($monthly_totals[$month] ?? 0) + $record['actual'];
     }
 
-    // Handle form submission (add/update)
+    // Handle form submission
     if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['form_mode'])) {
         $edit_id = isset($_POST['edit_id']) ? intval($_POST['edit_id']) : 0;
 
         $category = $_POST['category'] ?? '';
-        $subcategory = $_POST['subcategory'] ?? '';
         $record_date = $_POST['record_date'] ?? date('Y-m-d');
         $budget = floatval($_POST['budget'] ?? 0);
         $actual = floatval($_POST['actual'] ?? 0);
@@ -95,48 +102,50 @@
         $tax = round($actual * 0.12, 2); // Assuming 12% VAT
 
         if ($edit_id > 0) {
-            // Update existing record (project_id fixed to 1)
+            // UPDATE EXISTING RECORD
             $stmt = $conn->prepare("UPDATE project_expense SET 
-                category = ?, subcategory = ?, record_date = ?, budget = ?, actual = ?, payee = ?, description = ?, remarks = ?, 
+                category = ?, record_date = ?, budget = ?, actual = ?, payee = ?, description = ?, remarks = ?, 
                 variance = ?, tax = ?, edited_by = ?, edit_date = NOW()
-                WHERE record_id = ? AND project_id = 1");
+                WHERE record_id = ? AND project_id = ?");
             $stmt->bind_param(
-                "sssddsssdsdi",
-                $category, $subcategory, $record_date, $budget, $actual, $payee, $description, $remarks,
-                $variance, $tax, $user_id, $edit_id
+                "ssddsssdsdii",
+                $category, $record_date, $budget, $actual, $payee, $description, $remarks,
+                $variance, $tax, $user_id, $edit_id, $project_id
             );
             $stmt->execute();
             $stmt->close();
         } else {
-            // Add new record (project_id fixed to 1)
+            // ADD NEW RECORD
             $stmt = $conn->prepare("INSERT INTO project_expense (
-                project_id, category, subcategory, record_date, budget, actual, payee, description, remarks, 
+                project_id, category, record_date, budget, actual, payee, description, remarks, 
                 variance, tax, created_by, creation_date
-            ) VALUES (1, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())");
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())");
             $stmt->bind_param(
-                "sssddssssds",
-                $category, $subcategory, $record_date, $budget, $actual, $payee, $description, $remarks,
+                "issddssssds",
+                $project_id, $category, $record_date, $budget, $actual, $payee, $description, $remarks,
                 $variance, $tax, $user_id
             );
             $stmt->execute();
             $stmt->close();
         }
 
-        header("Location: ms_expenses.php");
+        // Redirect to avoid form resubmission
+        header("Location: ms_records.php?projectId=$project_id");
         exit();
     }
 
-    // Delete record from project_id = 1
+    // Delete record
     if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['delete_record'])) {
-        $id = intval($_POST['record_id']);
-        $stmt = $conn->prepare("DELETE FROM project_expense WHERE record_id = ? AND project_id = 1");
+        $id = $_POST['record_id'];
+    
+        $stmt = $conn->prepare("DELETE FROM project_expense WHERE record_id = ?");
         $stmt->bind_param("i", $id);
         $stmt->execute();
         $stmt->close();
-
-        header("Location: ms_expenses.php");
+    
+        header("Location: ms_records.php?projectId=" . $project_id);
         exit();
-    }
+    }    
 
     $conn->close();
 ?>
@@ -160,7 +169,7 @@
     <div class="sidebar" id="sidebar">
         <?php include 'sidebar.php'; ?>
     </div>
-    
+
     <div class="content-area">
         <?php include 'header.php'; ?>
 
@@ -233,22 +242,21 @@
                                     </td>
                                     <td><?= date("m-d-Y", strtotime($row['record_date'])) ?></td>
                                     <td>
-                                        <a href="#" class="edit-btn"
+                                        <button type="button" class="btn btn-sm btn-warning edit-btn"
                                             data-id="<?= $row['record_id'] ?>"
                                             data-category="<?= htmlspecialchars($row['category']) ?>"
                                             data-subcategory="<?= htmlspecialchars($row['subcategory']) ?>"
-                                            data-date="<?= $row['record_date'] ?>"
+                                            data-date="<?= $row['purchase_date'] ?>"
                                             data-budget="<?= $row['budget'] ?>"
-                                            data-actual="<?= $row['actual'] ?>"
+                                            data-expense="<?= $row['expense'] ?>"
                                             data-payee="<?= htmlspecialchars($row['payee']) ?>"
                                             data-description="<?= htmlspecialchars($row['description']) ?>"
                                             data-remarks="<?= htmlspecialchars($row['remarks']) ?>"
-                                            data-created_by="<?= htmlspecialchars($row['created_by']) ?>"
-                                            data-creation_date="<?= $row['creation_date'] ?>"
-                                            data-edited_by="<?= htmlspecialchars($row['edited_by']) ?>"
-                                            data-edit_date="<?= $row['edit_date'] ?>">
-                                            <img src="icons/edit.svg" width="18">
-                                        </a>
+                                            data-rental_rate="<?= $row['rental_rate'] ?>"
+                                            data-tax="<?= $row['tax'] ?>"
+                                            data-invoice_no="<?= htmlspecialchars($row['invoice_no']) ?>">
+                                            <img src="icons/edit.svg" width="18" alt="Edit">
+                                        </button>
                                     </td>
                                     <td>
                                         <a href="#" class="delete-btn" data-id="<?= htmlspecialchars($row['record_id']) ?>">
@@ -315,96 +323,84 @@
                 </div>
             </div>
         </div>
-    </div>
 
-    <!-- ADD/EDIT RECORD MODAL -->
-    <div id="recordModal" class="custom-modal-overlay" style="display:none;">
-        <div class="custom-modal">
-            <div class="modal-header">
-                <h5 id="recordModalHeader">ADD RECORD</h5>
+        <!-- ADD/EDIT RECORD MODAL -->
+        <div id="recordModal" class="custom-modal-overlay" style="display:none;">
+            <div class="custom-modal">
+                <div class="modal-header">
+                    <h5 id="recordModalHeader">ADD RECORD</h5>
+                </div>
+                <form method="POST" action="ms_records.php?projectId=<?= $project_id ?>">
+                    <input type="hidden" name="edit_id" id="edit_id">
+                    <div class="modal-body">
+                        <div class="input-row">
+                            <div class="form-group">
+                                <label>Category</label>
+                                <select name="category" id="category" required>
+                                    <option value="">-- SELECT --</option>
+                                    <option value="CAPEX: Materials">CAPEX: Materials</option>
+                                    <option value="CAPEX: Labors">CAPEX: Labors</option>
+                                    <option value="CAPEX: Purchase">CAPEX: Purchase</option>
+                                    <option value="OPEX: Gas">OPEX: Gas</option>
+                                    <option value="OPEX: Food">OPEX: Food</option>
+                                    <option value="OPEX: Toll">OPEX: Toll</option>
+                                    <option value="OPEX: Parking">OPEX: Parking</option>
+                                    <option value="OPEX: Salary">OPEX: Salary</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label>Date</label>
+                                <input type="date" name="record_date" id="record_date" value="<?= date('Y-m-d') ?>">
+                            </div>
+                        </div>
+
+                        <div class="input-row">
+                            <div class="form-group">
+                                <label>Budget</label>
+                                <input type="number" name="budget" id="budget" value="0" step="0.01">
+                            </div>
+                            <div class="form-group">
+                                <label>Amount</label>
+                                <input type="number" name="actual" id="actual" step="0.01" required>
+                            </div>
+                        </div>
+
+                        <div class="form-group full-width">
+                            <label>Payee</label>
+                            <input type="text" name="payee" id="payee" required>
+                        </div>
+
+                        <div class="form-group full-width">
+                            <label>Description</label>
+                            <input type="text" name="description" id="description" required> 
+                        </div>
+
+                        <div class="form-group full-width">
+                            <label>Remarks</label>
+                            <textarea name="remarks" id="remarks" rows="3"></textarea>
+                        </div>
+                    </div>
+
+                    <!-- Display metadata (added/edited info) -->
+                    <div id="recordMeta" class="record-meta" style="display: none;">
+                        <div style="display: inline-flex; gap: 20px; width: 100%;">
+                            <div class="meta-left">
+                                <div>Added by: <strong id="createdBy"></strong></div>
+                                <div>Edited by: <strong id="editedBy"></strong></div>
+                            </div>
+                            <div class="meta-right">
+                                <div>Added on: <strong id="createdDate"></strong></div>
+                                <div>Edited on: <strong id="editedDate"></strong></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="modal-footer">
+                        <button type="submit" name="form_mode" id="recordSubmitBtn" class="btn-add">ADD</button>
+                        <button type="button" class="btn-cancel" onclick="closeModal()">CANCEL</button>
+                    </div>
+                </form>
             </div>
-            <form method="POST" action="ms_expenses.php?projectId=<?= $project_id ?>">
-                <input type="hidden" name="edit_id" id="edit_id">
-                <div class="modal-body">
-                    <div class="input-row">
-                        <div class="form-group">
-                            <label for="category">Category</label>
-                            <select class="form-control" id="category" name="category" required>
-                                <option value="">-- Select Category --</option>
-                                <?php foreach ($categories as $cat): ?>
-                                    <option value="<?= htmlspecialchars($cat['category_name']) ?>" data-id="<?= htmlspecialchars($cat['category_id']) ?>">
-                                        <?= htmlspecialchars($cat['category_name']) ?>
-                                    </option>
-                                <?php endforeach; ?>
-                            </select>
-                        </div>
-                        <div class="form-group">
-                            <label for="subcategory">Subcategory</label>
-                            <select class="form-control" id="subcategory" name="subcategory" disabled>
-                                <option value="">-- Select Subcategory --</option>
-                                <?php foreach ($subcategories as $subcat): ?>
-                                    <option value="<?= htmlspecialchars($subcat['subcategory_name']) ?>" 
-                                            data-category="<?= htmlspecialchars($subcat['category_name']) ?>">
-                                        <?= htmlspecialchars($subcat['subcategory_name']) ?>
-                                    </option>
-                                <?php endforeach; ?>
-                            </select>
-                        </div>
-                    </div>
-
-                    <div class="form-group full-width">
-                        <label>Description</label>
-                        <input type="text" name="description" id="description" required> 
-                    </div>
-
-                    <div class="form-group full-width">
-                        <div class="form-group">
-                            <label>Date</label>
-                            <input type="date" name="record_date" id="record_date" value="<?= date('Y-m-d') ?>">
-                        </div>
-                    </div>
-
-                    <div class="input-row">
-                        <div class="form-group">
-                            <label>Budget</label>
-                            <input type="number" name="budget" id="budget" value="0" step="0.01">
-                        </div>
-                        <div class="form-group">
-                            <label>Amount</label>
-                            <input type="number" name="actual" id="actual" step="0.01" required>
-                        </div>
-                    </div>
-
-                    <div class="form-group full-width">
-                        <label>Payee</label>
-                        <input type="text" name="payee" id="payee" required>
-                    </div>
-
-                    <div class="form-group full-width">
-                        <label>Remarks</label>
-                        <textarea name="remarks" id="remarks" rows="3"></textarea>
-                    </div>
-                </div>
-
-                <!-- Display metadata (added/edited info) -->
-                <div id="recordMeta" class="record-meta" style="display: none;">
-                    <div style="display: inline-flex; gap: 20px; width: 100%;">
-                        <div class="meta-left">
-                            <div>Added by: <strong id="createdBy"></strong></div>
-                            <div>Edited by: <strong id="editedBy"></strong></div>
-                        </div>
-                        <div class="meta-right">
-                            <div>Added on: <strong id="createdDate"></strong></div>
-                            <div>Edited on: <strong id="editedDate"></strong></div>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="modal-footer">
-                    <button type="submit" name="form_mode" id="recordSubmitBtn" class="btn-add">ADD</button>
-                    <button type="button" class="btn-cancel" onclick="closeModal()">CANCEL</button>
-                </div>
-            </form>
         </div>
     </div>
 
@@ -415,7 +411,7 @@
                 <h5>Delete Record?</h5>
             </div>
             <div class="modal-footer">
-                <form method="POST" action="ms_expenses.php?projectId=<?= $project_id ?>">
+                <form method="POST" action="ms_records.php?projectId=<?= $project_id ?>">
                     <input type="hidden" name="record_id" id="delete_id">
                     <button type="submit" name="delete_record" class="btn-save-delete">YES</button>
                     <button type="button" class="btn-cancel" onclick="closeDeleteModal()">NO</button>
@@ -427,73 +423,6 @@
     <script src="js/sidebar.js"></script>
     <script src="js/header.js"></script>
 
-    <script>//Project Summary Dropdown EDIT and DELETE
-        // Toggle dropdown visibility
-        function toggleDropdown(button) {
-            // Find the dropdown-menu sibling of the clicked button
-            const dropdown = button.nextElementSibling;
-            if (!dropdown) return;
-            
-            // Toggle visibility
-            dropdown.style.display = (dropdown.style.display === 'block') ? 'none' : 'block';
-        }
-
-        // Close dropdown if clicked outside
-        window.addEventListener('click', function(e) {
-            const dropdowns = document.querySelectorAll('.dropdown-menu');
-            dropdowns.forEach(menu => {
-                // If click is NOT inside menu or its button, hide it
-                if (!menu.contains(e.target) && !menu.previousElementSibling.contains(e.target)) {
-                    menu.style.display = 'none';
-                }
-            });
-        });
-
-        // Attach handlers for edit/delete buttons
-        document.querySelectorAll('.dropdown-edit').forEach(button => {
-            button.addEventListener('click', function () {
-                // Show the slide-in edit panel
-                document.getElementById('editProjectPanel').classList.add('open');
-                // Optionally hide the dropdown
-                this.parentElement.style.display = 'none';
-            });
-        });
-
-        // Close panel function
-        function closeEditPanel() {
-            document.getElementById('editProjectPanel').classList.remove('open');
-        }
-
-        //DELETE Button
-        function deleteProject(projectId) {
-            if (!projectId) {
-                alert("Project ID not found.");
-                return;
-            }
-
-            if (confirm("Are you sure you want to delete this project?")) {
-                const formData = new FormData();
-                formData.append("delete_project_id", projectId);
-
-                fetch("", {
-                    method: "POST",
-                    body: formData
-                })
-                .then(response => response.text())
-                .then(data => {
-                    if (data.trim() === "success") {
-                        window.location.href = "ms_projects.php"; // redirect after deletion
-                    } else {
-                        alert("Error: " + data);
-                    }
-                })
-                .catch(error => {
-                    console.error("Delete error:", error);
-                    alert("An error occurred.");
-                });
-            }
-        }
-    </script>
     <script>
         //Records/Analytics View Toggles
         const btnRecords = document.getElementById('view-records');
@@ -523,93 +452,38 @@
             btnAnalytics.click(); // simulate button click
         }
 
-        function openAddModal() {
-            document.getElementById('recordModalHeader').textContent = "ADD RECORD";
-            document.getElementById('recordSubmitBtn').textContent = "ADD";
-            document.getElementById('recordMeta').style.display = 'none';
+        //ADD Record Modal
+        const modal = document.getElementById("addRecordModal");
+        const openBtn = document.querySelector(".add-record-btn");
 
-            // Reset form
-            document.getElementById('edit_id').value = '';
-            document.getElementById('category').value = '';
-            document.getElementById('subcategory').value = '';
-            document.getElementById('record_date').value = '<?= date('Y-m-d') ?>';
-            document.getElementById('budget').value = '0';
-            document.getElementById('actual').value = '';
-            document.getElementById('payee').value = '';
-            document.getElementById('description').value = '';
-            document.getElementById('remarks').value = '';
-
-            document.getElementById('recordModal').style.display = 'flex';
-        }
-
-        function openEditModal(btn) {
-            document.getElementById('recordModalHeader').textContent = "EDIT RECORD";
-            document.getElementById('recordSubmitBtn').textContent = "SAVE"; // Keep as ADD per requirement
-            document.getElementById('recordMeta').style.display = 'flex';
-
-            document.getElementById('edit_id').value = btn.dataset.id;
-            document.getElementById('category').value = btn.dataset.category;
-            document.getElementById('subcategory').value = btn.dataset.subcategory;
-            document.getElementById('record_date').value = btn.dataset.date;
-            document.getElementById('budget').value = btn.dataset.budget;
-            document.getElementById('actual').value = btn.dataset.actual;
-            document.getElementById('payee').value = btn.dataset.payee;
-            document.getElementById('description').value = btn.dataset.description;
-            document.getElementById('remarks').value = btn.dataset.remarks;
-
-            document.getElementById('createdBy').textContent = btn.dataset.created_by || 'Unknown';
-            document.getElementById('editedBy').textContent = btn.dataset.edited_by || '—';
-            document.getElementById('createdDate').textContent = btn.dataset.creation_date || '—';
-            document.getElementById('editedDate').textContent = btn.dataset.edit_date || '—';
-
-            document.getElementById('recordModal').style.display = 'flex';
-        }
+        openBtn.addEventListener("click", () => {
+            modal.style.display = "flex";
+        });
 
         function closeModal() {
-            document.getElementById('recordModal').style.display = 'none';
+            modal.style.display = "none";
         }
 
-        // Event delegation for edit buttons
-        document.addEventListener('DOMContentLoaded', () => {
-            document.querySelector('.add-record-btn').addEventListener('click', openAddModal);
-            document.querySelectorAll('.edit-btn').forEach(btn => {
-                btn.addEventListener('click', (e) => {
-                    e.preventDefault();
-                    openEditModal(btn);
-                });
+        //Closing methods aside from Cancel Button
+            //  Close on outside click
+            window.onclick = function(event) {
+                if (event.target === modal) {
+                    closeModal();
+                }
+            }
+
+            //  Close modal on Escape key
+            window.addEventListener("keydown", function(event) {
+                if (event.key === "Escape" && modal.style.display === "flex") {
+                    modal.style.display = "none";
+                }
             });
-        });
 
-        // Close modal when clicking outside the modal box
-        document.getElementById('recordModal').addEventListener('click', function(event) {
-            const modalBox = document.querySelector('.custom-modal');
-            if (!modalBox.contains(event.target)) {
-                closeModal();
-            }
-        });
-
-        // Close modal on ESC key press
-        document.addEventListener('keydown', function(event) {
-            if (event.key === "Escape") {
-                closeModal();
-            }
-        });
-
-        // Close modal function
-        function closeModal() {
-            document.getElementById('recordModal').style.display = 'none';
-            document.getElementById('recordModalHeader').innerText = 'ADD RECORD';
-            document.getElementById('recordSubmitBtn').innerText = 'ADD';
-            document.getElementById('recordMeta').style.display = 'none';
-
-            // Optional: Clear the form on close
-            document.querySelector('#recordModal form').reset();
-            document.getElementById('edit_id').value = '';
-        }
+        //EDIT and DELETE Modals
+        const editModal = document.getElementById("editRecordModal"); // you'll define this below
+        const deleteModal = document.getElementById("deleteConfirmModal");
 
         // DELETE
-        const deleteModal = document.getElementById("deleteConfirmModal");
-        
         document.querySelectorAll(".delete-btn").forEach(btn => {
             btn.addEventListener("click", e => {
                 e.preventDefault();
@@ -630,176 +504,96 @@
         window.addEventListener("keydown", function(e) {
             if (e.key === "Escape" && deleteModal.style.display === "flex") closeDeleteModal();
         });
-    </script>
-    <script>
-        document.addEventListener('DOMContentLoaded', function () {
-            const categorySelect = document.getElementById('category');
-            const subcategorySelect = document.getElementById('subcategory');
 
-            // Store all subcategories initially
-            const allSubOptions = Array.from(subcategorySelect.querySelectorAll('option[data-category]'));
+        // EDIT
+        document.querySelectorAll(".edit-btn").forEach(btn => {
+            btn.addEventListener("click", e => {
+                e.preventDefault();
+                document.getElementById("edit_id").value = btn.dataset.id;
+                document.querySelector("#editRecordModal select[name='category']").value = btn.dataset.category;
+                document.querySelector("#editRecordModal input[name='record_date']").value = btn.dataset.date;
+                document.querySelector("#editRecordModal input[name='budget']").value = btn.dataset.budget;
+                document.querySelector("#editRecordModal input[name='actual']").value = btn.dataset.actual;
+                document.querySelector("#editRecordModal input[name='payee']").value = btn.dataset.payee;
+                document.querySelector("#editRecordModal input[name='description']").value = btn.dataset.description;
+                document.querySelector("#editRecordModal textarea[name='remarks']").value = btn.dataset.remarks;
 
-            categorySelect.addEventListener('change', function () {
-                const selectedCategory = categorySelect.value;
-
-                // Reset and disable if no category selected
-                if (!selectedCategory) {
-                    subcategorySelect.disabled = true;
-                    subcategorySelect.innerHTML = '<option value="">-- Select Subcategory --</option>';
-                    return;
-                }
-
-                subcategorySelect.disabled = false;
-                subcategorySelect.innerHTML = '<option value="">-- Select Subcategory --</option>';
-
-                // Filter subcategories by category name
-                allSubOptions.forEach(option => {
-                    if (option.getAttribute('data-category') === selectedCategory) {
-                        subcategorySelect.appendChild(option.cloneNode(true));
-                    }
-                });
+                editModal.style.display = "flex";
             });
         });
+
+        function closeEditModal() {
+            editModal.style.display = "none";
+        }
     </script>
-    <script>
-        const weeklyCtx = document.getElementById('weeklyChart').getContext('2d');
-        const doughnutCtx = document.getElementById('doughnutChart').getContext('2d');
 
-        // Weekly Chart Data Grouping
-        const weeklyBuckets = {};
-        const weekRanges = {}; // To store date ranges for each week
+    <script> //ANALYTICS VIEW
+        const categoryChartCtx = document.getElementById('categoryChart').getContext('2d');
+        const monthlyChartCtx = document.getElementById('monthlyChart').getContext('2d');
+        
+        const categoryData = <?= json_encode($category_totals) ?>;
+        const monthlyData = <?= json_encode($monthly_totals) ?>;
 
-        <?php
-        $week_counter = 1;
-        $week_labels = [];
-        $weekly_budget_data = [];
-        $weekly_actual_data = [];
+        const pieLabels = Object.keys(categoryData);
+        const pieValues = Object.values(categoryData);
 
-        $temp_buckets = [];
-
-        foreach ($records as $r) {
-            $timestamp = strtotime($r['record_date']);
-            $week_num = date('W', $timestamp);
-            $year = date('o', $timestamp);
-
-            $key = "$year-W$week_num";
-
-            // Get start and end of the week (Mon-Sun)
-            $start_of_week = date('M d', strtotime($year . "W" . $week_num));
-            $end_of_week = date('M d', strtotime($year . "W" . $week_num . " +6 days"));
-
-            $range = "$start_of_week - $end_of_week";
-            $label = "Week $week_counter\n$range";
-
-            if (!isset($temp_buckets[$key])) {
-                $temp_buckets[$key] = ['budget' => 0, 'actual' => 0, 'label' => $label];
-                $week_counter++;
-            }
-
-            $temp_buckets[$key]['budget'] += $r['budget'];
-            $temp_buckets[$key]['actual'] += $r['actual'];
-        }
-
-        foreach ($temp_buckets as $entry) {
-            $week_labels[] = $entry['label'];
-            $weekly_budget_data[] = $entry['budget'];
-            $weekly_actual_data[] = $entry['actual'];
-        }
-        ?>
-
-        const weekLabels = <?= json_encode($week_labels) ?>;
-        const weeklyBudgetData = <?= json_encode($weekly_budget_data) ?>;
-        const weeklyActualData = <?= json_encode($weekly_actual_data) ?>;
-
-        // Bar Chart
-        new Chart(weeklyCtx, {
+        const categoryChart = new Chart(categoryChartCtx, {
             type: 'bar',
             data: {
-                labels: weekLabels,
-                datasets: [
-                    {
-                        label: 'Budget',
-                        data: weeklyBudgetData,
-                        backgroundColor: 'rgba(54, 162, 235, 0.7)'
-                    },
-                    {
-                        label: 'Actual',
-                        data: weeklyActualData,
-                        backgroundColor: 'rgba(255, 99, 132, 0.7)'
-                    }
-                ]
-            },
-            options: {
-                responsive: true,
-                scales: {
-                    x: {
-                        ticks: {
-                            callback: function(value) {
-                                return this.getLabelForValue(value).split('\n');
-                            },
-                            autoSkip: false,
-                            maxRotation: 0,
-                            minRotation: 0
-                        }
-                    },
-                    y: {
-                        beginAtZero: true,
-                        ticks: {
-                            callback: value => '₱' + value.toLocaleString()
-                        }
-                    }
-                },
-                plugins: {
-                    tooltip: {
-                        callbacks: {
-                            label: ctx => `₱${ctx.raw.toLocaleString()}`
-                        }
-                    },
-                    legend: {
-                        display: true
-                    }
-                }
-            }
-        });
-
-        // Doughnut Chart
-        const categoryData = <?= json_encode($category_totals) ?>;
-        const catLabels = Object.keys(categoryData);
-        const catValues = Object.values(categoryData);
-        const catTotal = catValues.reduce((a, b) => a + b, 0);
-        const catColors = catLabels.map((_, i) => `hsl(${i * 360 / catLabels.length}, 70%, 60%)`);
-
-        new Chart(doughnutCtx, {
-            type: 'doughnut',
-            data: {
-                labels: catLabels,
+                labels: <?= json_encode(array_keys($category_totals)) ?>,
                 datasets: [{
-                    data: catValues,
-                    backgroundColor: catColors
+                    label: 'Actual by Category',
+                    data: <?= json_encode(array_values($category_totals)) ?>,
+                    backgroundColor: 'rgba(75, 192, 192, 0.7)',
+                    borderColor: 'rgba(75, 192, 192, 1)',
+                    borderWidth: 1
                 }]
-            },
-            options: {
-                plugins: {
-                    tooltip: {
-                        callbacks: {
-                            label: (ctx) => {
-                                const amount = ctx.raw;
-                                return `₱${amount.toLocaleString()}`;
-                            }
-                        }
-                    }
-                }
             }
         });
 
-        // Category Legend with % breakdown
-        const legendDiv = document.getElementById('categoryLegend');
-        legendDiv.innerHTML = catLabels.map((label, i) => {
-            const percent = ((catValues[i] / catTotal) * 100).toFixed(1);
-            return `<div><span style="color:${catColors[i]}">●</span> ${label} - ${percent}%</div>`;
-        }).join('');
+        const monthlyChart = new Chart(monthlyChartCtx, {
+            type: 'line',
+            data: {
+                labels: <?= json_encode(array_keys($monthly_totals)) ?>,
+                datasets: [{
+                    label: 'Monthly Actual Spending',
+                    data: <?= json_encode(array_values($monthly_totals)) ?>,
+                    fill: false,
+                    borderColor: 'rgba(153, 102, 255, 1)',
+                    tension: 0.3
+                }]
+            }
+        });
 
-        // PDF Export
+        const pieChart = new Chart(document.getElementById('pieChart'), {
+            type: 'pie',
+            data: {
+                labels: pieLabels,
+                datasets: [{
+                    label: 'Category Distribution',
+                    data: pieValues,
+                    backgroundColor: pieLabels.map(() => `hsl(${Math.random()*360}, 70%, 70%)`)
+                }]
+            }
+        });
+
+        const varianceLabels = <?= json_encode(array_column($records, 'record_date')) ?>;
+        const varianceData = <?= json_encode(array_map(fn($r) => $r['budget'] - $r['actual'], $records)) ?>;
+
+        const varianceChart = new Chart(document.getElementById('varianceChart'), {
+            type: 'line',
+            data: {
+                labels: varianceLabels,
+                datasets: [{
+                    label: 'Variance Over Time',
+                    data: varianceData,
+                    borderColor: 'rgba(255, 159, 64, 1)',
+                    tension: 0.3
+                }]
+            }
+        });
+
+        // PDF Report Export
         document.getElementById('downloadReport').addEventListener('click', () => {
             const { jsPDF } = window.jspdf;
             const doc = new jsPDF();
@@ -807,9 +601,9 @@
             doc.text("Project: <?= addslashes($project['project_name']) ?>", 10, 20);
             doc.text("Total Budget: ₱<?= number_format(array_sum(array_column($records, 'budget')), 2) ?>", 10, 30);
             doc.text("Total Actual: ₱<?= number_format(array_sum(array_column($records, 'actual')), 2) ?>", 10, 40);
-            doc.text("Variance: ₱<?= number_format(array_sum(array_column($records, 'budget')) - array_sum(array_column($records, 'actual')), 2) ?>", 10, 50);
-            doc.text("Tax: ₱<?= number_format(array_sum(array_column($records, 'tax')), 2) ?>", 10, 60);
-            doc.save("analytics-report.pdf");
+            doc.text("Total Variance: ₱<?= number_format(array_sum(array_column($records, 'budget')) - array_sum(array_column($records, 'actual')), 2) ?>", 10, 50);
+            doc.text("Total Tax: ₱<?= number_format(array_sum(array_column($records, 'tax')), 2) ?>", 10, 60);
+            doc.save("analytics_report_<?= $project_code ?>.pdf");
         });
     </script>
 </body>
