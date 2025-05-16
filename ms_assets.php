@@ -131,7 +131,7 @@
                     <table class="asset-list-table">
                         <thead>
                             <tr>
-                                <th style="width: 5%;">#</th>
+                                <th style="width: 5%;"></th>
                                 <th style="width: 45%;">Description</th>
                                 <th style="width: 25%;">Category</th>
                                 <th style="width: 25%;">Value</th>

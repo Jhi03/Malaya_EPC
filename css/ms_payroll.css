@@ -7,7 +7,7 @@ body {
 }
 
 .content-body {
-    padding: 20px;
+    padding: 20px 40px 20px 40px;
     flex: 1;
     overflow-x: hidden;
     display: flex;
@@ -16,7 +16,7 @@ body {
     margin-left: auto;
     margin-right: auto;
 
-    background: rgba(242, 242, 242, 0.8);
+    background: rgba(243, 243, 243, 0.8);
     background-image: repeating-linear-gradient(
         45deg,
         rgba(255, 255, 255, 0.700) 0px,
@@ -28,10 +28,8 @@ body {
     -webkit-backdrop-filter: blur(12px) saturate(180%);
 }
 
-.content-container {
-    padding: 20px;
-}
 .card {
+    font-size: 14px;
     margin-bottom: 20px;
     border-radius: 8px;
     box-shadow: 0 2px 4px rgba(0,0,0,0.1);
@@ -41,28 +39,109 @@ body {
     padding: 15px;
     border-bottom: 1px solid #e7e7e7;
 }
+.card-body.no-padding-bottom{
+    padding-bottom: 0 !important;
+}
 .form-group {
     margin-bottom: 15px;
 }
+
+/* Responsive table */
 .table-responsive {
     overflow-x: auto;
 }
-.table th {
-    background-color: #f8f9fa;
+
+/* Table Base Style */
+.table {
+    width: 100%;
+    margin-top: 10px;
+    border-collapse: collapse;
+    font-size: 12px;
+    background-color: #fff;
+    table-layout: fixed;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.03);
+    border-radius: 10px;
+    overflow: hidden;
 }
+
+/* Table Head Styling - darker gray */
+.table thead th {
+    background-color: #e5e7eb; /* darker gray */
+    font-weight: 600;
+    text-align: center;
+    border: 1px solid #d1d5db;
+    padding: 10px 12px;
+}
+
+/* Table Body Styling */
+.table td {
+    border: 1px solid #e5e7eb;
+    padding: 10px 12px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    text-align: left;
+}
+
+/* First row white, alternating starts with white */
+.table tbody tr:nth-child(odd) {
+    background-color: #ffffff;
+}
+.table tbody tr:nth-child(even) {
+    background-color: #f9f9f9;
+}
+
+/* Hover effect */
+.table tbody tr:hover {
+    background-color: #f1f5f9;
+}
+
+/* Column Widths */
+.table th:nth-child(1),
+.table td:nth-child(1) {
+    width: 30px;
+    text-align: center;
+}
+
+.table th:nth-child(2),
+.table td:nth-child(2),
+.table th:nth-child(3),
+.table td:nth-child(3) {
+    width: 15%;
+}
+
+.table th:nth-child(8),
+.table td:nth-child(8),
+.table th:nth-child(9),
+.table td:nth-child(9),
+.table th:nth-child(10),
+.table td:nth-child(10) {
+    width: 12%;
+    text-align: center;
+}
+
 .btn-action {
     margin-right: 5px;
 }
 .alert {
     margin-bottom: 20px;
 }
+/* Payroll layout styling */
 .payroll-stats {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+}
+
+.stat-row {
     display: flex;
     flex-wrap: wrap;
     gap: 15px;
-    margin-bottom: 20px;
+    align-items: stretch;
 }
+
 .stat-card {
+    font-size: 12px;
     flex: 1;
     min-width: 200px;
     padding: 15px;
@@ -70,36 +149,109 @@ body {
     background-color: #fff;
     box-shadow: 0 2px 4px rgba(0,0,0,0.1);
 }
+
 .stat-card h3 {
     margin: 0;
     font-size: 14px;
     color: #6c757d;
 }
+
 .stat-card p {
     margin: 10px 0 0;
-    font-size: 24px;
+    font-size: 16px;
     font-weight: bold;
 }
-.filter-form {
-    padding: 15px;
-    margin-bottom: 20px;
-    background-color: #f8f9fa;
-    border-radius: 8px;
+
+form .form-label {
+    font-weight: 600;
 }
+
+form .form-label,
+form .form-control,
+form .form-select {
+    font-size: 14px;
+    padding: 6px 10px;
+}
+
+button.btn-primary, .btn-outline-secondary {
+    font-size: 14px;
+    padding: 6px 12px;
+}
+
+/* Style for Add Entry Button */
+.add-record-btn {
+    background-color: #333;
+    border: none;
+    color: white;
+    padding: 8px 24px;
+    border-radius: 9999px;
+    font-size: 12px;
+    font-weight: 600;
+    text-transform: uppercase;
+    cursor: pointer;
+}
+
+.add-record-btn:hover {
+    background-color: #212121;
+}
+
+.add-record-btn img {
+    vertical-align: middle;
+    display: inline-block;
+    transform: translateY(-1px);
+}
+
+/* Style for Clear Filters Button */
+.filter-btn {
+    background-color: #f3f4f6;
+    border: none;
+    padding: 8px 16px;
+    border-radius: 12px;
+    font-size: 13px;
+    font-weight: 500;
+    color: #374151;
+    cursor: pointer;
+    transition: background-color 0.2s ease, box-shadow 0.2s ease;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.04);
+}
+
+.filter-btn:hover {
+    background-color: #e5e7eb;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.05);
+}
+
 .form-section {
     border: 1px solid #dee2e6;
     border-radius: 8px;
     padding: 15px;
     margin-bottom: 15px;
 }
+
 .form-section-title {
     font-weight: bold;
     margin-bottom: 10px;
     border-bottom: 1px solid #dee2e6;
     padding-bottom: 5px;
 }
+
+#payrollModal .modal-dialog {
+    max-width: 40vw;    /* 40% of viewport width */
+    display: flex;
+    flex-direction: column;
+}
+
+#viewPayrollModal .modal-dialog {
+    max-width: 40vw;    /* 40% of viewport width */
+    display: flex;
+    flex-direction: column;
+}
+
+.modal-title{
+    padding: 8px 15px;
+}
+
 #calculationSummary {
-    font-size: 16px;
+    font-size: 14px;
     margin-top: 15px;
 }
 .calculation-row {
@@ -112,4 +264,29 @@ body {
     border-top: 1px solid #dee2e6;
     padding-top: 5px;
     margin-top: 5px;
+}
+
+.btn.btn-secondary
+.btn.btn-danger
+.btn.btn-primary{
+    padding: 6px 12px 6px 12px !important;
+    font-size: 14px;
+}
+
+.btn.btn-secondary {
+    background-color: #333 !important;
+    color: white !important;
+    border: none !important;
+    border-radius: 8px !important;
+}
+
+.btn.btn-secondary:hover {
+    background-color: #212121 !important;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.05) !important;
+    transform: translateY(-2px) !important;
+}
+
+.btn.btn-sm.btn-action.view-payroll{
+    background-color: #333;
+    border: none;
 }

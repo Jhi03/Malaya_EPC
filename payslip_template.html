@@ -1,0 +1,163 @@
+<!-- payslip_template.html -->
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Payslip - {{employee_name}}</title>
+    <style>
+        /* payslip_style.css */
+        html, body {
+            height: 100%;
+            margin: 0;
+            background-color: #333; /* outside paper background */
+        }
+        @page {
+            size: A4;
+            margin: 2cm;
+        }
+        body {
+            font-family: Arial, sans-serif;
+            font-size: 12px; /* main text */
+            padding: 2cm; /* simulate margin */
+            box-sizing: border-box;
+            background: #fff;
+            color: #000;
+            max-width: 21cm;
+            margin: 1.5rem auto; /* center horizontally with some top margin */
+            border: 1px solid #ccc;
+            box-shadow: 0 0 15px rgba(0,0,0,0.3);
+            min-height: calc(29.7cm - 4cm); /* A4 height minus 2cm margins top+bottom */
+        }
+        .header {
+            text-align: center;
+            margin-bottom: 1.25rem;
+        }
+        .company-name {
+            font-size: 16px; /* scaled down from 22px */
+            font-weight: bold;
+        }
+        .payslip-title {
+            font-size: 14px; /* scaled down from 18px */
+            margin: 0.5rem 0 1rem 0;
+        }
+        .info-section {
+            margin-bottom: 1.25rem;
+        }
+        .info-row {
+            display: flex;
+            margin-bottom: 0.3rem;
+        }
+        .info-label {
+            width: 180px;
+            font-weight: bold;
+            font-size: 12px;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 1.25rem;
+            font-size: 12px;
+        }
+        th, td {
+            border: 1px solid #ddd;
+            padding: 6px 8px;
+            text-align: left;
+        }
+        th {
+            background-color: #f2f2f2;
+        }
+        .summary {
+            font-weight: bold;
+            font-size: 13px;
+        }
+        .footer {
+            margin-top: 3rem;
+            text-align: center;
+            font-size: 10px;
+            color: #555;
+        }
+        @media print {
+            @page {
+                margin: 2cm;
+            }
+            body {
+                padding: 0;
+                margin: 0;
+                border: none;
+                box-shadow: none;
+                max-width: auto;
+                min-height: auto;
+            }
+            button {
+                display: none;
+            }
+        }
+        /* layout of earnings and deductions side by side */
+        .row {
+            display: flex;
+            justify-content: space-between;
+            gap: 1rem;
+        }
+        .col {
+            width: 48%;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <div class="company-name">MALAYA SOLAR ENERGIES INC.</div>
+        <div class="payslip-title">EMPLOYEE PAYSLIP</div>
+    </div>
+
+    <div class="info-section">
+        <div class="info-row"><div class="info-label">Employee Name:</div><div>{{employee_name}}</div></div>
+        <div class="info-row"><div class="info-label">Pay Period:</div><div>{{payroll_period}}</div></div>
+        <div class="info-row"><div class="info-label">Payment Method:</div><div>{{payment_method}}</div></div>
+    </div>
+
+    <div class="row">
+        <div class="col">
+            <h4 style="font-size:14px; margin-bottom:0.5rem;">Earnings</h4>
+            <table>
+                <tr><th>Description</th><th>Amount</th></tr>
+                <tr><td>Basic Pay</td><td>{{basic_pay}}</td></tr>
+                <tr><td>Overtime Pay</td><td>{{overtime_pay}}</td></tr>
+                <tr><td>Allowances</td><td>{{allowances}}</td></tr>
+                <tr><td>Bonus</td><td>{{bonus}}</td></tr>
+                <tr class="summary"><td>Gross Pay</td><td>{{gross_pay}}</td></tr>
+            </table>
+        </div>
+
+        <div class="col">
+            <h4 style="font-size:14px; margin-bottom:0.5rem;">Deductions</h4>
+            <table>
+                <tr><th>Description</th><th>Amount</th></tr>
+                <tr><td>SSS</td><td>{{sss}}</td></tr>
+                <tr><td>PhilHealth</td><td>{{philhealth}}</td></tr>
+                <tr><td>Pag-IBIG</td><td>{{pagibig}}</td></tr>
+                <tr><td>Loans</td><td>{{loans}}</td></tr>
+                <tr><td>Other Deductions</td><td>{{other_deductions}}</td></tr>
+                <tr><td>Tax</td><td>{{tax}}</td></tr>
+                <tr class="summary"><td>Total Deductions</td><td>{{total_deductions}}</td></tr>
+            </table>
+        </div>
+    </div>
+
+    <table>
+        <tr class="summary"><th style="font-size:14px;">NET PAY</th><th style="font-size:14px;">{{net_pay}}</th></tr>
+    </table>
+
+    <div class="info-section">
+        <h4 style="font-size:14px; margin-bottom:0.5rem;">Remarks</h4>
+        <div style="border: 1px solid #ddd; padding: 10px; font-size: 12px;">{{remarks}}</div>
+    </div>
+
+    <div class="footer">
+        <p>This is a computer-generated document. No signature required.</p>
+        <p>Malaya Solar Energies Inc. &copy; {{year}}</p>
+    </div>
+
+    <div style="text-align: center; margin-top: 20px;">
+        <button onclick="window.print()">Print Payslip</button>
+    </div>
+</body>
+</html>
