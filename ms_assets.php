@@ -3,7 +3,19 @@
     $page_title = "ASSETS";
 
     // DATABASE CONNECTION
+<<<<<<< HEAD
+    $servername = "localhost";  
+    $username = "u188693564_adminsolar";           
+    $password = "@Malayasolarenergies1";            
+    $dbname = "u188693564_malayasol";     
+
+    // Create connection
+    $conn = new mysqli($servername, $username, $password, $dbname);
+
+    // Check connection
+=======
     $conn = new mysqli("localhost", "root", "", "malayasol");
+>>>>>>> 53a8b739bac1fa34eb692d96a52277e24a81f2ec
     if ($conn->connect_error) {
         die("Connection failed: " . $conn->connect_error);
     }
