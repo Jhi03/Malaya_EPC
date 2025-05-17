@@ -149,8 +149,8 @@
                                             <input type="checkbox" class="row-checkbox" style="display: none;">
                                         </td>
                                         <td><?= htmlspecialchars($row['asset_description']) ?></td>
-                                        <td><?= htmlspecialchars($row['category']) ?></td>
-                                        <td>₱<?= number_format($row['value'], 2) ?></td>
+                                        <td></td>
+                                        <td></td>
                                     </tr>
                                 <?php endwhile; ?>
                             </tbody>

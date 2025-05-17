@@ -121,8 +121,14 @@ if ($project_id > 0) {
 <head>
 <meta charset="UTF-8" />
 <title><?= htmlspecialchars($page_title) ?></title>
-<link rel="stylesheet" href="ms_payroll.css" />
 <link rel="stylesheet" href="styles.css" />
+<style>
+    #editProjectModal .modal-dialog {
+        max-width: 40vw;    /* 40% of viewport width */
+        display: flex;
+        flex-direction: column;
+    }
+</style>
 </head>
 <body>
 
