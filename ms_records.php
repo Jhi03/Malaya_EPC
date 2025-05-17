@@ -616,9 +616,13 @@
                                                 data-rental_rate="<?= $row['rental_rate'] ?>"
                                                 data-tax="<?= $row['tax'] ?>"
                                                 data-variance="<?= $row['variance'] ?>"
-                                                data-invoice_no="<?= htmlspecialchars($row['invoice_no']) ?>">
+                                                data-invoice_no="<?= htmlspecialchars($row['invoice_no']) ?>"
+                                                data-bill_to_client="<?= $row['bill_to_client'] ?>"
+                                                data-is_rental="<?= $row['is_rental'] ?>"
+                                                data-is_company_loss="<?= $row['is_company_loss'] ?>">
                                                 <img src="icons/eye.svg" width="16" alt="View">
                                             </button>
+
                                             <button type="button" class="btn btn-sm btn-primary edit-btn"
                                                 data-id="<?= $row['record_id'] ?>"
                                                 data-category="<?= htmlspecialchars($row['category']) ?>"
@@ -631,7 +635,10 @@
                                                 data-remarks="<?= htmlspecialchars($row['remarks']) ?>"
                                                 data-rental_rate="<?= $row['rental_rate'] ?>"
                                                 data-tax="<?= $row['tax'] ?>"
-                                                data-invoice_no="<?= htmlspecialchars($row['invoice_no']) ?>">
+                                                data-invoice_no="<?= htmlspecialchars($row['invoice_no']) ?>"
+                                                data-bill_to_client="<?= $row['bill_to_client'] ?>"
+                                                data-is_rental="<?= $row['is_rental'] ?>"
+                                                data-is_company_loss="<?= $row['is_company_loss'] ?>">
                                                 <img src="icons/pencil-white.svg" width="16" alt="Edit">
                                             </button>
                                             <button type="button" class="btn btn-sm btn-danger delete-btn" onclick="deleteExpense(<?= $row['record_id'] ?>)">
@@ -927,7 +934,7 @@
                     
                     <div class="row mb-4">
                         <div class="col-md-6">
-                            <h6>Financial Details</h6>
+                            <h6>Transaction Details</h6>
                             <table class="table table-bordered">
                                 <tr>
                                     <th class="viewRecord" style="width: 5%; text-align: left;">Budget</th>
@@ -938,16 +945,28 @@
                                     <td id="view_expense"></td>
                                 </tr>
                                 <tr>
-                                    <th class="viewRecord" style="width: 5%; text-align: left;">Variance</th>
-                                    <td id="view_variance"></td>
+                                    <th class="viewRecord" style="width: 5%; text-align: left;">Rental</th>
+                                    <td id="view_is_rental"></td>
                                 </tr>
-                                <tr class="table-secondary">
+                                <tr>
                                     <th class="viewRecord" style="width: 5%; text-align: left;">Rental Rate</th>
                                     <td id="view_rental_rate"></td>
                                 </tr>
                                 <tr>
+                                    <th class="viewRecord" style="width: 5%; text-align: left;">Variance</th>
+                                    <td id="view_variance"></td>
+                                </tr>
+                                <tr>
                                     <th class="viewRecord" style="width: 5%; text-align: left;">Tax</th>
                                     <td id="view_tax"></td>
+                                </tr>
+                                <tr>
+                                    <th class="viewRecord" style="width: 5%; text-align: left;">Bill to Client</th>
+                                    <td id="view_bill_to_client"></td>
+                                </tr>
+                                <tr>
+                                    <th class="viewRecord" style="width: 5%; text-align: left;">Company Loss</th>
+                                    <td id="view_is_company_loss"></td>
                                 </tr>
                             </table>
                         </div>
@@ -1055,6 +1074,34 @@
                 $('#view_payee').text($(this).data('payee') || 'N/A');
                 $('#view_invoice_no').text($(this).data('invoice_no') || 'N/A');
                 $('#view_remarks').text($(this).data('remarks') || 'No remarks');
+                
+                // Add these new fields
+                $('#view_bill_to_client').text($(this).data('bill_to_client') || 'No');
+                $('#view_is_rental').text($(this).data('is_rental') || 'No');
+                $('#view_is_company_loss').text($(this).data('is_company_loss') || 'No');
+
+                // Hide bill_to_client row if not Yes
+                if ($(this).data('bill_to_client') === 'Yes') {
+                    $('#view_bill_to_client').closest('tr').show();
+                    $('#view_bill_to_client').closest('tr').addClass('table-success');
+                } else {
+                    $('#view_bill_to_client').closest('tr').hide();
+                }
+                
+                // Hide company_loss row if not Yes
+                if ($(this).data('is_company_loss') === 'Yes') {
+                    $('#view_is_company_loss').closest('tr').show();
+                    $('#view_is_company_loss').closest('tr').addClass('table-danger');
+                } else {
+                    $('#view_is_company_loss').closest('tr').hide();
+                }
+                
+                // Show/highlight rental row based on is_rental value
+                if ($(this).data('is_rental') === 'Yes') {
+                    $('#view_rental_rate').closest('tr').addClass('table-primary');
+                } else {
+                    $('#view_rental_rate').closest('tr').removeClass('table-primary');
+                }
 
                 $.post('get_expense_details.php', {
                 record_id: $(this).data('id')
@@ -1791,53 +1838,3 @@
     </script>
 </body>
 </html>
-
-<!--
-NOTES: 
-    04-13-25
-    TO BE WORKED ON:
-    - modify project summary layout to have them match the initial design [done]
-    - expand search bar later [done]
-    - add functionality to "add record" button [done]
-
-    NOT YET FUNCTIONAL:
-    - add record button [done]
-
-    04-14-25
-    CHANGES:
-    - added php, modal, and script for add record block
-
-    TO BE WORKED ON:
-    - fix add record form layout later [done]
-    - test adding and showing records in the page [done]
-
-    04-20-25
-    CHANGES:
-    - edit and delete button: added - tested and working
-    - side bar: won't scroll, and animation added
-    - topbar: contents will scroll under it
-    - project summary: layout updated
-
-    TO BE WORKED ON:
-    - analytics view with existing data [done]
-    
-    04-21-25
-    CHANGES:
-    - analytics view: added
-
-    TO BE WORKED ON:
-    - sort by and filter 
-    - analytics: tweak layout and data to be presented
-    - add record: amount value is fixed to .00
-        - input won't accept other decimal values e.g .98
-    - download PDF button
-
-    04-24-25
-    CHANGES:
-    - login page: login and session tracking added
-    - user menu: added settings and logout button
-    - search bar: width expanded
-
-    NO FUNCTION:
-    - settings: from user menu
--->
