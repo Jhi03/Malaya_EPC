@@ -264,19 +264,8 @@ console.log("Analytics data loaded:", window.analyticsData);
         border-bottom-right-radius: 4px;
     }
 
-    /* Date range selector */
-    #date-range-btn {
-        border-radius: 50px;
-        display: flex;
-        align-items: center;
-        padding: 0.375rem 1rem;
-    }
-
-    #date-range-display {
-        padding: 0.375rem 0.75rem;
-        background: #f8f9fa;
-        border-radius: 4px;
-        font-size: 0.85rem;
+    .mb-3{
+        justify-content: right;
     }
 
     /* Chart containers */
@@ -438,37 +427,53 @@ console.log("Analytics data loaded:", window.analyticsData);
         </div>
     </div>
     <!-- Add these controls before the chart rows -->
-    <!-- Date Range Dropdown -->
-    <div class="date-range-dropdown dropdown">
-        <button class="btn btn-outline-primary btn-sm dropdown-toggle" type="button" id="date-range-btn" data-bs-toggle="dropdown" aria-expanded="false">
-            <i class="fas fa-calendar-alt me-1"></i> Date Range
-        </button>
-        <div class="dropdown-menu p-3" style="width: 300px;">
-            <h6 class="dropdown-header">Select Date Range</h6>
-            
-            <div class="mb-3">
-                <label for="dropdown-start-date" class="form-label small">Start Date</label>
-                <input type="date" class="form-control form-control-sm" id="dropdown-start-date">
-            </div>
-            
-            <div class="mb-3">
-                <label for="dropdown-end-date" class="form-label small">End Date</label>
-                <input type="date" class="form-control form-control-sm" id="dropdown-end-date">
-            </div>
-            
-            <div class="mb-3">
-                <label class="form-label small">Quick Selections</label>
-                <div class="d-grid gap-2">
-                    <button type="button" class="btn btn-outline-secondary btn-sm quick-range-btn" data-days="7">Last 7 Days</button>
-                    <button type="button" class="btn btn-outline-secondary btn-sm quick-range-btn" data-days="30">Last 30 Days</button>
-                    <button type="button" class="btn btn-outline-secondary btn-sm quick-range-btn" data-days="90">Last 3 Months</button>
-                    <button type="button" class="btn btn-outline-secondary btn-sm quick-range-btn" data-days="all">All Time</button>
+    <!-- Date Range Picker Modal -->
+    <div class="modal fade" id="dateRangeModal" tabindex="-1" aria-labelledby="dateRangeModalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="dateRangeModalLabel">Select Date Range</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <label for="start-date" class="form-label">Start Date</label>
+                            <input type="date" class="form-control" id="start-date">
+                        </div>
+                        <div class="col-md-6">
+                            <label for="end-date" class="form-label">End Date</label>
+                            <input type="date" class="form-control" id="end-date">
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-12">
+                            <label class="form-label">Quick Selections</label>
+                            <div class="btn-group w-100">
+                                <button type="button" class="btn btn-outline-secondary" data-quick-range="7">Last 7 Days</button>
+                                <button type="button" class="btn btn-outline-secondary" data-quick-range="30">Last 30 Days</button>
+                                <button type="button" class="btn btn-outline-secondary" data-quick-range="90">Last 3 Months</button>
+                                <button type="button" class="btn btn-outline-secondary" data-quick-range="all">All Time</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-primary" id="apply-date-range">Apply</button>
                 </div>
             </div>
-            
-            <div class="d-flex justify-content-between">
-                <span id="date-range-display" class="small text-muted align-self-center">All Time</span>
-                <button type="button" class="btn btn-primary btn-sm" id="apply-date-range">Apply</button>
+        </div>
+    </div>
+    <div class="row mb-3">
+        <div class="col-md-6">
+            <div class="d-flex justify-content-end">
+                <div class="btn-group btn-group-sm" role="group">
+                    <button type="button" class="btn btn-outline-primary" data-period="daily">Daily</button>
+                    <button type="button" class="btn btn-outline-primary active" data-period="weekly">Weekly</button>
+                    <button type="button" class="btn btn-outline-primary" data-period="monthly">Monthly</button>
+                    <button type="button" class="btn btn-outline-primary" data-period="quarterly">Quarterly</button>
+                </div>
             </div>
         </div>
     </div>
@@ -731,97 +736,6 @@ console.log("Analytics data loaded:", window.analyticsData);
                 updateCategoryChart();
             });
         });
-    }
-    
-    // Setup date range dropdown
-    function setupDateRangePicker() {
-        console.log("Setting up date range dropdown");
-        
-        // Get elements
-        const dateRangeBtn = document.getElementById('date-range-btn');
-        const startDateInput = document.getElementById('dropdown-start-date');
-        const endDateInput = document.getElementById('dropdown-end-date');
-        const applyBtn = document.getElementById('apply-date-range');
-        const dateRangeDisplay = document.getElementById('date-range-display');
-        const quickRangeButtons = document.querySelectorAll('.quick-range-btn');
-        
-        // Check if elements exist
-        if (!dateRangeBtn || !startDateInput || !endDateInput || !applyBtn) {
-            console.error("Date range dropdown elements not found");
-            return;
-        }
-        
-        // Initialize Bootstrap dropdown if possible
-        if (typeof bootstrap !== 'undefined' && bootstrap.Dropdown) {
-            new bootstrap.Dropdown(dateRangeBtn);
-        }
-        
-        // Setup quick selection buttons
-        quickRangeButtons.forEach(button => {
-            button.addEventListener('click', function() {
-                const days = this.getAttribute('data-days');
-                console.log("Quick range selected:", days);
-                
-                const endDate = new Date();
-                let startDate = new Date();
-                
-                if (days === 'all') {
-                    startDateInput.value = '';
-                    endDateInput.value = '';
-                } else {
-                    startDate.setDate(startDate.getDate() - parseInt(days));
-                    
-                    // Format dates for input fields (YYYY-MM-DD)
-                    const formatDate = (date) => {
-                        const year = date.getFullYear();
-                        const month = String(date.getMonth() + 1).padStart(2, '0');
-                        const day = String(date.getDate()).padStart(2, '0');
-                        return `${year}-${month}-${day}`;
-                    };
-                    
-                    startDateInput.value = formatDate(startDate);
-                    endDateInput.value = formatDate(endDate);
-                }
-            });
-        });
-        
-        // Setup apply button
-        applyBtn.addEventListener('click', function() {
-            console.log("Applying date range");
-            
-            const startDate = startDateInput.value;
-            const endDate = endDateInput.value;
-            
-            // Update config
-            config.dateRangeStart = startDate ? new Date(startDate) : null;
-            config.dateRangeEnd = endDate ? new Date(endDate) : null;
-            
-            // Update dropdown button text
-            if (startDate && endDate) {
-                const formatDisplayDate = (dateStr) => {
-                    const date = new Date(dateStr);
-                    return date.toLocaleDateString();
-                };
-                
-                dateRangeDisplay.textContent = `${formatDisplayDate(startDate)} - ${formatDisplayDate(endDate)}`;
-                dateRangeBtn.innerHTML = `<i class="fas fa-calendar-alt me-1"></i> ${formatDisplayDate(startDate)} - ${formatDisplayDate(endDate)}`;
-            } else {
-                dateRangeDisplay.textContent = 'All Time';
-                dateRangeBtn.innerHTML = `<i class="fas fa-calendar-alt me-1"></i> All Time`;
-            }
-            
-            // Close dropdown if using Bootstrap
-            if (typeof bootstrap !== 'undefined' && bootstrap.Dropdown) {
-                const dropdownEl = document.querySelector('.date-range-dropdown .dropdown-menu');
-                const dropdown = bootstrap.Dropdown.getInstance(dateRangeBtn);
-                if (dropdown) dropdown.hide();
-            }
-            
-            // Update charts
-            updateCharts();
-        });
-        
-        console.log("Date range dropdown setup complete");
     }
     
     // Fix the export buttons setup function
