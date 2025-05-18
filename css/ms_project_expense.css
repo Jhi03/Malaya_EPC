@@ -313,7 +313,6 @@ img {
 .table-responsive {
     overflow-x: auto;
 }
-
 /* Table Base Style */
 .table {
     width: 100%;
@@ -326,7 +325,6 @@ img {
     border-radius: 10px;
     overflow: hidden;
 }
-
 /* Table Head Styling - darker gray */
 .table thead th {
     background-color: #e5e7eb; /* darker gray */
@@ -335,7 +333,6 @@ img {
     border: 1px solid #d1d5db;
     padding: 10px 12px;
 }
-
 /* Table Body Styling */
 .table td {
     border: 1px solid #e5e7eb;
@@ -345,7 +342,6 @@ img {
     text-overflow: ellipsis;
     text-align: left;
 }
-
 /* First row white, alternating starts with white */
 .table tbody tr:nth-child(odd) {
     background-color: #ffffff;
@@ -353,30 +349,25 @@ img {
 .table tbody tr:nth-child(even) {
     background-color: #f9f9f9;
 }
-
 /* Hover effect */
 .table tbody tr:hover {
     background-color: #f1f5f9;
 }
-
 /* Column Widths & Specific Alignments */
 .table th:nth-child(1),
 .table td:nth-child(1) {
   width: 30px; /* Fixed width */
 }
-
 .table th:nth-child(2),
 .table td:nth-child(2) {
   width: 8%; /* Category */
 }
-
 .table th:nth-child(3),
 .table td:nth-child(3),
 .table th:nth-child(4),
 .table td:nth-child(4) {
   width: 12%; /* Description and Budget */
 }
-
 .table th:nth-child(9),
 .table td:nth-child(9),
 .table th:nth-child(10),
@@ -385,7 +376,6 @@ img {
 .table td:nth-child(11) {
   width: 10%; /* Remarks, Date, Edit */
 }
-
 .table th:nth-child(5),
 .table td:nth-child(5),
 .table th:nth-child(6),
@@ -396,7 +386,6 @@ img {
 .table td:nth-child(8) {
   width: auto; /* These will take up remaining space */
 }
-
 /* Optional: style tooltips on hover */
 .table td[title]:hover::after {
     content: attr(title);
@@ -412,6 +401,17 @@ img {
     top: calc(100% + 5px);
     left: 50%;
     transform: translateX(-50%);
+}
+
+/* Text alignment classes */
+.text-right {
+    text-align: left !important;
+}
+.text-center {
+    text-align: center !important;
+}
+.text-right {
+    text-align: right !important;
 }
 
 .calculation-row.total {

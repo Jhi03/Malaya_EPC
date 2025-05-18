@@ -385,7 +385,7 @@
                                                     data-net="<?php echo $entry['net_pay']; ?>"
                                                     data-payment="<?php echo $entry['payment_method']; ?>"
                                                     data-remarks="<?php echo $entry['remarks']; ?>">
-                                                    <img src="icons/pencil.svg" width="14">
+                                                    <img src="icons/pencil-white.svg" width="14">
                                             </button>
                                             <button class="btn btn-sm btn-danger btn-action delete-payroll" data-id="<?php echo $entry['payroll_id']; ?>">
                                                 <img src="icons/trash.svg" width="14">

@@ -553,13 +553,13 @@
                                 <th>Category</th>
                                 <th>Description</th>
                                 <th>Payee</th>
-                                <th>Budget</th>
-                                <th>Expense</th>
-                                <th>Variance</th>
-                                <th>Tax</th>
+                                <th class="text-right">Budget</th>
+                                <th class="text-right">Expense</th>
+                                <th class="text-right">Variance</th>
+                                <th class="text-right">Tax</th>
                                 <th>Remarks</th>
-                                <th>Date</th>
-                                <th> </th>
+                                <th class="text-center">Date</th>
+                                <th class="text-center">Actions</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -567,20 +567,28 @@
                                 <?php foreach ($records as $i => $row): ?>
                                     <tr>
                                         <td><?= $i + 1 ?></td>
-                                        <td><?= htmlspecialchars($row['category']) ?></td>
+                                        <td>
+                                            <?php 
+                                            // Display category and subcategory together
+                                            echo htmlspecialchars($row['category']);
+                                            if (!empty($row['subcategory'])) {
+                                                echo ': ' . htmlspecialchars($row['subcategory']);
+                                            }
+                                            ?>
+                                        </td>
                                         <td title="<?= htmlspecialchars($row['record_description']) ?>">
                                             <?= htmlspecialchars($row['record_description']) ?>
                                         </td>
                                         <td><?= htmlspecialchars($row['payee']) ?></td>
-                                        <td>₱<?= number_format($row['budget'], 2) ?></td>
-                                        <td>₱<?= number_format($row['expense'], 2) ?></td>
-                                        <td>₱<?= number_format($row['variance'], 2) ?></td>
-                                        <td>₱<?= number_format($row['tax'], 2) ?></td>
+                                        <td class="text-right">₱<?= number_format($row['budget'], 2) ?></td>
+                                        <td class="text-right">₱<?= number_format($row['expense'], 2) ?></td>
+                                        <td class="text-right">₱<?= number_format($row['variance'], 2) ?></td>
+                                        <td class="text-right">₱<?= number_format($row['tax'], 2) ?></td>
                                         <td title="<?= htmlspecialchars($row['remarks']) ?>">
                                             <?= htmlspecialchars($row['remarks']) ?>
                                         </td>
-                                        <td><?= date("M d, Y", strtotime($row['purchase_date'])) ?></td>
-                                        <td>
+                                        <td class="text-center"><?= date("M d, Y", strtotime($row['purchase_date'])) ?></td>
+                                        <td class="text-center">
                                             <button class="btn btn-info btn-sm view-btn"
                                                 data-id="<?= $row['record_id'] ?>"
                                                 data-category="<?= htmlspecialchars($row['category']) ?>"
@@ -595,12 +603,11 @@
                                                 data-tax="<?= $row['tax'] ?>"
                                                 data-variance="<?= $row['variance'] ?>"
                                                 data-invoice_no="<?= htmlspecialchars($row['invoice_no']) ?>"
-                                                data-bill_to_client="<?= $row['bill_to_client'] ?>"
-                                                data-is_rental="<?= $row['is_rental'] ?>"
-                                                data-is_company_loss="<?= $row['is_company_loss'] ?>">
+                                                data-bill_to_client="<?= $row['bill_to_client'] ?? 'No' ?>"
+                                                data-is_rental="<?= $row['is_rental'] ?? 'No' ?>"
+                                                data-is_company_loss="<?= $row['is_company_loss'] ?? 'No' ?>">
                                                 <img src="icons/eye.svg" width="16" alt="View">
                                             </button>
-
                                             <button type="button" class="btn btn-sm btn-primary edit-btn"
                                                 data-id="<?= $row['record_id'] ?>"
                                                 data-category="<?= htmlspecialchars($row['category']) ?>"
@@ -614,9 +621,9 @@
                                                 data-rental_rate="<?= $row['rental_rate'] ?>"
                                                 data-tax="<?= $row['tax'] ?>"
                                                 data-invoice_no="<?= htmlspecialchars($row['invoice_no']) ?>"
-                                                data-bill_to_client="<?= $row['bill_to_client'] ?>"
-                                                data-is_rental="<?= $row['is_rental'] ?>"
-                                                data-is_company_loss="<?= $row['is_company_loss'] ?>">
+                                                data-bill_to_client="<?= $row['bill_to_client'] ?? 'No' ?>"
+                                                data-is_rental="<?= $row['is_rental'] ?? 'No' ?>"
+                                                data-is_company_loss="<?= $row['is_company_loss'] ?? 'No' ?>">
                                                 <img src="icons/pencil-white.svg" width="16" alt="Edit">
                                             </button>
                                             <button type="button" class="btn btn-sm btn-danger delete-btn" onclick="deleteExpense(<?= $row['record_id'] ?>)">
