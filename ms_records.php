@@ -642,75 +642,7 @@
 
             <!--ANALYTICS VIEW -->
             <div class="analytics-view container py-4" id="analytics-view" style="display: none;">
-                <!-- Time period selection -->
-                <div class="time-selector mb-4">
-                    <div class="d-flex justify-content-end">
-                        <div class="btn-group" role="group">
-                            <button type="button" class="btn btn-sm btn-outline-primary" data-period="daily">Daily</button>
-                            <button type="button" class="btn btn-sm btn-outline-primary active" data-period="weekly">Weekly</button>
-                            <button type="button" class="btn btn-sm btn-outline-primary" data-period="monthly">Monthly</button>
-                            <button type="button" class="btn btn-sm btn-outline-primary" data-period="quarterly">Quarterly</button>
-                            <button type="button" class="btn btn-sm btn-outline-primary" data-period="biannual">6 Months</button>
-                            <button type="button" class="btn btn-sm btn-outline-primary" data-period="annual">12 Months</button>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="row">
-                    <!-- Left: Summary (25%) -->
-                    <div class="col-md-3">
-                        <div class="card shadow rounded-4 p-3 mb-3">
-                            <h6>Total Budget</h6>
-                            <p class="fs-5 fw-bold text-black" id="total-budget">₱<?= number_format($total_budget, 2) ?></p>
-                        </div>
-                        <div class="card shadow rounded-4 p-3 mb-3">
-                            <h6>Total Expense</h6>
-                            <p class="fs-5 fw-bold text-black" id="total-expense">₱<?= number_format($total_expense, 2) ?></p>
-                        </div>
-                        <div class="card shadow rounded-4 p-3 mb-3">
-                            <h6>Total Variance</h6>
-                            <p class="fs-5 fw-bold text-black" id="total-variance">₱<?= number_format($total_variance, 2) ?></p>
-                        </div>
-                        <div class="card shadow rounded-4 p-3 mb-3">
-                            <h6>Total Tax</h6>
-                            <p class="fs-5 fw-bold text-black" id="total-tax">₱<?= number_format($total_tax, 2) ?></p>
-                        </div>
-                        
-                        <!-- Breakdown selection -->
-                        <div class="breakdown-selector mt-4">
-                            <h6 class="mb-2">Breakdown By:</h6>
-                            <div class="btn-group d-flex" role="group">
-                                <button type="button" class="btn btn-sm btn-outline-secondary active" data-type="category">Category</button>
-                                <button type="button" class="btn btn-sm btn-outline-secondary" data-type="subcategory">Subcategory</button>
-                            </div>
-                        </div>
-                    </div>
-                    
-                    <!-- Right: Charts (75%) -->
-                    <div class="col-md-9">
-                        <div class="row g-4">
-                            <!-- Budget vs Expense Over Time -->
-                            <div class="col-md-12">
-                                <div class="card shadow rounded-4 p-3 mb-3">
-                                    <h6 class="text-center">Budget vs Expense Over Time</h6>
-                                    <div style="height: 300px;">
-                                        <canvas id="timeChart"></canvas>
-                                    </div>
-                                </div>
-                            </div>
-                            
-                            <!-- Category Breakdown -->
-                            <div class="col-md-12">
-                                <div class="card shadow rounded-4 p-3">
-                                    <h6 class="text-center">Expense by Category</h6>
-                                    <div style="height: 300px;">
-                                        <canvas id="categoryChart"></canvas>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
+                <?php include('analytics_view.php'); ?>
             </div>
         </div>
     </div>
@@ -1146,33 +1078,6 @@
 
     <script src="js/sidebar.js"></script>
     <script src="js/header.js"></script>
-
-    <script>
-        document.addEventListener('DOMContentLoaded', function () {
-            const recordsBtn = document.getElementById('view-records-btn');
-            const analyticsBtn = document.getElementById('view-analytics-btn');
-            const recordsView = document.getElementById('records-view');  // Changed from 'records-table-container'
-            const analyticsView = document.getElementById('analytics-view');
-
-            if (recordsBtn && analyticsBtn && recordsView && analyticsView) {
-                recordsBtn.addEventListener('click', () => {
-                    recordsView.style.display = 'block';
-                    analyticsView.style.display = 'none';
-                    recordsBtn.classList.add('active');
-                    analyticsBtn.classList.remove('active');
-                });
-
-                analyticsBtn.addEventListener('click', () => {
-                    recordsView.style.display = 'none';
-                    analyticsView.style.display = 'block';
-                    analyticsBtn.classList.add('active');
-                    recordsBtn.classList.remove('active');
-                });
-            } else {
-                console.warn('Toggle elements not found in DOM');
-            }
-        });
-    </script>
 
     <script> //viewExpenseModal
         $(document).ready(function () {

@@ -356,3 +356,52 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 });
 </script>
+
+<script>
+    // View toggle
+    document.addEventListener('DOMContentLoaded', function() {
+        // Get references to UI elements
+        const recordsBtn = document.getElementById('view-records-btn');
+        const analyticsBtn = document.getElementById('view-analytics-btn');
+        const recordsView = document.getElementById('records-view');
+        const analyticsView = document.getElementById('analytics-view');
+        
+        // Toggle between views
+        if (recordsBtn && analyticsBtn && recordsView && analyticsView) {
+            recordsBtn.addEventListener('click', function() {
+                recordsView.style.display = 'block';
+                analyticsView.style.display = 'none';
+                recordsBtn.classList.add('active');
+                analyticsBtn.classList.remove('active');
+                
+                // Update URL without reloading page
+                const url = new URL(window.location.href);
+                url.searchParams.delete('view');
+                window.history.pushState({}, '', url);
+            });
+            
+            analyticsBtn.addEventListener('click', function() {
+                recordsView.style.display = 'none';
+                analyticsView.style.display = 'block';
+                analyticsBtn.classList.add('active');
+                recordsBtn.classList.remove('active');
+                
+                // Update URL without reloading page
+                const url = new URL(window.location.href);
+                url.searchParams.set('view', 'analytics');
+                window.history.pushState({}, '', url);
+                
+                // Initialize charts when analytics view becomes visible
+                if (typeof initializeCharts === 'function') {
+                    setTimeout(initializeCharts, 100);
+                }
+            });
+            
+            // Set initial view based on URL parameter
+            const urlParams = new URLSearchParams(window.location.search);
+            if (urlParams.get('view') === 'analytics') {
+                analyticsBtn.click(); // This triggers the click event handler above
+            }
+        }
+    });
+</script>
