@@ -132,6 +132,8 @@
         }
     }
 
+    include('search_filter_sort.php');
+
     // Fetch categories
         $categories = [];
         $result = $conn->query("SELECT category_id, category_name FROM categories");
@@ -538,37 +540,13 @@
             <?php endif; ?>
 
             <!-- Add Records, Search, Filter, and Toggle Bar -->
-            <div class="search-filter-bar">
-                <!-- Left group: Add, Search, Filter -->
-                <div class="left-controls">
-                    <button onclick="openExpenseModal('add')" class="add-record-btn">ADD RECORD</button>
-
-                    <div class="search-container">
-                        <input type="text" class="search-input" placeholder="SEARCH">
-                    </div>
-
-                    <div class="filter-options">
-                    <button class="sort-btn">
-                        <img src="icons/arrow-down-up.svg" alt="SortIcon" width="16"> Sort By
-                    </button>                    
-                    <button class="filter-btn">
-                        <img src="icons/filter.svg" alt="FilterIcon" width="16"> Filter
-                    </button>
-                    </div>
-                </div>
-
-                <!-- Right group: View toggle -->
-                <div class="view-toggle">
-                    <button class="toggle-btn active" id="view-records-btn">RECORD</button>
-                    <button class="toggle-btn" id="view-analytics-btn">ANALYTICS</button>
-                </div>
-            </div>
+            <?php include('search_filter_sort_ui.php'); ?>
 
             <div class="records-table-container" id="records-view" style="display: block;">
                 <!-- RECORDS VIEW -->
                 <!-- Expense Records Table -->
                 <div class="table-responsive">
-                    <table class="table table-hover">
+                    <table class="table table-hover" id="expense-table">
                         <thead>
                             <tr>
                                 <th> </th>
@@ -1023,6 +1001,138 @@
             </div>
         </div>
     </div>
+
+    <!-- Filter Modal -->
+    <div class="modal fade" id="filterModal" tabindex="-1" role="dialog" aria-labelledby="filterModalLabel" aria-hidden="true">
+        <div class="modal-dialog" role="document">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="filterModalLabel">Filter Records</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <form id="filter-form" action="" method="get">
+                    <div class="modal-body">
+                        <input type="hidden" name="projectId" value="<?= $project_id ?>">
+                        
+                        <div class="mb-3">
+                            <label for="filter-category" class="form-label">Category</label>
+                            <select id="filter-category" name="category" class="form-select">
+                                <option value="">All Categories</option>
+                                <?php foreach ($categories as $cat): ?>
+                                    <option value="<?= htmlspecialchars($cat['category_name']) ?>" 
+                                        <?= isset($_GET['category']) && $_GET['category'] === $cat['category_name'] ? 'selected' : '' ?>>
+                                        <?= htmlspecialchars($cat['category_name']) ?>
+                                    </option>
+                                <?php endforeach; ?>
+                            </select>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="filter-subcategory" class="form-label">Subcategory</label>
+                            <select id="filter-subcategory" name="subcategory" class="form-select" 
+                                <?= empty($_GET['category']) ? 'disabled' : '' ?>>
+                                <option value="">All Subcategories</option>
+                                <?php 
+                                if (!empty($_GET['category'])) {
+                                    foreach ($subcategories as $subcat) {
+                                        if ($subcat['category_name'] === $_GET['category']) {
+                                            echo '<option value="' . htmlspecialchars($subcat['subcategory_name']) . '"';
+                                            if (isset($_GET['subcategory']) && $_GET['subcategory'] === $subcat['subcategory_name']) echo ' selected';
+                                            echo '>' . htmlspecialchars($subcat['subcategory_name']) . '</option>';
+                                        }
+                                    }
+                                }
+                                ?>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <a href="?projectId=<?= $project_id ?><?= isset($_GET['view']) ? '&view=' . htmlspecialchars($_GET['view']) : '' ?>" 
+                            class="btn btn-secondary">Reset</a>
+                        <button type="submit" class="btn btn-primary">Apply Filter</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Sort Modal -->
+    <div class="modal fade" id="sortModal" tabindex="-1" role="dialog" aria-labelledby="sortModalLabel" aria-hidden="true">
+        <div class="modal-dialog" role="document">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="sortModalLabel">Sort Records</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <form id="sort-form" action="" method="get">
+                    <div class="modal-body">
+                        <input type="hidden" name="projectId" value="<?= $project_id ?>">
+                        <?php if (isset($_GET['category'])): ?>
+                        <input type="hidden" name="category" value="<?= htmlspecialchars($_GET['category']) ?>">
+                        <?php endif; ?>
+                        <?php if (isset($_GET['subcategory'])): ?>
+                        <input type="hidden" name="subcategory" value="<?= htmlspecialchars($_GET['subcategory']) ?>">
+                        <?php endif; ?>
+                        <?php if (isset($_GET['view'])): ?>
+                        <input type="hidden" name="view" value="<?= htmlspecialchars($_GET['view']) ?>">
+                        <?php endif; ?>
+                        
+                        <div class="sort-options">
+                            <label class="fw-bold mb-3">Sort By</label>
+                            <div class="form-check p-2 mb-2 border rounded">
+                                <input class="form-check-input" type="radio" name="sort_by" id="sort-a-z" value="a-z" 
+                                    <?= isset($_GET['sort_by']) && $_GET['sort_by'] === 'a-z' ? 'checked' : '' ?>>
+                                <label class="form-check-label w-100" for="sort-a-z">
+                                    A to Z (Description)
+                                </label>
+                            </div>
+                            <div class="form-check p-2 mb-2 border rounded">
+                                <input class="form-check-input" type="radio" name="sort_by" id="sort-z-a" value="z-a" 
+                                    <?= isset($_GET['sort_by']) && $_GET['sort_by'] === 'z-a' ? 'checked' : '' ?>>
+                                <label class="form-check-label w-100" for="sort-z-a">
+                                    Z to A (Description)
+                                </label>
+                            </div>
+                            <div class="form-check p-2 mb-2 border rounded">
+                                <input class="form-check-input" type="radio" name="sort_by" id="sort-oldest-newest" value="oldest-newest" 
+                                    <?= isset($_GET['sort_by']) && $_GET['sort_by'] === 'oldest-newest' ? 'checked' : '' ?>>
+                                <label class="form-check-label w-100" for="sort-oldest-newest">
+                                    Oldest to Newest
+                                </label>
+                            </div>
+                            <div class="form-check p-2 mb-2 border rounded">
+                                <input class="form-check-input" type="radio" name="sort_by" id="sort-newest-oldest" value="newest-oldest" 
+                                    <?= isset($_GET['sort_by']) && $_GET['sort_by'] === 'newest-oldest' ? 'checked' : (!isset($_GET['sort_by']) ? 'checked' : '') ?>>
+                                <label class="form-check-label w-100" for="sort-newest-oldest">
+                                    Newest to Oldest
+                                </label>
+                            </div>
+                            <div class="form-check p-2 mb-2 border rounded">
+                                <input class="form-check-input" type="radio" name="sort_by" id="sort-highest-lowest" value="highest-lowest" 
+                                    <?= isset($_GET['sort_by']) && $_GET['sort_by'] === 'highest-lowest' ? 'checked' : '' ?>>
+                                <label class="form-check-label w-100" for="sort-highest-lowest">
+                                    Highest to Lowest Cost
+                                </label>
+                            </div>
+                            <div class="form-check p-2 mb-2 border rounded">
+                                <input class="form-check-input" type="radio" name="sort_by" id="sort-lowest-highest" value="lowest-highest" 
+                                    <?= isset($_GET['sort_by']) && $_GET['sort_by'] === 'lowest-highest' ? 'checked' : '' ?>>
+                                <label class="form-check-label w-100" for="sort-lowest-highest">
+                                    Lowest to Highest Cost
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <a href="?projectId=<?= $project_id ?><?= isset($_GET['view']) ? '&view=' . htmlspecialchars($_GET['view']) : '' ?>" 
+                            class="btn btn-secondary">Reset</a>
+                        <button type="submit" class="btn btn-primary">Apply Sort</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+    
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.2.3/dist/js/bootstrap.bundle.min.js"></script>
@@ -1034,7 +1144,7 @@
         document.addEventListener('DOMContentLoaded', function () {
             const recordsBtn = document.getElementById('view-records-btn');
             const analyticsBtn = document.getElementById('view-analytics-btn');
-            const recordsView = document.getElementById('records-table-container');
+            const recordsView = document.getElementById('records-view');  // Changed from 'records-table-container'
             const analyticsView = document.getElementById('analytics-view');
 
             if (recordsBtn && analyticsBtn && recordsView && analyticsView) {
