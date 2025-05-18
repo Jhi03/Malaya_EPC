@@ -1,47 +1,127 @@
 <?php
-// At the top of analytics_view.php, add this data preparation
-// Basic calculation of chart data from $expense_records
+// Analytics view data preparation
+// Calculate chart data from expense records
+
+// Initialize arrays for time-based data
+$days = [];
+$daily_budget = [];
+$daily_expense = [];
+
+$weeks = [];
+$weekly_budget = [];
+$weekly_expense = [];
+
 $months = [];
 $monthly_budget = [];
 $monthly_expense = [];
 
+$quarters = [];
+$quarterly_budget = [];
+$quarterly_expense = [];
+
+// Initialize arrays for category data
 $categories = [];
 $category_expenses = [];
+
+// Initialize arrays for subcategory data
+$subcategories = [];
+$subcategory_names = [];
+$subcategory_expenses = [];
 
 // Calculate impact data
 $total_over_budget = 0;
 $total_company_loss = 0;
 $total_billed_to_client = 0;
+$total_rental = 0;
 $count_over_budget = 0;
 $count_company_loss = 0;
 $count_billed_to_client = 0;
+$count_rental = 0;
 
 // Process records if available
 if (!empty($expense_records)) {
     // Process each expense record
     foreach ($expense_records as $record) {
-        // Extract date data
-        $date = isset($record['purchase_date']) ? date('M Y', strtotime($record['purchase_date'])) : 'Unknown';
-        if (!isset($monthly_budget[$date])) {
-            $months[] = $date;
-            $monthly_budget[$date] = 0;
-            $monthly_expense[$date] = 0;
-        }
-        
-        // Add to monthly totals
-        $monthly_budget[$date] += floatval($record['budget'] ?? 0);
+        // Get expense amount
         $expense_amount = isset($record['is_rental']) && $record['is_rental'] === 'Yes' 
             ? floatval($record['rental_rate'] ?? 0) 
             : floatval($record['expense'] ?? 0);
-        $monthly_expense[$date] += $expense_amount;
+        $budget_amount = floatval($record['budget'] ?? 0);
+        
+        // Calculate rental total
+        if (isset($record['is_rental']) && $record['is_rental'] === 'Yes') {
+            $total_rental += floatval($record['rental_rate'] ?? 0);
+            $count_rental++;
+        }
+        
+        // Extract date data for different time periods
+        if (isset($record['purchase_date'])) {
+            $date = new DateTime($record['purchase_date']);
+            
+            // Daily data (format: "Jan 01")
+            $day_key = $date->format('M d');
+            if (!isset($daily_budget[$day_key])) {
+                $days[$day_key] = $day_key;
+                $daily_budget[$day_key] = 0;
+                $daily_expense[$day_key] = 0;
+            }
+            $daily_budget[$day_key] += $budget_amount;
+            $daily_expense[$day_key] += $expense_amount;
+            
+            // Weekly data (format: "Week 01, 2025")
+            $week_number = $date->format('W');
+            $year = $date->format('Y');
+            $week_key = "Week {$week_number}, {$year}";
+            if (!isset($weekly_budget[$week_key])) {
+                $weeks[$week_key] = $week_key;
+                $weekly_budget[$week_key] = 0;
+                $weekly_expense[$week_key] = 0;
+            }
+            $weekly_budget[$week_key] += $budget_amount;
+            $weekly_expense[$week_key] += $expense_amount;
+            
+            // Monthly data (format: "Jan 2025")
+            $month_key = $date->format('M Y');
+            if (!isset($monthly_budget[$month_key])) {
+                $months[$month_key] = $month_key;
+                $monthly_budget[$month_key] = 0;
+                $monthly_expense[$month_key] = 0;
+            }
+            $monthly_budget[$month_key] += $budget_amount;
+            $monthly_expense[$month_key] += $expense_amount;
+            
+            // Quarterly data (format: "Q1 2025")
+            $quarter = ceil($date->format('n') / 3);
+            $year = $date->format('Y');
+            $quarter_key = "Q{$quarter} {$year}";
+            if (!isset($quarterly_budget[$quarter_key])) {
+                $quarters[$quarter_key] = $quarter_key;
+                $quarterly_budget[$quarter_key] = 0;
+                $quarterly_expense[$quarter_key] = 0;
+            }
+            $quarterly_budget[$quarter_key] += $budget_amount;
+            $quarterly_expense[$quarter_key] += $expense_amount;
+        }
         
         // Process category data
         $category = $record['category'] ?? 'Unknown';
-        if (!in_array($category, $categories)) {
+        if (!isset($category_expenses[$category])) {
             $categories[] = $category;
             $category_expenses[$category] = 0;
         }
         $category_expenses[$category] += $expense_amount;
+        
+        // Process subcategory data
+        $subcategory = $record['subcategory'] ?? 'None';
+        $subcategory_key = (!empty($subcategory) && $subcategory !== 'None') 
+            ? "{$category}: {$subcategory}" 
+            : $category;
+        
+        if (!isset($subcategory_expenses[$subcategory_key])) {
+            $subcategory_names[] = $subcategory_key;
+            $subcategory_expenses[$subcategory_key] = 0;
+        }
+        $subcategory_expenses[$subcategory_key] += $expense_amount;
         
         // Process impact data
         if (isset($record['variance']) && $record['variance'] < 0) {
@@ -61,21 +141,58 @@ if (!empty($expense_records)) {
     }
 }
 
+// Sort time-based data chronologically
+ksort($days);
+ksort($weeks);
+ksort($months);
+ksort($quarters);
+
 // Convert associative arrays to indexed arrays for Chart.js
-$chart_months = array_keys($monthly_budget);
-$chart_budget = array_values($monthly_budget);
-$chart_expense = array_values($monthly_expense);
+$chart_days = array_values($days);
+$chart_daily_budget = array_values($daily_budget);
+$chart_daily_expense = array_values($daily_expense);
+
+$chart_weeks = array_values($weeks);
+$chart_weekly_budget = array_values($weekly_budget);
+$chart_weekly_expense = array_values($weekly_expense);
+
+$chart_months = array_values($months);
+$chart_monthly_budget = array_values($monthly_budget);
+$chart_monthly_expense = array_values($monthly_expense);
+
+$chart_quarters = array_values($quarters);
+$chart_quarterly_budget = array_values($quarterly_budget);
+$chart_quarterly_expense = array_values($quarterly_expense);
 
 // Create the chart data array
 $chart_data = [
-    // Time data
+    // Time data - daily
+    'days' => $chart_days,
+    'daily_budget' => $chart_daily_budget,
+    'daily_expense' => $chart_daily_expense,
+    
+    // Time data - weekly
+    'weeks' => $chart_weeks,
+    'weekly_budget' => $chart_weekly_budget,
+    'weekly_expense' => $chart_weekly_expense,
+    
+    // Time data - monthly
     'months' => $chart_months,
-    'monthly_budget' => $chart_budget,
-    'monthly_expense' => $chart_expense,
+    'monthly_budget' => $chart_monthly_budget,
+    'monthly_expense' => $chart_monthly_expense,
+    
+    // Time data - quarterly
+    'quarters' => $chart_quarters,
+    'quarterly_budget' => $chart_quarterly_budget,
+    'quarterly_expense' => $chart_quarterly_expense,
     
     // Category data
     'categories' => array_keys($category_expenses),
     'category_expenses' => array_values($category_expenses),
+    
+    // Subcategory data
+    'subcategories' => $subcategory_names,
+    'subcategory_expenses' => array_values($subcategory_expenses),
     
     // Impact data
     'impact_labels' => ['Over Budget', 'Company Loss', 'Billed to Client'],
@@ -84,13 +201,18 @@ $chart_data = [
     
     // Totals data
     'total_labels' => ['Budget', 'Expense', 'Variance', 'Tax', 'Rentals'],
-    'total_values' => [$total_budget, $total_expense, $total_variance, $total_tax, 0] // Replace 0 with actual rental total
+    'total_values' => [
+        $total_budget, 
+        $total_expense, 
+        $total_variance, 
+        $total_tax, 
+        $total_rental
+    ]
 ];
 
 // Convert to JSON for JavaScript
 $chart_data_json = json_encode($chart_data);
 ?>
-
 <!-- Add this before the script tag -->
 <script>
 // Pass PHP data to JavaScript
@@ -316,65 +438,37 @@ console.log("Analytics data loaded:", window.analyticsData);
         </div>
     </div>
     <!-- Add these controls before the chart rows -->
-    <!-- Date Range Picker Modal -->
-    <div class="modal fade" id="dateRangeModal" tabindex="-1" aria-labelledby="dateRangeModalLabel" aria-hidden="true">
-        <div class="modal-dialog">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title" id="dateRangeModalLabel">Select Date Range</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                </div>
-                <div class="modal-body">
-                    <div class="row mb-3">
-                        <div class="col-md-6">
-                            <label for="start-date" class="form-label">Start Date</label>
-                            <input type="date" class="form-control" id="start-date">
-                        </div>
-                        <div class="col-md-6">
-                            <label for="end-date" class="form-label">End Date</label>
-                            <input type="date" class="form-control" id="end-date">
-                        </div>
-                    </div>
-                    <div class="row">
-                        <div class="col-12">
-                            <label class="form-label">Quick Selections</label>
-                            <div class="btn-group w-100">
-                                <button type="button" class="btn btn-outline-secondary" data-quick-range="7">Last 7 Days</button>
-                                <button type="button" class="btn btn-outline-secondary" data-quick-range="30">Last 30 Days</button>
-                                <button type="button" class="btn btn-outline-secondary" data-quick-range="90">Last 3 Months</button>
-                                <button type="button" class="btn btn-outline-secondary" data-quick-range="all">All Time</button>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                    <button type="button" class="btn btn-primary" id="apply-date-range">Apply</button>
+    <!-- Date Range Dropdown -->
+    <div class="date-range-dropdown dropdown">
+        <button class="btn btn-outline-primary btn-sm dropdown-toggle" type="button" id="date-range-btn" data-bs-toggle="dropdown" aria-expanded="false">
+            <i class="fas fa-calendar-alt me-1"></i> Date Range
+        </button>
+        <div class="dropdown-menu p-3" style="width: 300px;">
+            <h6 class="dropdown-header">Select Date Range</h6>
+            
+            <div class="mb-3">
+                <label for="dropdown-start-date" class="form-label small">Start Date</label>
+                <input type="date" class="form-control form-control-sm" id="dropdown-start-date">
+            </div>
+            
+            <div class="mb-3">
+                <label for="dropdown-end-date" class="form-label small">End Date</label>
+                <input type="date" class="form-control form-control-sm" id="dropdown-end-date">
+            </div>
+            
+            <div class="mb-3">
+                <label class="form-label small">Quick Selections</label>
+                <div class="d-grid gap-2">
+                    <button type="button" class="btn btn-outline-secondary btn-sm quick-range-btn" data-days="7">Last 7 Days</button>
+                    <button type="button" class="btn btn-outline-secondary btn-sm quick-range-btn" data-days="30">Last 30 Days</button>
+                    <button type="button" class="btn btn-outline-secondary btn-sm quick-range-btn" data-days="90">Last 3 Months</button>
+                    <button type="button" class="btn btn-outline-secondary btn-sm quick-range-btn" data-days="all">All Time</button>
                 </div>
             </div>
-        </div>
-    </div>
-    <div class="row mb-3">
-        <div class="col-md-6">
-            <div class="d-flex">
-                <div class="me-2">
-                    <button id="date-range-btn" class="btn btn-outline-primary btn-sm">
-                        📅 Select Date Range
-                    </button>
-                </div>
-                <div id="date-range-display" class="text-muted small pt-1">
-                    All Time
-                </div>
-            </div>
-        </div>
-        <div class="col-md-6">
-            <div class="d-flex justify-content-end">
-                <div class="btn-group btn-group-sm" role="group">
-                    <button type="button" class="btn btn-outline-primary" data-period="daily">Daily</button>
-                    <button type="button" class="btn btn-outline-primary active" data-period="weekly">Weekly</button>
-                    <button type="button" class="btn btn-outline-primary" data-period="monthly">Monthly</button>
-                    <button type="button" class="btn btn-outline-primary" data-period="quarterly">Quarterly</button>
-                </div>
+            
+            <div class="d-flex justify-content-between">
+                <span id="date-range-display" class="small text-muted align-self-center">All Time</span>
+                <button type="button" class="btn btn-primary btn-sm" id="apply-date-range">Apply</button>
             </div>
         </div>
     </div>
@@ -445,13 +539,27 @@ console.log("Analytics data loaded:", window.analyticsData);
             </div>
         </div>
     </div>
+    <!-- Add this where you want the export buttons to appear -->
+    <div class="export-buttons d-flex justify-content-end mb-3">
+        <button id="export-csv" class="btn btn-sm btn-outline-secondary me-2">
+            <i class="fas fa-file-csv me-1"></i> Export CSV
+        </button>
+        <button id="export-png" class="btn btn-sm btn-outline-secondary">
+            <i class="fas fa-file-image me-1"></i> Export Charts
+        </button>
+    </div>
 </div>
 
 <!-- Chart.js initialization script -->
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<script src="https://html2canvas.hertzen.com/dist/html2canvas.min.js"></script>
 <script>
+// Chart.js initialization script
+// Make it self-contained to avoid conflicts
 (function() {
-    // Configuration object to store current state
+    console.log("Analytics module loaded");
+    
+    // Configuration
     const config = {
         chartInitialized: false,
         currentPeriod: 'weekly',
@@ -461,554 +569,859 @@ console.log("Analytics data loaded:", window.analyticsData);
         dateRangeEnd: null
     };
     
-    // Charts references
+    // Chart references
     let timeChart, categoryChart, impactChart, totalsChart;
+    
+    // Get data from PHP or use fallback
+    const chartData = window.analyticsData || {
+        // Fallback dummy data if PHP data is missing
+        months: ['Jan', 'Feb', 'Mar', 'Apr', 'May'],
+        monthly_budget: [1000, 1200, 900, 1500, 1100],
+        monthly_expense: [800, 1300, 950, 1400, 1050],
+        categories: ['OPEX', 'CAPEX', 'ASSET'],
+        category_expenses: [5000, 3000, 2000],
+        subcategories: ['OPEX: Food', 'OPEX: Gas', 'CAPEX: Materials', 'ASSET'],
+        subcategory_expenses: [3000, 2000, 3000, 2000],
+        impact_labels: ['Over Budget', 'Company Loss', 'Billed to Client'],
+        impact_data: [1500, 2000, 3000],
+        total_labels: ['Budget', 'Expense', 'Variance', 'Tax', 'Rentals'],
+        total_values: [10000, 8500, 1500, 1020, 2000]
+    };
     
     // Initialize when DOM is loaded
     document.addEventListener('DOMContentLoaded', function() {
         console.log("DOM loaded for analytics");
         
-        // Data from PHP or fallback to dummy data
-        const chartData = window.analyticsData || {
-            // Fallback dummy data if PHP data is missing
-            months: ['Jan', 'Feb', 'Mar', 'Apr', 'May'],
-            monthly_budget: [1000, 1200, 900, 1500, 1100],
-            monthly_expense: [800, 1300, 950, 1400, 1050],
-            categories: ['OPEX', 'CAPEX', 'ASSET'],
-            category_expenses: [5000, 3000, 2000],
-            impact_labels: ['Over Budget', 'Company Loss', 'Billed to Client'],
-            impact_data: [1500, 2000, 3000],
-            total_labels: ['Budget', 'Expense', 'Variance', 'Tax', 'Rentals'],
-            total_values: [10000, 8500, 1500, 1020, 2000]
-        };
-        
-        // Setup view toggle functionality
+        // Setup view toggle
         setupViewToggle();
         
-        // Initialize if analytics view is already visible
+        // Check if analytics view is visible on page load
         const analyticsView = document.getElementById('analytics-view');
         if (analyticsView && analyticsView.style.display !== 'none') {
             initializeAnalyticsDashboard();
         }
         
-        // Initialize charts when analytics button is clicked
+        // Setup analytics button click
         const analyticsBtn = document.getElementById('view-analytics-btn');
         if (analyticsBtn) {
             analyticsBtn.addEventListener('click', function() {
                 initializeAnalyticsDashboard();
             });
         }
-        
-        // Main initialization function for analytics dashboard
-        function initializeAnalyticsDashboard() {
-            if (!config.chartInitialized) {
-                console.log("Initializing analytics dashboard");
-                initializeCharts();
-                setupControls();
-                config.chartInitialized = true;
-            }
-        }
-        
-        // Setup view toggle between records and analytics
-        function setupViewToggle() {
-            const recordsBtn = document.getElementById('view-records-btn');
-            const analyticsBtn = document.getElementById('view-analytics-btn');
-            const recordsView = document.getElementById('records-view');
-            const analyticsView = document.getElementById('analytics-view');
-            
-            // Log the elements to verify they exist
-            console.log("View elements found?", {
-                recordsBtn: !!recordsBtn,
-                analyticsBtn: !!analyticsBtn,
-                recordsView: !!recordsView,
-                analyticsView: !!analyticsView
-            });
-            
-            if (recordsBtn && analyticsBtn && recordsView && analyticsView) {
-                recordsBtn.addEventListener('click', function() {
-                    recordsView.style.display = 'block';
-                    analyticsView.style.display = 'none';
-                    recordsBtn.classList.add('active');
-                    analyticsBtn.classList.remove('active');
-                    
-                    // Update URL parameter
-                    const url = new URL(window.location.href);
-                    url.searchParams.delete('view');
-                    history.replaceState({}, '', url);
-                });
-                
-                analyticsBtn.addEventListener('click', function() {
-                    console.log("Analytics button clicked");
-                    recordsView.style.display = 'none';
-                    analyticsView.style.display = 'block';
-                    analyticsBtn.classList.add('active');
-                    recordsBtn.classList.remove('active');
-                    
-                    // Update URL parameter
-                    const url = new URL(window.location.href);
-                    url.searchParams.set('view', 'analytics');
-                    history.replaceState({}, '', url);
-                });
-                
-                // Set initial view based on URL parameter
-                const urlParams = new URLSearchParams(window.location.search);
-                if (urlParams.get('view') === 'analytics') {
-                    console.log("Initial view set to analytics");
-                    analyticsBtn.click();
-                }
-            }
-        }
-        
-        // Setup all controls
-        function setupControls() {
-            setupChartControls();
-            setupDateRangePicker();
-        }
-        
-        // Setup chart controls (period, type, breakdown)
-        function setupChartControls() {
-            // Time period buttons
-            const periodButtons = document.querySelectorAll('[data-period]');
-            periodButtons.forEach(button => {
-                button.addEventListener('click', function() {
-                    // Remove active class from all period buttons
-                    periodButtons.forEach(btn => btn.classList.remove('active'));
-                    
-                    // Add active class to clicked button
-                    this.classList.add('active');
-                    
-                    // Get selected period
-                    const period = this.getAttribute('data-period');
-                    console.log("Period selected:", period);
-                    config.currentPeriod = period;
-                    
-                    // Update charts based on period
-                    updateCharts();
-                    
-                    // Alert for now (to be replaced with actual implementation)
-                    alert("Period selected: " + period);
-                });
-            });
-            
-            // Chart type buttons (line/bar)
-            const chartTypeButtons = document.querySelectorAll('[data-chart]');
-            chartTypeButtons.forEach(button => {
-                button.addEventListener('click', function() {
-                    // Remove active class from all chart type buttons
-                    chartTypeButtons.forEach(btn => btn.classList.remove('active'));
-                    
-                    // Add active class to clicked button
-                    this.classList.add('active');
-                    
-                    // Get selected chart type
-                    const chartType = this.getAttribute('data-chart');
-                    console.log("Chart type selected:", chartType);
-                    config.currentChartType = chartType;
-                    
-                    // Update chart type
-                    updateCharts();
-                    
-                    // Alert for now (to be replaced with actual implementation)
-                    alert("Chart type selected: " + chartType);
-                });
-            });
-            
-            // Breakdown buttons (category/subcategory)
-            const breakdownButtons = document.querySelectorAll('[data-breakdown]');
-            breakdownButtons.forEach(button => {
-                button.addEventListener('click', function() {
-                    // Remove active class from all breakdown buttons
-                    breakdownButtons.forEach(btn => btn.classList.remove('active'));
-                    
-                    // Add active class to clicked button
-                    this.classList.add('active');
-                    
-                    // Get selected breakdown
-                    const breakdown = this.getAttribute('data-breakdown');
-                    console.log("Breakdown selected:", breakdown);
-                    config.currentBreakdown = breakdown;
-                    
-                    // Update chart breakdown
-                    updateCharts();
-                    
-                    // Alert for now (to be replaced with actual implementation)
-                    alert("Breakdown selected: " + breakdown);
-                });
-            });
-        }
-        
-        // Initialize all charts
-        function initializeCharts() {
-            console.log("Initializing analytics charts");
-            
-            try {
-                // 1. Time Chart
-                const timeCanvas = document.getElementById('timeChart');
-                if (timeCanvas) {
-                    console.log("Found timeChart canvas");
-                    timeChart = new Chart(timeCanvas, {
-                        type: 'line',
-                        data: {
-                            labels: chartData.months,
-                            datasets: [
-                                {
-                                    label: 'Budget',
-                                    data: chartData.monthly_budget,
-                                    borderColor: 'rgba(54, 162, 235, 1)',
-                                    backgroundColor: 'rgba(54, 162, 235, 0.2)',
-                                    fill: true
-                                },
-                                {
-                                    label: 'Expense',
-                                    data: chartData.monthly_expense,
-                                    borderColor: 'rgba(255, 99, 132, 1)',
-                                    backgroundColor: 'rgba(255, 99, 132, 0.2)',
-                                    fill: true
-                                }
-                            ]
-                        },
-                        options: {
-                            responsive: true,
-                            maintainAspectRatio: false,
-                            plugins: {
-                                tooltip: {
-                                    callbacks: {
-                                        label: function(context) {
-                                            const value = context.raw;
-                                            return context.dataset.label + ': ₱' + value.toLocaleString();
-                                        }
-                                    }
-                                }
-                            },
-                            scales: {
-                                y: {
-                                    beginAtZero: true,
-                                    ticks: {
-                                        callback: function(value) {
-                                            return '₱' + value.toLocaleString();
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    });
-                    console.log("Time chart initialized");
-                }
-                
-                // 2. Category Chart (Donut)
-                const categoryCanvas = document.getElementById('categoryChart');
-                if (categoryCanvas) {
-                    console.log("Found categoryChart canvas");
-                    categoryChart = new Chart(categoryCanvas, {
-                        type: 'doughnut',
-                        data: {
-                            labels: chartData.categories,
-                            datasets: [{
-                                data: chartData.category_expenses,
-                                backgroundColor: [
-                                    'rgba(255, 99, 132, 0.7)',
-                                    'rgba(54, 162, 235, 0.7)',
-                                    'rgba(255, 206, 86, 0.7)',
-                                    'rgba(75, 192, 192, 0.7)',
-                                    'rgba(153, 102, 255, 0.7)',
-                                    'rgba(255, 159, 64, 0.7)'
-                                ]
-                            }]
-                        },
-                        options: {
-                            responsive: true,
-                            maintainAspectRatio: false,
-                            plugins: {
-                                legend: {
-                                    position: 'right'
-                                },
-                                tooltip: {
-                                    callbacks: {
-                                        label: function(context) {
-                                            const label = context.label;
-                                            const value = context.raw;
-                                            const total = context.dataset.data.reduce((sum, val) => sum + val, 0);
-                                            const percentage = ((value / total) * 100).toFixed(1);
-                                            return label + ': ₱' + value.toLocaleString() + ' (' + percentage + '%)';
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    });
-                    console.log("Category chart initialized");
-                }
-                
-                // 3. Impact Chart
-                const impactCanvas = document.getElementById('impactChart');
-                if (impactCanvas) {
-                    console.log("Found impactChart canvas");
-                    impactChart = new Chart(impactCanvas, {
-                        type: 'bar',
-                        data: {
-                            labels: chartData.impact_labels,
-                            datasets: [{
-                                label: 'Amount',
-                                data: chartData.impact_data,
-                                backgroundColor: [
-                                    'rgba(255, 99, 132, 0.7)',
-                                    'rgba(255, 159, 64, 0.7)',
-                                    'rgba(54, 162, 235, 0.7)'
-                                ]
-                            }]
-                        },
-                        options: {
-                            responsive: true,
-                            maintainAspectRatio: false,
-                            indexAxis: 'y',  // Horizontal bar chart
-                            plugins: {
-                                legend: {
-                                    display: false
-                                },
-                                tooltip: {
-                                    callbacks: {
-                                        label: function(context) {
-                                            const value = context.raw;
-                                            return '₱' + value.toLocaleString();
-                                        }
-                                    }
-                                }
-                            },
-                            scales: {
-                                x: {
-                                    ticks: {
-                                        callback: function(value) {
-                                            return '₱' + value.toLocaleString();
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    });
-                    console.log("Impact chart initialized");
-                }
-                
-                // 4. Totals Chart
-                const totalsCanvas = document.getElementById('totalsChart');
-                if (totalsCanvas) {
-                    console.log("Found totalsChart canvas");
-                    totalsChart = new Chart(totalsCanvas, {
-                        type: 'bar',
-                        data: {
-                            labels: chartData.total_labels,
-                            datasets: [{
-                                label: 'Amount',
-                                data: chartData.total_values,
-                                backgroundColor: [
-                                    'rgba(54, 162, 235, 0.7)',
-                                    'rgba(255, 99, 132, 0.7)',
-                                    'rgba(75, 192, 192, 0.7)',
-                                    'rgba(153, 102, 255, 0.7)',
-                                    'rgba(255, 206, 86, 0.7)'
-                                ]
-                            }]
-                        },
-                        options: {
-                            responsive: true,
-                            maintainAspectRatio: false,
-                            indexAxis: 'y',  // Horizontal bar chart
-                            plugins: {
-                                legend: {
-                                    display: false
-                                },
-                                tooltip: {
-                                    callbacks: {
-                                        label: function(context) {
-                                            const value = context.raw;
-                                            return '₱' + value.toLocaleString();
-                                        }
-                                    }
-                                }
-                            },
-                            scales: {
-                                x: {
-                                    ticks: {
-                                        callback: function(value) {
-                                            return '₱' + value.toLocaleString();
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    });
-                    console.log("Totals chart initialized");
-                }
-                
-                console.log("All charts initialized successfully");
-            } catch (error) {
-                console.error("Error initializing charts:", error);
-            }
-        }
-        
-        // Function to update charts based on current settings
-        function updateCharts() {
-            // This function will be expanded to update charts based on 
-            // period, chart type, breakdown, and date range
-            console.log("Updating charts with settings:", config);
-            
-            // For now, we just display the current configuration
-            // Later, this would update the actual chart data and display
-        }
-        
-        // Setup date range picker
-        function setupDateRangePicker() {
-            console.log("Setting up date range picker");
-            
-            const dateRangeBtn = document.getElementById('date-range-btn');
-            if (!dateRangeBtn) {
-                console.error("Date range button not found");
-                return;
-            }
-            
-            // Create modal if it doesn't exist
-            let modalElement = document.getElementById('simpleDateRangeModal');
-            if (!modalElement) {
-                console.log("Creating simple modal element");
-                modalElement = document.createElement('div');
-                modalElement.id = 'simpleDateRangeModal';
-                modalElement.style.cssText = 'display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1050;';
-                modalElement.innerHTML = `
-                    <div style="position: relative; width: 500px; max-width: 90%; margin: 100px auto; background: white; border-radius: 5px; padding: 20px; box-shadow: 0 5px 15px rgba(0,0,0,0.1);">
-                        <h5>Select Date Range</h5>
-                        <button type="button" id="close-modal-btn" style="position: absolute; top: 10px; right: 10px; background: none; border: none; font-size: 20px; cursor: pointer;">&times;</button>
-                        
-                        <div style="margin-bottom: 15px;">
-                            <div style="display: flex; gap: 10px; margin-bottom: 10px;">
-                                <div style="flex: 1;">
-                                    <label for="simple-start-date">Start Date</label>
-                                    <input type="date" id="simple-start-date" style="width: 100%; padding: 5px; border: 1px solid #ddd; border-radius: 4px;">
-                                </div>
-                                <div style="flex: 1;">
-                                    <label for="simple-end-date">End Date</label>
-                                    <input type="date" id="simple-end-date" style="width: 100%; padding: 5px; border: 1px solid #ddd; border-radius: 4px;">
-                                </div>
-                            </div>
-                            
-                            <div>
-                                <label>Quick Selections</label>
-                                <div style="display: flex; gap: 5px; margin-top: 5px; flex-wrap: wrap;">
-                                    <button type="button" class="quick-range-btn" data-days="7" style="flex: 1; padding: 5px; border: 1px solid #ddd; background: #f8f9fa; border-radius: 4px; cursor: pointer;">Last 7 Days</button>
-                                    <button type="button" class="quick-range-btn" data-days="30" style="flex: 1; padding: 5px; border: 1px solid #ddd; background: #f8f9fa; border-radius: 4px; cursor: pointer;">Last 30 Days</button>
-                                    <button type="button" class="quick-range-btn" data-days="90" style="flex: 1; padding: 5px; border: 1px solid #ddd; background: #f8f9fa; border-radius: 4px; cursor: pointer;">Last 3 Months</button>
-                                    <button type="button" class="quick-range-btn" data-days="all" style="flex: 1; padding: 5px; border: 1px solid #ddd; background: #f8f9fa; border-radius: 4px; cursor: pointer;">All Time</button>
-                                </div>
-                            </div>
-                        </div>
-                        
-                        <div style="display: flex; justify-content: flex-end; gap: 10px;">
-                            <button type="button" id="cancel-date-range-btn" style="padding: 6px 12px; background: #6c757d; color: white; border: none; border-radius: 4px; cursor: pointer;">Cancel</button>
-                            <button type="button" id="simple-apply-date-range" style="padding: 6px 12px; background: #0d6efd; color: white; border: none; border-radius: 4px; cursor: pointer;">Apply</button>
-                        </div>
-                    </div>
-                `;
-                document.body.appendChild(modalElement);
-                
-                // Add event listeners to modal elements
-                setTimeout(function() {
-                    // Close modal buttons
-                    const closeBtn = document.getElementById('close-modal-btn');
-                    if (closeBtn) {
-                        closeBtn.addEventListener('click', function() {
-                            modalElement.style.display = 'none';
-                        });
-                    }
-                    
-                    const cancelBtn = document.getElementById('cancel-date-range-btn');
-                    if (cancelBtn) {
-                        cancelBtn.addEventListener('click', function() {
-                            modalElement.style.display = 'none';
-                        });
-                    }
-                    
-                    // Quick range buttons
-                    const quickRangeButtons = document.querySelectorAll('.quick-range-btn');
-                    quickRangeButtons.forEach(button => {
-                        button.addEventListener('click', function() {
-                            const days = this.getAttribute('data-days');
-                            console.log("Quick range selected:", days);
-                            
-                            const endDate = new Date();
-                            let startDate = new Date();
-                            
-                            if (days === 'all') {
-                                document.getElementById('simple-start-date').value = '';
-                                document.getElementById('simple-end-date').value = '';
-                            } else {
-                                startDate.setDate(startDate.getDate() - parseInt(days));
-                                
-                                // Format dates for input fields (YYYY-MM-DD)
-                                const formatDate = (date) => {
-                                    const year = date.getFullYear();
-                                    const month = String(date.getMonth() + 1).padStart(2, '0');
-                                    const day = String(date.getDate()).padStart(2, '0');
-                                    return `${year}-${month}-${day}`;
-                                };
-                                
-                                document.getElementById('simple-start-date').value = formatDate(startDate);
-                                document.getElementById('simple-end-date').value = formatDate(endDate);
-                            }
-                        });
-                    });
-                    
-                    // Apply button
-                    const applyBtn = document.getElementById('simple-apply-date-range');
-                    if (applyBtn) {
-                        applyBtn.addEventListener('click', function() {
-                            console.log("Apply button clicked");
-                            
-                            const startDate = document.getElementById('simple-start-date').value;
-                            const endDate = document.getElementById('simple-end-date').value;
-                            
-                            console.log("Selected dates:", startDate, "to", endDate);
-                            
-                            // Update config
-                            config.dateRangeStart = startDate ? new Date(startDate) : null;
-                            config.dateRangeEnd = endDate ? new Date(endDate) : null;
-                            
-                            // Update display
-                            const dateRangeDisplay = document.getElementById('date-range-display');
-                            if (dateRangeDisplay) {
-                                if (startDate && endDate) {
-                                    // Format dates for display
-                                    const formatDisplayDate = (dateStr) => {
-                                        const date = new Date(dateStr);
-                                        return date.toLocaleDateString();
-                                    };
-                                    
-                                    dateRangeDisplay.textContent = `${formatDisplayDate(startDate)} - ${formatDisplayDate(endDate)}`;
-                                } else {
-                                    dateRangeDisplay.textContent = 'All Time';
-                                }
-                            }
-                            
-                            // Close modal
-                            modalElement.style.display = 'none';
-                            
-                            // Update charts with date range
-                            updateCharts();
-                            
-                            // Alert for now
-                            alert(`Date range set: ${startDate || 'All'} to ${endDate || 'All'}`);
-                        });
-                    }
-                }, 100);
-            }
-            
-            // Show modal when date range button is clicked
-            dateRangeBtn.addEventListener('click', function(e) {
-                e.preventDefault();
-                e.stopPropagation(); // Prevent other handlers
-                console.log("Date range button clicked");
-                modalElement.style.display = 'block';
-            });
-            
-            console.log("Date range picker setup complete");
-        }
     });
+    
+    // View toggle functionality
+    function setupViewToggle() {
+        const recordsBtn = document.getElementById('view-records-btn');
+        const analyticsBtn = document.getElementById('view-analytics-btn');
+        const recordsView = document.getElementById('records-view');
+        const analyticsView = document.getElementById('analytics-view');
+        
+        if (recordsBtn && analyticsBtn && recordsView && analyticsView) {
+            recordsBtn.addEventListener('click', function() {
+                recordsView.style.display = 'block';
+                analyticsView.style.display = 'none';
+                recordsBtn.classList.add('active');
+                analyticsBtn.classList.remove('active');
+                
+                // Update URL
+                const url = new URL(window.location.href);
+                url.searchParams.delete('view');
+                history.replaceState({}, '', url);
+            });
+            
+            analyticsBtn.addEventListener('click', function() {
+                recordsView.style.display = 'none';
+                analyticsView.style.display = 'block';
+                analyticsBtn.classList.add('active');
+                recordsBtn.classList.remove('active');
+                
+                // Update URL
+                const url = new URL(window.location.href);
+                url.searchParams.set('view', 'analytics');
+                history.replaceState({}, '', url);
+            });
+            
+            // Set initial view based on URL parameter
+            const urlParams = new URLSearchParams(window.location.search);
+            if (urlParams.get('view') === 'analytics') {
+                analyticsBtn.click();
+            }
+        }
+    }
+    
+    // Initialize analytics dashboard
+    function initializeAnalyticsDashboard() {
+        console.log("Initializing analytics dashboard");
+        
+        if (!config.chartInitialized) {
+            // Initialize charts
+            initializeCharts();
+            
+            // Setup UI controls
+            setupControls();
+            
+            // Mark as initialized
+            config.chartInitialized = true;
+        }
+    }
+    
+    // Setup all controls
+    function setupControls() {
+        setupChartControls();
+        setupDateRangePicker();
+        setupExportButtons();
+    }
+    
+    // Setup chart controls (period, type, breakdown)
+    function setupChartControls() {
+        // Time period buttons
+        const periodButtons = document.querySelectorAll('[data-period]');
+        periodButtons.forEach(button => {
+            button.addEventListener('click', function() {
+                // Remove active class from all period buttons
+                periodButtons.forEach(btn => btn.classList.remove('active'));
+                
+                // Add active class to clicked button
+                this.classList.add('active');
+                
+                // Update config
+                config.currentPeriod = this.getAttribute('data-period');
+                console.log("Period selected:", config.currentPeriod);
+                
+                // Update charts
+                updateCharts();
+            });
+        });
+        
+        // Chart type buttons (line/bar)
+        const chartTypeButtons = document.querySelectorAll('[data-chart]');
+        chartTypeButtons.forEach(button => {
+            button.addEventListener('click', function() {
+                // Remove active class from all chart type buttons
+                chartTypeButtons.forEach(btn => btn.classList.remove('active'));
+                
+                // Add active class to clicked button
+                this.classList.add('active');
+                
+                // Update config
+                config.currentChartType = this.getAttribute('data-chart');
+                console.log("Chart type selected:", config.currentChartType);
+                
+                // Update charts
+                updateCharts();
+            });
+        });
+        
+        // Breakdown buttons (category/subcategory)
+        const breakdownButtons = document.querySelectorAll('[data-breakdown]');
+        breakdownButtons.forEach(button => {
+            button.addEventListener('click', function() {
+                // Remove active class from all breakdown buttons
+                breakdownButtons.forEach(btn => btn.classList.remove('active'));
+                
+                // Add active class to clicked button
+                this.classList.add('active');
+                
+                // Update config
+                config.currentBreakdown = this.getAttribute('data-breakdown');
+                console.log("Breakdown selected:", config.currentBreakdown);
+                
+                // Update charts
+                updateCategoryChart();
+            });
+        });
+    }
+    
+    // Setup date range dropdown
+    function setupDateRangePicker() {
+        console.log("Setting up date range dropdown");
+        
+        // Get elements
+        const dateRangeBtn = document.getElementById('date-range-btn');
+        const startDateInput = document.getElementById('dropdown-start-date');
+        const endDateInput = document.getElementById('dropdown-end-date');
+        const applyBtn = document.getElementById('apply-date-range');
+        const dateRangeDisplay = document.getElementById('date-range-display');
+        const quickRangeButtons = document.querySelectorAll('.quick-range-btn');
+        
+        // Check if elements exist
+        if (!dateRangeBtn || !startDateInput || !endDateInput || !applyBtn) {
+            console.error("Date range dropdown elements not found");
+            return;
+        }
+        
+        // Initialize Bootstrap dropdown if possible
+        if (typeof bootstrap !== 'undefined' && bootstrap.Dropdown) {
+            new bootstrap.Dropdown(dateRangeBtn);
+        }
+        
+        // Setup quick selection buttons
+        quickRangeButtons.forEach(button => {
+            button.addEventListener('click', function() {
+                const days = this.getAttribute('data-days');
+                console.log("Quick range selected:", days);
+                
+                const endDate = new Date();
+                let startDate = new Date();
+                
+                if (days === 'all') {
+                    startDateInput.value = '';
+                    endDateInput.value = '';
+                } else {
+                    startDate.setDate(startDate.getDate() - parseInt(days));
+                    
+                    // Format dates for input fields (YYYY-MM-DD)
+                    const formatDate = (date) => {
+                        const year = date.getFullYear();
+                        const month = String(date.getMonth() + 1).padStart(2, '0');
+                        const day = String(date.getDate()).padStart(2, '0');
+                        return `${year}-${month}-${day}`;
+                    };
+                    
+                    startDateInput.value = formatDate(startDate);
+                    endDateInput.value = formatDate(endDate);
+                }
+            });
+        });
+        
+        // Setup apply button
+        applyBtn.addEventListener('click', function() {
+            console.log("Applying date range");
+            
+            const startDate = startDateInput.value;
+            const endDate = endDateInput.value;
+            
+            // Update config
+            config.dateRangeStart = startDate ? new Date(startDate) : null;
+            config.dateRangeEnd = endDate ? new Date(endDate) : null;
+            
+            // Update dropdown button text
+            if (startDate && endDate) {
+                const formatDisplayDate = (dateStr) => {
+                    const date = new Date(dateStr);
+                    return date.toLocaleDateString();
+                };
+                
+                dateRangeDisplay.textContent = `${formatDisplayDate(startDate)} - ${formatDisplayDate(endDate)}`;
+                dateRangeBtn.innerHTML = `<i class="fas fa-calendar-alt me-1"></i> ${formatDisplayDate(startDate)} - ${formatDisplayDate(endDate)}`;
+            } else {
+                dateRangeDisplay.textContent = 'All Time';
+                dateRangeBtn.innerHTML = `<i class="fas fa-calendar-alt me-1"></i> All Time`;
+            }
+            
+            // Close dropdown if using Bootstrap
+            if (typeof bootstrap !== 'undefined' && bootstrap.Dropdown) {
+                const dropdownEl = document.querySelector('.date-range-dropdown .dropdown-menu');
+                const dropdown = bootstrap.Dropdown.getInstance(dateRangeBtn);
+                if (dropdown) dropdown.hide();
+            }
+            
+            // Update charts
+            updateCharts();
+        });
+        
+        console.log("Date range dropdown setup complete");
+    }
+    
+    // Fix the export buttons setup function
+    function setupExportButtons() {
+        // Export to CSV
+        const exportCsvBtn = document.getElementById('export-csv');
+        if (exportCsvBtn) {
+            console.log("Export CSV button found");
+            exportCsvBtn.addEventListener('click', function() {
+                console.log("Export CSV button clicked");
+                exportToCSV();
+            });
+        } else {
+            console.error("Export CSV button not found");
+        }
+        
+        // Export charts as images
+        // Check for both possible IDs
+        const exportPngBtn = document.getElementById('export-png') || document.getElementById('export-image');
+        if (exportPngBtn) {
+            console.log("Export PNG button found");
+            exportPngBtn.addEventListener('click', function() {
+                console.log("Export PNG button clicked");
+                exportChartsAsImages();
+            });
+        } else {
+            console.error("Export PNG button not found");
+        }
+    }
+    
+    // Initialize charts
+    function initializeCharts() {
+        console.log("Initializing charts");
+        
+        try {
+            // 1. Time Chart
+            const timeCanvas = document.getElementById('timeChart');
+            if (timeCanvas) {
+                timeChart = new Chart(timeCanvas, {
+                    type: config.currentChartType,
+                    data: {
+                        labels: getTimeLabels(),
+                        datasets: [
+                            {
+                                label: 'Budget',
+                                data: getBudgetData(),
+                                borderColor: 'rgba(54, 162, 235, 1)',
+                                backgroundColor: 'rgba(54, 162, 235, 0.2)',
+                                borderWidth: 2,
+                                fill: true
+                            },
+                            {
+                                label: 'Expense',
+                                data: getExpenseData(),
+                                borderColor: 'rgba(255, 99, 132, 1)',
+                                backgroundColor: 'rgba(255, 99, 132, 0.2)',
+                                borderWidth: 2,
+                                fill: true
+                            }
+                        ]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: {
+                                position: 'top'
+                            },
+                            tooltip: {
+                                callbacks: {
+                                    label: function(context) {
+                                        const value = context.raw;
+                                        return context.dataset.label + ': ₱' + value.toLocaleString();
+                                    }
+                                }
+                            }
+                        },
+                        scales: {
+                            y: {
+                                beginAtZero: true,
+                                ticks: {
+                                    callback: function(value) {
+                                        return '₱' + value.toLocaleString();
+                                    }
+                                }
+                            }
+                        }
+                    }
+                });
+                console.log("Time chart initialized");
+            }
+            
+            // 2. Category Chart (Donut)
+            const categoryCanvas = document.getElementById('categoryChart');
+            if (categoryCanvas) {
+                categoryChart = new Chart(categoryCanvas, {
+                    type: 'doughnut',
+                    data: {
+                        labels: getCategoryLabels(),
+                        datasets: [{
+                            data: getCategoryData(),
+                            backgroundColor: [
+                                'rgba(255, 99, 132, 0.7)',
+                                'rgba(54, 162, 235, 0.7)',
+                                'rgba(255, 206, 86, 0.7)',
+                                'rgba(75, 192, 192, 0.7)',
+                                'rgba(153, 102, 255, 0.7)',
+                                'rgba(255, 159, 64, 0.7)',
+                                'rgba(199, 199, 199, 0.7)'
+                            ]
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        cutout: '60%',
+                        plugins: {
+                            legend: {
+                                position: 'right',
+                                labels: {
+                                    boxWidth: 12,
+                                    font: {
+                                        size: 11
+                                    }
+                                }
+                            },
+                            tooltip: {
+                                callbacks: {
+                                    label: function(context) {
+                                        const value = context.raw;
+                                        const total = context.dataset.data.reduce((sum, val) => sum + val, 0);
+                                        const percentage = ((value / total) * 100).toFixed(1);
+                                        return context.label + ': ₱' + value.toLocaleString() + ' (' + percentage + '%)';
+                                    }
+                                }
+                            }
+                        }
+                    }
+                });
+                console.log("Category chart initialized");
+            }
+            
+            // 3. Impact Chart
+            const impactCanvas = document.getElementById('impactChart');
+            if (impactCanvas) {
+                impactChart = new Chart(impactCanvas, {
+                    type: 'bar',
+                    data: {
+                        labels: chartData.impact_labels || [],
+                        datasets: [{
+                            label: 'Amount',
+                            data: chartData.impact_data || [],
+                            backgroundColor: [
+                                'rgba(255, 99, 132, 0.7)',
+                                'rgba(255, 159, 64, 0.7)',
+                                'rgba(54, 162, 235, 0.7)'
+                            ],
+                            borderColor: [
+                                'rgba(255, 99, 132, 1)',
+                                'rgba(255, 159, 64, 1)',
+                                'rgba(54, 162, 235, 1)'
+                            ],
+                            borderWidth: 1
+                        }]
+                    },
+                    options: {
+                        indexAxis: 'y',
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: {
+                                display: false
+                            },
+                            tooltip: {
+                                callbacks: {
+                                    label: function(context) {
+                                        const value = context.raw;
+                                        return '₱' + value.toLocaleString();
+                                    },
+                                    afterLabel: function(context) {
+                                        const counts = chartData.impact_counts || [0, 0, 0];
+                                        return counts[context.dataIndex] + ' items';
+                                    }
+                                }
+                            }
+                        },
+                        scales: {
+                            x: {
+                                beginAtZero: true,
+                                ticks: {
+                                    callback: function(value) {
+                                        return '₱' + value.toLocaleString();
+                                    }
+                                }
+                            }
+                        }
+                    }
+                });
+                console.log("Impact chart initialized");
+            }
+            
+            // 4. Totals Chart
+            const totalsCanvas = document.getElementById('totalsChart');
+            if (totalsCanvas) {
+                totalsChart = new Chart(totalsCanvas, {
+                    type: 'bar',
+                    data: {
+                        labels: chartData.total_labels || [],
+                        datasets: [{
+                            label: 'Amount',
+                            data: chartData.total_values || [],
+                            backgroundColor: [
+                                'rgba(54, 162, 235, 0.7)',
+                                'rgba(255, 99, 132, 0.7)',
+                                'rgba(75, 192, 192, 0.7)',
+                                'rgba(153, 102, 255, 0.7)',
+                                'rgba(255, 206, 86, 0.7)'
+                            ],
+                            borderColor: [
+                                'rgba(54, 162, 235, 1)',
+                                'rgba(255, 99, 132, 1)',
+                                'rgba(75, 192, 192, 1)',
+                                'rgba(153, 102, 255, 1)',
+                                'rgba(255, 206, 86, 1)'
+                            ],
+                            borderWidth: 1
+                        }]
+                    },
+                    options: {
+                        indexAxis: 'y',
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: {
+                                display: false
+                            },
+                            tooltip: {
+                                callbacks: {
+                                    label: function(context) {
+                                        const value = context.raw;
+                                        return '₱' + value.toLocaleString();
+                                    }
+                                }
+                            }
+                        },
+                        scales: {
+                            x: {
+                                beginAtZero: true,
+                                ticks: {
+                                    callback: function(value) {
+                                        return '₱' + value.toLocaleString();
+                                    }
+                                }
+                            }
+                        }
+                    }
+                });
+                console.log("Totals chart initialized");
+            }
+            
+            console.log("All charts initialized successfully");
+        } catch (error) {
+            console.error("Error initializing charts:", error);
+        }
+    }
+    
+    // Helper functions to get labels and data based on current settings
+    function getTimeLabels() {
+        switch (config.currentPeriod) {
+            case 'daily':
+                return chartData.days || [];
+            case 'weekly':
+                return chartData.weeks || [];
+            case 'monthly':
+                return chartData.months || [];
+            case 'quarterly':
+                return chartData.quarters || [];
+            default:
+                return chartData.months || [];
+        }
+    }
+    
+    function getBudgetData() {
+        switch (config.currentPeriod) {
+            case 'daily':
+                return chartData.daily_budget || [];
+            case 'weekly':
+                return chartData.weekly_budget || [];
+            case 'monthly':
+                return chartData.monthly_budget || [];
+            case 'quarterly':
+                return chartData.quarterly_budget || [];
+            default:
+                return chartData.monthly_budget || [];
+        }
+    }
+    
+    function getExpenseData() {
+        switch (config.currentPeriod) {
+            case 'daily':
+                return chartData.daily_expense || [];
+            case 'weekly':
+                return chartData.weekly_expense || [];
+            case 'monthly':
+                return chartData.monthly_expense || [];
+            case 'quarterly':
+                return chartData.quarterly_expense || [];
+            default:
+                return chartData.monthly_expense || [];
+        }
+    }
+    
+    function getCategoryLabels() {
+        return config.currentBreakdown === 'category' 
+            ? (chartData.categories || []) 
+            : (chartData.subcategories || []);
+    }
+    
+    function getCategoryData() {
+        return config.currentBreakdown === 'category'
+            ? (chartData.category_expenses || [])
+            : (chartData.subcategory_expenses || []);
+    }
+    
+    // Update all charts
+    function updateCharts() {
+        updateTimeChart();
+        updateCategoryChart();
+    }
+    
+    // Update time chart
+    function updateTimeChart() {
+        if (!timeChart) return;
+        
+        console.log("Updating time chart to", config.currentPeriod, config.currentChartType);
+        
+        // Update chart type if needed
+        if (timeChart.config.type !== config.currentChartType) {
+            timeChart.config.type = config.currentChartType;
+            
+            // Update dataset styling based on chart type
+            if (config.currentChartType === 'bar') {
+                timeChart.data.datasets[0].backgroundColor = 'rgba(54, 162, 235, 0.7)';
+                timeChart.data.datasets[1].backgroundColor = 'rgba(255, 99, 132, 0.7)';
+                timeChart.data.datasets[0].fill = false;
+                timeChart.data.datasets[1].fill = false;
+            } else {
+                timeChart.data.datasets[0].backgroundColor = 'rgba(54, 162, 235, 0.2)';
+                timeChart.data.datasets[1].backgroundColor = 'rgba(255, 99, 132, 0.2)';
+                timeChart.data.datasets[0].fill = true;
+                timeChart.data.datasets[1].fill = true;
+            }
+        }
+        
+        // Get data based on current period
+        let labels = getTimeLabels();
+        let budgetData = getBudgetData();
+        let expenseData = getExpenseData();
+        
+        // Apply date range filter if set
+        if (config.dateRangeStart || config.dateRangeEnd) {
+            const filteredData = filterDataByDateRange(labels, budgetData, expenseData);
+            labels = filteredData.labels;
+            budgetData = filteredData.budgetData;
+            expenseData = filteredData.expenseData;
+        }
+        
+        // Update chart data
+        timeChart.data.labels = labels;
+        timeChart.data.datasets[0].data = budgetData;
+        timeChart.data.datasets[1].data = expenseData;
+        
+        // Update chart
+        timeChart.update();
+    }
+    
+    // Update category chart
+    function updateCategoryChart() {
+        if (!categoryChart) return;
+        
+        console.log("Updating category chart to", config.currentBreakdown);
+        
+        const labels = getCategoryLabels();
+        const data = getCategoryData();
+        
+        // Generate colors if needed
+        const backgroundColor = generateColors(data.length);
+        
+        // Update chart data
+        categoryChart.data.labels = labels;
+        categoryChart.data.datasets[0].data = data;
+        categoryChart.data.datasets[0].backgroundColor = backgroundColor;
+        
+        // Update chart
+        categoryChart.update();
+    }
+    
+    // Filter data by date range
+    function filterDataByDateRange(labels, budgetData, expenseData) {
+        if (!config.dateRangeStart && !config.dateRangeEnd) {
+            return { labels, budgetData, expenseData };
+        }
+        
+        const filteredLabels = [];
+        const filteredBudget = [];
+        const filteredExpense = [];
+        
+        // Function to parse dates from different formats
+        function parseDate(label) {
+            try {
+                // Handle different date formats
+                if (/\d{4}-\d{2}-\d{2}/.test(label)) {
+                    // YYYY-MM-DD format
+                    return new Date(label);
+                } else if (/\w{3} \d{4}/.test(label)) {
+                    // "MMM YYYY" format (e.g., "Jan 2025")
+                    return new Date(label);
+                } else if (/\w{3} \d{1,2}/.test(label)) {
+                    // "MMM DD" format (e.g., "Jan 15")
+                    return new Date(label + ", " + new Date().getFullYear());
+                } else if (/Week \d{1,2}, \d{4}/.test(label)) {
+                    // "Week XX, YYYY" format
+                    const [_, weekStr, yearStr] = label.match(/Week (\d{1,2}), (\d{4})/);
+                    const year = parseInt(yearStr);
+                    const week = parseInt(weekStr);
+                    
+                    // Create a date for Jan 1 of that year
+                    const date = new Date(year, 0, 1);
+                    
+                    // Add (week-1) * 7 days to get to the start of the week
+                    date.setDate(date.getDate() + (week - 1) * 7);
+                    
+                    return date;
+                } else if (/Q\d \d{4}/.test(label)) {
+                    // "Q1 2025" format
+                    const [_, quarterStr, yearStr] = label.match(/Q(\d) (\d{4})/);
+                    const year = parseInt(yearStr);
+                    const quarter = parseInt(quarterStr);
+                    
+                    // Map quarter to month (Q1=Jan, Q2=Apr, Q3=Jul, Q4=Oct)
+                    const month = (quarter - 1) * 3;
+                    
+                    return new Date(year, month, 1);
+                } else {
+                    // Try to parse as is
+                    return new Date(label);
+                }
+            } catch (e) {
+                console.warn("Could not parse date:", label);
+                return null;
+            }
+        }
+        
+        // Filter data based on date range
+        for (let i = 0; i < labels.length; i++) {
+            const date = parseDate(labels[i]);
+            
+            // Skip invalid dates
+            if (!date) continue;
+            
+            const isAfterStart = !config.dateRangeStart || date >= config.dateRangeStart;
+            const isBeforeEnd = !config.dateRangeEnd || date <= config.dateRangeEnd;
+            
+            if (isAfterStart && isBeforeEnd) {
+                filteredLabels.push(labels[i]);
+                filteredBudget.push(budgetData[i]);
+                filteredExpense.push(expenseData[i]);
+            }
+        }
+        
+        return {
+            labels: filteredLabels,
+            budgetData: filteredBudget,
+            expenseData: filteredExpense
+        };
+    }
+    
+    // Generate colors for chart segments
+    function generateColors(count) {
+        const baseColors = [
+            'rgba(255, 99, 132, 0.7)',    // red
+            'rgba(54, 162, 235, 0.7)',    // blue
+            'rgba(255, 206, 86, 0.7)',    // yellow
+            'rgba(75, 192, 192, 0.7)',    // green
+            'rgba(153, 102, 255, 0.7)',   // purple
+            'rgba(255, 159, 64, 0.7)',    // orange
+            'rgba(199, 199, 199, 0.7)',   // gray
+            'rgba(83, 102, 255, 0.7)',    // indigo
+            'rgba(40, 159, 64, 0.7)',     // forest green
+            'rgba(210, 99, 132, 0.7)'     // pink
+        ];
+        
+        if (count <= baseColors.length) {
+            return baseColors.slice(0, count);
+        }
+        
+        // Generate additional colors if needed
+        const colors = [...baseColors];
+        for (let i = baseColors.length; i < count; i++) {
+            const r = Math.floor(Math.random() * 255);
+            const g = Math.floor(Math.random() * 255);
+            const b = Math.floor(Math.random() * 255);
+            colors.push(`rgba(${r}, ${g}, ${b}, 0.7)`);
+        }
+        
+        return colors;
+    }
+    
+    // Export data to CSV
+    function exportToCSV() {
+        console.log("Exporting to CSV");
+        
+        // Create CSV content
+        let csvContent = "data:text/csv;charset=utf-8,";
+        
+        // Add headers
+        csvContent += "Date,Budget,Expense,Variance\n";
+        
+        // Get data based on current period
+        let labels = getTimeLabels();
+        let budgetData = getBudgetData();
+        let expenseData = getExpenseData();
+        
+        // Apply date range filter if set
+        if (config.dateRangeStart || config.dateRangeEnd) {
+            const filteredData = filterDataByDateRange(labels, budgetData, expenseData);
+            labels = filteredData.labels;
+            budgetData = filteredData.budgetData;
+            expenseData = filteredData.expenseData;
+        }
+        
+        // Add data rows
+        for (let i = 0; i < labels.length; i++) {
+            const budget = budgetData[i] || 0;
+            const expense = expenseData[i] || 0;
+            const variance = budget - expense;
+            
+            csvContent += `${labels[i]},${budget},${expense},${variance}\n`;
+        }
+        
+        // Create download link
+        const encodedUri = encodeURI(csvContent);
+        const link = document.createElement("a");
+        link.setAttribute("href", encodedUri);
+        link.setAttribute("download", `expense_data_${config.currentPeriod}.csv`);
+        document.body.appendChild(link);
+        
+        // Trigger download
+        link.click();
+        
+        // Clean up
+        document.body.removeChild(link);
+    }
+    
+    // Very simple chart export (minimum chance of failure)
+    function exportChartsAsImages() {
+        // Get all chart canvases
+        const timeChart = document.getElementById('timeChart');
+        const categoryChart = document.getElementById('categoryChart');
+        const impactChart = document.getElementById('impactChart');
+        const totalsChart = document.getElementById('totalsChart');
+        
+        // Download each chart (if it exists)
+        try {
+            if (timeChart) {
+                const link = document.createElement('a');
+                link.download = 'time_chart.png';
+                link.href = timeChart.toDataURL();
+                link.click();
+            }
+        } catch (e) { console.error("Error exporting time chart:", e); }
+        
+        try {
+            if (categoryChart) {
+                const link = document.createElement('a');
+                link.download = 'category_chart.png';
+                link.href = categoryChart.toDataURL();
+                link.click();
+            }
+        } catch (e) { console.error("Error exporting category chart:", e); }
+        
+        try {
+            if (impactChart) {
+                const link = document.createElement('a');
+                link.download = 'impact_chart.png';
+                link.href = impactChart.toDataURL();
+                link.click();
+            }
+        } catch (e) { console.error("Error exporting impact chart:", e); }
+        
+        try {
+            if (totalsChart) {
+                const link = document.createElement('a');
+                link.download = 'totals_chart.png';
+                link.href = totalsChart.toDataURL();
+                link.click();
+            }
+        } catch (e) { console.error("Error exporting totals chart:", e); }
+        
+        alert("Charts exported as images. Check your downloads folder.");
+    }
 })();
 </script>
