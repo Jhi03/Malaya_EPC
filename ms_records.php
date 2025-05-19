@@ -498,159 +498,6 @@
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 <body>
-    <div class="sidebar" id="sidebar">
-        <?php include 'sidebar.php'; ?>
-    </div>
-    
-    <div class="content-area">
-        <?php include 'header.php'; ?>
-
-        <div class="content-body">
-            <!-- Project Summary -->
-            <?php if ($project): ?>
-                <div class="project-summary position-relative">
-                    <div class="project-options">
-                        <button class="ellipsis-btn" onclick="toggleDropdown(this)">
-                            <img src="icons/ellipsis-vertical.svg" alt="Options">
-                        </button>
-                        <div class="dropdown-menu" style="display:none;">
-                            <button class="dropdown-edit" onclick="openEditModal()">Edit</button>
-                            <button class="dropdown-delete" onclick="deleteProject(<?= $project['project_id'] ?>)">Delete</button>
-                        </div>
-                    </div>
-                    
-                    <!-- Your existing project summary layout below -->
-                    <div class="summary-left">
-                        <div class="left-column">
-                            <p><strong>PROJECT:</strong> <?= htmlspecialchars($project['project_name']) ?></p>
-                            <p><strong>CODE:</strong> <?= htmlspecialchars($project['project_code']) ?></p>
-                            <p><strong>CLIENT:</strong> <?= htmlspecialchars($project['first_name'] . ' ' . $project['last_name']) ?></p>
-                        </div>
-                        <div class="right-column">
-                            <p><strong>COMPANY:</strong> <?= htmlspecialchars($project['company_name']) ?></p>
-                            <p><strong>EMAIL:</strong> <?= htmlspecialchars($project['email']) ?></p>
-                            <p><strong>CONTACT:</strong> <?= htmlspecialchars($project['contact']) ?></p>
-                        </div>
-                    </div>
-                    <div class="summary-right">
-                        <p><strong>CREATION DATE:</strong> <?= date('m-d-Y', strtotime($project['creation_date'])) ?></p>
-                        <p><strong>DESCRIPTION:</strong> <?= htmlspecialchars($project['description']) ?></p>
-                    </div>
-                </div>
-            <?php else: ?>
-                <p class="text-danger text-center">Project not found.</p>
-            <?php endif; ?>
-
-            <!-- Add Records, Search, Filter, and Toggle Bar -->
-            <?php include('search_filter_sort_ui.php'); ?>
-
-            <div class="records-table-container" id="records-view" style="display: block;">
-                <!-- RECORDS VIEW -->
-                <!-- Expense Records Table -->
-                <div class="table-responsive">
-                    <table class="table table-hover" id="expense-table">
-                        <thead>
-                            <tr>
-                                <th> </th>
-                                <th>Category</th>
-                                <th>Description</th>
-                                <th>Payee</th>
-                                <th class="text-right">Budget</th>
-                                <th class="text-right">Expense</th>
-                                <th class="text-right">Variance</th>
-                                <th class="text-right">Tax</th>
-                                <th>Remarks</th>
-                                <th class="text-center">Date</th>
-                                <th class="text-center">Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <?php if (count($records) > 0): ?>
-                                <?php foreach ($records as $i => $row): ?>
-                                    <tr>
-                                        <td><?= $i + 1 ?></td>
-                                        <td>
-                                            <?php 
-                                            // Display category and subcategory together
-                                            echo htmlspecialchars($row['category']);
-                                            if (!empty($row['subcategory'])) {
-                                                echo ': ' . htmlspecialchars($row['subcategory']);
-                                            }
-                                            ?>
-                                        </td>
-                                        <td title="<?= htmlspecialchars($row['record_description']) ?>">
-                                            <?= htmlspecialchars($row['record_description']) ?>
-                                        </td>
-                                        <td><?= htmlspecialchars($row['payee']) ?></td>
-                                        <td class="text-right">₱<?= number_format($row['budget'], 2) ?></td>
-                                        <td class="text-right">₱<?= number_format($row['expense'], 2) ?></td>
-                                        <td class="text-right">₱<?= number_format($row['variance'], 2) ?></td>
-                                        <td class="text-right">₱<?= number_format($row['tax'], 2) ?></td>
-                                        <td title="<?= htmlspecialchars($row['remarks']) ?>">
-                                            <?= htmlspecialchars($row['remarks']) ?>
-                                        </td>
-                                        <td class="text-center"><?= date("M d, Y", strtotime($row['purchase_date'])) ?></td>
-                                        <td class="text-center">
-                                            <button class="btn btn-info btn-sm view-btn"
-                                                data-id="<?= $row['record_id'] ?>"
-                                                data-category="<?= htmlspecialchars($row['category']) ?>"
-                                                data-subcategory="<?= htmlspecialchars($row['subcategory']) ?>"
-                                                data-date="<?= $row['purchase_date'] ?>"
-                                                data-budget="<?= $row['budget'] ?>"
-                                                data-expense="<?= $row['expense'] ?>"
-                                                data-payee="<?= htmlspecialchars($row['payee']) ?>"
-                                                data-record_description="<?= htmlspecialchars($row['record_description']) ?>"
-                                                data-remarks="<?= htmlspecialchars($row['remarks']) ?>"
-                                                data-rental_rate="<?= $row['rental_rate'] ?>"
-                                                data-tax="<?= $row['tax'] ?>"
-                                                data-variance="<?= $row['variance'] ?>"
-                                                data-invoice_no="<?= htmlspecialchars($row['invoice_no']) ?>"
-                                                data-bill_to_client="<?= $row['bill_to_client'] ?? 'No' ?>"
-                                                data-is_rental="<?= $row['is_rental'] ?? 'No' ?>"
-                                                data-is_company_loss="<?= $row['is_company_loss'] ?? 'No' ?>">
-                                                <img src="icons/eye.svg" width="16" alt="View">
-                                            </button>
-                                            <button type="button" class="btn btn-sm btn-primary edit-btn"
-                                                data-id="<?= $row['record_id'] ?>"
-                                                data-category="<?= htmlspecialchars($row['category']) ?>"
-                                                data-subcategory="<?= htmlspecialchars($row['subcategory']) ?>"
-                                                data-date="<?= $row['purchase_date'] ?>"
-                                                data-budget="<?= $row['budget'] ?>"
-                                                data-expense="<?= $row['expense'] ?>"
-                                                data-payee="<?= htmlspecialchars($row['payee']) ?>"
-                                                data-record_description="<?= htmlspecialchars($row['record_description']) ?>"
-                                                data-remarks="<?= htmlspecialchars($row['remarks']) ?>"
-                                                data-rental_rate="<?= $row['rental_rate'] ?>"
-                                                data-tax="<?= $row['tax'] ?>"
-                                                data-invoice_no="<?= htmlspecialchars($row['invoice_no']) ?>"
-                                                data-bill_to_client="<?= $row['bill_to_client'] ?? 'No' ?>"
-                                                data-is_rental="<?= $row['is_rental'] ?? 'No' ?>"
-                                                data-is_company_loss="<?= $row['is_company_loss'] ?? 'No' ?>">
-                                                <img src="icons/pencil-white.svg" width="16" alt="Edit">
-                                            </button>
-                                            <button type="button" class="btn btn-sm btn-danger delete-btn" onclick="deleteExpense(<?= $row['record_id'] ?>)">
-                                                <img src="icons/trash.svg" alt="Delete" width="16">
-                                            </button>
-                                        </td>
-                                    </tr>
-                                <?php endforeach; ?>
-                            <?php else: ?>
-                                <tr><td colspan="11" class="text-center">No records available for this project.</td></tr>
-                            <?php endif; ?>
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-
-            <!--ANALYTICS VIEW -->
-            <div class="analytics-view container py-4" id="analytics-view" style="display: none;">
-                <?php include('analytics_view.php'); ?>
-            </div>
-        </div>
-    </div>
-    
-    <?php include('edit_project_modal.php'); ?>
-
     <!-- ADD/EDIT RECORD MODAL -->
     <div class="modal fade" id="expenseModal" tabindex="-1" aria-labelledby="expenseModalLabel" aria-hidden="true">
         <div class="modal-dialog modal-lg">
@@ -942,137 +789,159 @@
             </div>
         </div>
     </div>
+    
+    <div class="sidebar" id="sidebar">
+        <?php include 'sidebar.php'; ?>
+    </div>
+    
+    <div class="content-area">
+        <?php include 'header.php'; ?>
 
-    <!-- Filter Modal -->
-    <div class="modal fade" id="filterModal" tabindex="-1" role="dialog" aria-labelledby="filterModalLabel" aria-hidden="true">
-        <div class="modal-dialog" role="document">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title" id="filterModalLabel">Filter Records</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        <div class="content-body">
+            <!-- Project Summary -->
+            <?php if ($project): ?>
+                <div class="project-summary position-relative">
+                    <div class="project-options">
+                        <button class="ellipsis-btn" onclick="toggleDropdown(this)">
+                            <img src="icons/ellipsis-vertical.svg" alt="Options">
+                        </button>
+                        <div class="dropdown-menu" style="display:none;">
+                            <button class="dropdown-edit" onclick="openEditModal()">Edit</button>
+                            <button class="dropdown-delete" onclick="deleteProject(<?= $project['project_id'] ?>)">Delete</button>
+                        </div>
+                    </div>
+                    
+                    <!-- Your existing project summary layout below -->
+                    <div class="summary-left">
+                        <div class="left-column">
+                            <p><strong>PROJECT:</strong> <?= htmlspecialchars($project['project_name']) ?></p>
+                            <p><strong>CODE:</strong> <?= htmlspecialchars($project['project_code']) ?></p>
+                            <p><strong>CLIENT:</strong> <?= htmlspecialchars($project['first_name'] . ' ' . $project['last_name']) ?></p>
+                        </div>
+                        <div class="right-column">
+                            <p><strong>COMPANY:</strong> <?= htmlspecialchars($project['company_name']) ?></p>
+                            <p><strong>EMAIL:</strong> <?= htmlspecialchars($project['email']) ?></p>
+                            <p><strong>CONTACT:</strong> <?= htmlspecialchars($project['contact']) ?></p>
+                        </div>
+                    </div>
+                    <div class="summary-right">
+                        <p><strong>CREATION DATE:</strong> <?= date('m-d-Y', strtotime($project['creation_date'])) ?></p>
+                        <p><strong>DESCRIPTION:</strong> <?= htmlspecialchars($project['description']) ?></p>
+                    </div>
                 </div>
-                <form id="filter-form" action="" method="get">
-                    <div class="modal-body">
-                        <input type="hidden" name="projectId" value="<?= $project_id ?>">
-                        
-                        <div class="mb-3">
-                            <label for="filter-category" class="form-label">Category</label>
-                            <select id="filter-category" name="category" class="form-select">
-                                <option value="">All Categories</option>
-                                <?php foreach ($categories as $cat): ?>
-                                    <option value="<?= htmlspecialchars($cat['category_name']) ?>" 
-                                        <?= isset($_GET['category']) && $_GET['category'] === $cat['category_name'] ? 'selected' : '' ?>>
-                                        <?= htmlspecialchars($cat['category_name']) ?>
-                                    </option>
+            <?php else: ?>
+                <p class="text-danger text-center">Project not found.</p>
+            <?php endif; ?>
+
+            <!-- Add Records, Search, Filter, and Toggle Bar -->
+            <?php include('search_filter_sort_ui.php'); ?>
+
+            <div class="records-table-container" id="records-view" style="display: block;">
+                <!-- RECORDS VIEW -->
+                <!-- Expense Records Table -->
+                <div class="table-responsive">
+                    <table class="table table-hover" id="expense-table">
+                        <thead>
+                            <tr>
+                                <th> </th>
+                                <th>Category</th>
+                                <th>Description</th>
+                                <th>Payee</th>
+                                <th class="text-right">Budget</th>
+                                <th class="text-right">Expense</th>
+                                <th class="text-right">Variance</th>
+                                <th class="text-right">Tax</th>
+                                <th>Remarks</th>
+                                <th class="text-center">Date</th>
+                                <th class="text-center">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <?php if (count($records) > 0): ?>
+                                <?php foreach ($records as $i => $row): ?>
+                                    <tr>
+                                        <td><?= $i + 1 ?></td>
+                                        <td>
+                                            <?php 
+                                            // Display category and subcategory together
+                                            echo htmlspecialchars($row['category']);
+                                            if (!empty($row['subcategory'])) {
+                                                echo ': ' . htmlspecialchars($row['subcategory']);
+                                            }
+                                            ?>
+                                        </td>
+                                        <td title="<?= htmlspecialchars($row['record_description']) ?>">
+                                            <?= htmlspecialchars($row['record_description']) ?>
+                                        </td>
+                                        <td><?= htmlspecialchars($row['payee']) ?></td>
+                                        <td class="text-right">₱<?= number_format($row['budget'], 2) ?></td>
+                                        <td class="text-right">₱<?= number_format($row['expense'], 2) ?></td>
+                                        <td class="text-right">₱<?= number_format($row['variance'], 2) ?></td>
+                                        <td class="text-right">₱<?= number_format($row['tax'], 2) ?></td>
+                                        <td title="<?= htmlspecialchars($row['remarks']) ?>">
+                                            <?= htmlspecialchars($row['remarks']) ?>
+                                        </td>
+                                        <td class="text-center"><?= date("M d, Y", strtotime($row['purchase_date'])) ?></td>
+                                        <td class="text-center">
+                                            <button class="btn btn-info btn-sm view-btn"
+                                                data-id="<?= $row['record_id'] ?>"
+                                                data-category="<?= htmlspecialchars($row['category']) ?>"
+                                                data-subcategory="<?= htmlspecialchars($row['subcategory']) ?>"
+                                                data-date="<?= $row['purchase_date'] ?>"
+                                                data-budget="<?= $row['budget'] ?>"
+                                                data-expense="<?= $row['expense'] ?>"
+                                                data-payee="<?= htmlspecialchars($row['payee']) ?>"
+                                                data-record_description="<?= htmlspecialchars($row['record_description']) ?>"
+                                                data-remarks="<?= htmlspecialchars($row['remarks']) ?>"
+                                                data-rental_rate="<?= $row['rental_rate'] ?>"
+                                                data-tax="<?= $row['tax'] ?>"
+                                                data-variance="<?= $row['variance'] ?>"
+                                                data-invoice_no="<?= htmlspecialchars($row['invoice_no']) ?>"
+                                                data-bill_to_client="<?= $row['bill_to_client'] ?? 'No' ?>"
+                                                data-is_rental="<?= $row['is_rental'] ?? 'No' ?>"
+                                                data-is_company_loss="<?= $row['is_company_loss'] ?? 'No' ?>">
+                                                <img src="icons/eye.svg" width="16" alt="View">
+                                            </button>
+                                            <button type="button" class="btn btn-sm btn-primary edit-btn"
+                                                data-id="<?= $row['record_id'] ?>"
+                                                data-category="<?= htmlspecialchars($row['category']) ?>"
+                                                data-subcategory="<?= htmlspecialchars($row['subcategory']) ?>"
+                                                data-date="<?= $row['purchase_date'] ?>"
+                                                data-budget="<?= $row['budget'] ?>"
+                                                data-expense="<?= $row['expense'] ?>"
+                                                data-payee="<?= htmlspecialchars($row['payee']) ?>"
+                                                data-record_description="<?= htmlspecialchars($row['record_description']) ?>"
+                                                data-remarks="<?= htmlspecialchars($row['remarks']) ?>"
+                                                data-rental_rate="<?= $row['rental_rate'] ?>"
+                                                data-tax="<?= $row['tax'] ?>"
+                                                data-invoice_no="<?= htmlspecialchars($row['invoice_no']) ?>"
+                                                data-bill_to_client="<?= $row['bill_to_client'] ?? 'No' ?>"
+                                                data-is_rental="<?= $row['is_rental'] ?? 'No' ?>"
+                                                data-is_company_loss="<?= $row['is_company_loss'] ?? 'No' ?>">
+                                                <img src="icons/pencil-white.svg" width="16" alt="Edit">
+                                            </button>
+                                            <button type="button" class="btn btn-sm btn-danger delete-btn" onclick="deleteExpense(<?= $row['record_id'] ?>)">
+                                                <img src="icons/trash.svg" alt="Delete" width="16">
+                                            </button>
+                                        </td>
+                                    </tr>
                                 <?php endforeach; ?>
-                            </select>
-                        </div>
-                        
-                        <div class="mb-3">
-                            <label for="filter-subcategory" class="form-label">Subcategory</label>
-                            <select id="filter-subcategory" name="subcategory" class="form-select" 
-                                <?= empty($_GET['category']) ? 'disabled' : '' ?>>
-                                <option value="">All Subcategories</option>
-                                <?php 
-                                if (!empty($_GET['category'])) {
-                                    foreach ($subcategories as $subcat) {
-                                        if ($subcat['category_name'] === $_GET['category']) {
-                                            echo '<option value="' . htmlspecialchars($subcat['subcategory_name']) . '"';
-                                            if (isset($_GET['subcategory']) && $_GET['subcategory'] === $subcat['subcategory_name']) echo ' selected';
-                                            echo '>' . htmlspecialchars($subcat['subcategory_name']) . '</option>';
-                                        }
-                                    }
-                                }
-                                ?>
-                            </select>
-                        </div>
-                    </div>
-                    <div class="modal-footer">
-                        <a href="?projectId=<?= $project_id ?><?= isset($_GET['view']) ? '&view=' . htmlspecialchars($_GET['view']) : '' ?>" 
-                            class="btn btn-secondary">Reset</a>
-                        <button type="submit" class="btn btn-primary">Apply Filter</button>
-                    </div>
-                </form>
-            </div>
-        </div>
-    </div>
-
-    <!-- Sort Modal -->
-    <div class="modal fade" id="sortModal" tabindex="-1" role="dialog" aria-labelledby="sortModalLabel" aria-hidden="true">
-        <div class="modal-dialog" role="document">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title" id="sortModalLabel">Sort Records</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                            <?php else: ?>
+                                <tr><td colspan="11" class="text-center">No records available for this project.</td></tr>
+                            <?php endif; ?>
+                        </tbody>
+                    </table>
                 </div>
-                <form id="sort-form" action="" method="get">
-                    <div class="modal-body">
-                        <input type="hidden" name="projectId" value="<?= $project_id ?>">
-                        <?php if (isset($_GET['category'])): ?>
-                        <input type="hidden" name="category" value="<?= htmlspecialchars($_GET['category']) ?>">
-                        <?php endif; ?>
-                        <?php if (isset($_GET['subcategory'])): ?>
-                        <input type="hidden" name="subcategory" value="<?= htmlspecialchars($_GET['subcategory']) ?>">
-                        <?php endif; ?>
-                        <?php if (isset($_GET['view'])): ?>
-                        <input type="hidden" name="view" value="<?= htmlspecialchars($_GET['view']) ?>">
-                        <?php endif; ?>
-                        
-                        <div class="sort-options">
-                            <label class="fw-bold mb-3">Sort By</label>
-                            <div class="form-check p-2 mb-2 border rounded">
-                                <input class="form-check-input" type="radio" name="sort_by" id="sort-a-z" value="a-z" 
-                                    <?= isset($_GET['sort_by']) && $_GET['sort_by'] === 'a-z' ? 'checked' : '' ?>>
-                                <label class="form-check-label w-100" for="sort-a-z">
-                                    A to Z (Description)
-                                </label>
-                            </div>
-                            <div class="form-check p-2 mb-2 border rounded">
-                                <input class="form-check-input" type="radio" name="sort_by" id="sort-z-a" value="z-a" 
-                                    <?= isset($_GET['sort_by']) && $_GET['sort_by'] === 'z-a' ? 'checked' : '' ?>>
-                                <label class="form-check-label w-100" for="sort-z-a">
-                                    Z to A (Description)
-                                </label>
-                            </div>
-                            <div class="form-check p-2 mb-2 border rounded">
-                                <input class="form-check-input" type="radio" name="sort_by" id="sort-oldest-newest" value="oldest-newest" 
-                                    <?= isset($_GET['sort_by']) && $_GET['sort_by'] === 'oldest-newest' ? 'checked' : '' ?>>
-                                <label class="form-check-label w-100" for="sort-oldest-newest">
-                                    Oldest to Newest
-                                </label>
-                            </div>
-                            <div class="form-check p-2 mb-2 border rounded">
-                                <input class="form-check-input" type="radio" name="sort_by" id="sort-newest-oldest" value="newest-oldest" 
-                                    <?= isset($_GET['sort_by']) && $_GET['sort_by'] === 'newest-oldest' ? 'checked' : (!isset($_GET['sort_by']) ? 'checked' : '') ?>>
-                                <label class="form-check-label w-100" for="sort-newest-oldest">
-                                    Newest to Oldest
-                                </label>
-                            </div>
-                            <div class="form-check p-2 mb-2 border rounded">
-                                <input class="form-check-input" type="radio" name="sort_by" id="sort-highest-lowest" value="highest-lowest" 
-                                    <?= isset($_GET['sort_by']) && $_GET['sort_by'] === 'highest-lowest' ? 'checked' : '' ?>>
-                                <label class="form-check-label w-100" for="sort-highest-lowest">
-                                    Highest to Lowest Cost
-                                </label>
-                            </div>
-                            <div class="form-check p-2 mb-2 border rounded">
-                                <input class="form-check-input" type="radio" name="sort_by" id="sort-lowest-highest" value="lowest-highest" 
-                                    <?= isset($_GET['sort_by']) && $_GET['sort_by'] === 'lowest-highest' ? 'checked' : '' ?>>
-                                <label class="form-check-label w-100" for="sort-lowest-highest">
-                                    Lowest to Highest Cost
-                                </label>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="modal-footer">
-                        <a href="?projectId=<?= $project_id ?><?= isset($_GET['view']) ? '&view=' . htmlspecialchars($_GET['view']) : '' ?>" 
-                            class="btn btn-secondary">Reset</a>
-                        <button type="submit" class="btn btn-primary">Apply Sort</button>
-                    </div>
-                </form>
+            </div>
+
+            <!--ANALYTICS VIEW -->
+            <div class="analytics-view container py-4" id="analytics-view" style="display: none;">
+                <?php include('analytics_view.php'); ?>
             </div>
         </div>
     </div>
+    
+    <?php include('edit_project_modal.php'); ?>
 
     <script src="js/sidebar.js"></script>
     <script src="js/header.js"></script>
