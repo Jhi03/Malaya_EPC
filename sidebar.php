@@ -12,7 +12,7 @@
     <a class="nav-link-item <?php echo (basename($_SERVER['PHP_SELF']) == 'ms_assets.php') ? 'active' : ''; ?>" href="ms_assets.php">
         <img src="icons/sidebar-icons/assets.svg" alt="Assets Icon" class="me-2" width="24"></i><span>Assets</span>
     </a>
-    <a class="nav-link-item <?php echo (basename($_SERVER['PHP_SELF']) == 'ms_expenses.php') ? 'active' : ''; ?>" href="ms_expenses.php">
+    <a class="nav-link-item <?php echo (basename($_SERVER['PHP_SELF']) == 'ms_expenses.php' || (basename($_SERVER['PHP_SELF']) == 'ms_records.php' && isset($_GET['projectId']) && $_GET['projectId'] == 1)) ? 'active' : ''; ?>" href="ms_records.php?projectId=1">
         <img src="icons/sidebar-icons/expense.svg" alt="Expense Icon" class="me-2" width="24"></i><span>Expenses</span>
     </a>
     <a class="nav-link-item <?php echo (basename($_SERVER['PHP_SELF']) == 'ms_workforce.php') ? 'active' : ''; ?>" href="ms_workforce.php">

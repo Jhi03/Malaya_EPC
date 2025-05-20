@@ -55,7 +55,7 @@
     <div class="content-area">
         <?php include 'header.php'; ?>
         <div class="content-body">
-            <!-- Project Summary -->
+            <!-- ms_workforce.php contents here -->
         </div>
     </div>
 
@@ -63,22 +63,3 @@
     <script src="js/header.js"></script>
 </body>
 </html>
-
-<!-- 
-NOTES:
-    04-20-25
-    CHANGES:
-    - side bar: won't scroll, and animation added
-    - topbar: contents will scroll under it 
-
-    TO BE WORKED ON:
-    - dashboard layout [not started]
-    
-    04-24-25
-    CHANGES:
-    - login page: login and session tracking added
-    - user menu: added settings and logout button
-
-    NO FUNCTION:
-    - settings: from user menu
--->

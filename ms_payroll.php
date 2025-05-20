@@ -29,7 +29,7 @@
     // Handle payroll entry deletion
     if (isset($_POST['delete_payroll'])) {
         $payroll_id = $_POST['payroll_id'];
-        $delete_sql = "DELETE FROM payroll WHERE id = ?";
+        $delete_sql = "DELETE FROM payroll WHERE payroll_id = ?";  // Changed 'id' to 'payroll_id'
         $stmt = $conn->prepare($delete_sql);
         $stmt->bind_param("i", $payroll_id);
         
@@ -84,7 +84,7 @@
                 net_pay = ?, 
                 payment_method = ?, 
                 remarks = ? 
-                WHERE id = ?";
+                WHERE payroll_id = ?";  // Changed 'id' to 'payroll_id'
             
             $stmt = $conn->prepare($sql);
             $stmt->bind_param("issdddddddddddddssi", 
@@ -123,10 +123,10 @@
         $stmt->close();
     }
     
-    // Fetch all employees for dropdown
+    // Fetch all employees for dropdown - FIXED: changed 'account_status' to 'employment_status'
     $employees_query = "SELECT e.employee_id, CONCAT(e.first_name, ' ', e.last_name) as employee_name 
                        FROM employee e 
-                       WHERE e.status = 'active' 
+                       WHERE e.employment_status = 'active' 
                        ORDER BY e.last_name, e.first_name";
     $employees_result = $conn->query($employees_query);
     $employees = [];

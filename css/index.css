@@ -1,3 +1,4 @@
+
 :root {
     --primary-color: #f6d757;
     --primary-hover: #eac843;
@@ -22,68 +23,11 @@ html, body {
 }
 
 .login-container {
-    display: flex;
     height: 100vh;
     width: 100vw;
     position: relative;
-}
-
-/* Image panel (background) */
-.image-panel {
-    width: 50%;
-    position: absolute;
-    top: 0;
-    right: 0;
-    height: 100%;
-    overflow: hidden;
-}
-
-.background-image {
-    position: absolute;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
-    filter: brightness(0.7);
-    transition: transform 8s ease;
-}
-
-.image-panel:hover .background-image {
-    transform: scale(1.05);
-}
-
-.image-overlay {
-    position: absolute;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    background: linear-gradient(
-        135deg, 
-        rgba(0, 0, 0, 0.4) 0%, 
-        rgba(0, 0, 0, 0.2) 100%
-    );
-    display: flex;
-    align-items: center;
-    justify-content: center;
-}
-
-/* Left panel with dark theme and diagonal pattern */
-.brand-panel {
-    width: 50%;
+    /* The brand panel becomes the background */
     background-color: var(--dark-bg);
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
-    align-items: center;
-    color: var(--light-text);
-    position: relative;
-    padding: 10rem;
-    padding-right: 20rem;
-    z-index: 5; /* Ensures it sits on top of the image panel */
-    
-    /* Diagonal lines pattern */
     background-image: repeating-linear-gradient(
         45deg,
         rgba(60, 60, 60, 0.7) 0px,
@@ -91,14 +35,18 @@ html, body {
         transparent 1px,
         transparent 20px
     );
-    
-    overflow: hidden;
 }
 
+/* Brand panel content repositioned */
 .brand-content {
-    z-index: 2;
+    position: absolute;
+    top: 50%;
+    left: 25%;
+    transform: translate(-50%, -50%);
+    color: var(--light-text);
     text-align: center;
-    max-width: 90%;
+    z-index: 2;
+    width: 40%;
 }
 
 .brand-logo {
@@ -120,6 +68,50 @@ html, body {
     margin-bottom: 2rem;
 }
 
+/* Image panel repositioned */
+.image-panel {
+    position: absolute;
+    top: 50%;
+    right: 2%;
+    transform: translateY(-50%);
+    width: 48%; /* 5% smaller than before (was 50%) */
+    height: 95%; /* Control the height */
+    border-radius: 20px;
+    overflow: hidden;
+    /* Inward shadow effect */
+    box-shadow: inset 0 0 30px 5px rgba(0, 0, 0, 0.5);
+}
+
+.background-image {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    filter: brightness(0.7);
+    transition: transform 8s ease;
+}
+
+.image-panel:hover .background-image {
+    transform: scale(1.08);
+}
+
+.image-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(
+        135deg, 
+        rgba(0, 0, 0, 0.4) 0%, 
+        rgba(0, 0, 0, 0.2) 100%
+    );
+    /* Additional inward shadow for more depth */
+    box-shadow: inset 0 0 100px 20px rgba(0, 0, 0, 0.5);
+}
+
 /* Login form card */
 .login-card {
     position: absolute;
@@ -131,7 +123,7 @@ html, body {
     border-radius: 20px;
     padding: 3rem;
     box-shadow: var(--box-shadow);
-    z-index: 10; /* Ensure it's above both panels */
+    z-index: 10;
 }
 
 .login-header {
@@ -237,15 +229,22 @@ html, body {
 }
 
 /* Responsive adjustments */
-@media (max-width: 1024px) {
-    .brand-panel {
-        width: 55%;
-        padding: 5rem;
-        padding-right: 10rem;
+@media (max-width: 1200px) {
+    .brand-content {
+        left: 20%;
+        width: 30%;
     }
     
     .image-panel {
-        width: 70%;
+        width: 40%;
+        right: 5%;
+    }
+}
+
+@media (max-width: 992px) {
+    .brand-content {
+        left: 15%;
+        width: 25%;
     }
     
     .login-card {
@@ -254,27 +253,13 @@ html, body {
 }
 
 @media (max-width: 768px) {
-    .login-container {
-        flex-direction: column;
-    }
-    
-    .brand-panel {
-        width: 100%;
-        height: 40%;
-        padding: 2rem;
-        border-radius: 0;
-        border-bottom-left-radius: 25%;
-        border-bottom-right-radius: 25%;
-    }
-    
-    .image-panel {
-        width: 100%;
-        height: 100%;
-        z-index: 1;
-    }
-    
     .brand-content {
+        position: static;
+        transform: none;
+        padding: 2rem;
+        width: 100%;
         max-width: 100%;
+        margin: 0 auto;
     }
     
     .brand-logo {
@@ -291,9 +276,18 @@ html, body {
         margin-bottom: 1rem;
     }
     
+    .image-panel {
+        display: none; /* Hide image panel on mobile */
+    }
+    
     .login-card {
+        position: relative;
+        top: auto;
+        left: auto;
+        transform: none;
         width: 90%;
         max-width: 350px;
+        margin: 0 auto;
         padding: 2rem;
     }
 }
