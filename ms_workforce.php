@@ -100,7 +100,7 @@
                 
                 $stmt = $conn->prepare($sql);
                 $stmt->bind_param(
-                    "issssssssssss",
+                    "issssssissssssf",
                     $employee_id, $first_name, $middle_name, $last_name, $position, $department, $employment_status, 
                     $contact, $unit_no, $building, $street, $barangay, $city, $country
                 );
@@ -208,6 +208,10 @@
             $employee_id = $_POST['employee_id'];
             $action = $_POST['account_action'];
             
+            // Include authentication helper
+            require_once 'google_auth.php';
+            $auth = new MalayaSolarAuth();
+            
             // Start transaction
             $conn->begin_transaction();
             
@@ -216,7 +220,6 @@
                     // Create new account
                     $username = $_POST['username'];
                     $email = $_POST['email'];
-                    $password = $_POST['password'];
                     $role = $_POST['role'];
                     
                     // Check if user already exists
@@ -229,13 +232,17 @@
                         throw new Exception("User account already exists for this employee.");
                     }
                     
+                    // Generate a random password
+                    $password = $auth->generateRandomPassword(12);
+                    $display_password = $password; // Store for display
+                    
                     // Hash the password
-                    $hashed_password = password_hash($password, PASSWORD_DEFAULT);
+                    $hashed_password = $auth->hashPassword($password);
                     
                     // Insert into users table
                     $sql = "INSERT INTO users (
                         employee_id, username, email, password, role, account_status
-                    ) VALUES (?, ?, ?, ?, ?, 'active')";
+                    ) VALUES (?, ?, ?, ?, ?, 'new')";
                     
                     $stmt = $conn->prepare($sql);
                     $stmt->bind_param(
@@ -247,7 +254,7 @@
                         throw new Exception("Error creating user account: " . $stmt->error);
                     }
                     
-                    $message = "User account created successfully!";
+                    $message = "User account created successfully! The initial password is: <strong>" . $display_password . "</strong>";
                 } 
                 else if ($action === 'update') {
                     // Update existing account
@@ -259,10 +266,11 @@
                     // Update password only if provided
                     if (!empty($_POST['password'])) {
                         $password = $_POST['password'];
-                        $hashed_password = password_hash($password, PASSWORD_DEFAULT);
+                        $hashed_password = $auth->hashPassword($password);
                         
                         $sql = "UPDATE users SET 
-                            username = ?, email = ?, password = ?, role = ?, account_status = ?
+                            username = ?, email = ?, password = ?, role = ?, account_status = ?,
+                            failed_attempts = 0
                             WHERE employee_id = ?";
                         
                         $stmt = $conn->prepare($sql);
@@ -272,7 +280,8 @@
                         );
                     } else {
                         $sql = "UPDATE users SET 
-                            username = ?, email = ?, role = ?, account_status = ?
+                            username = ?, email = ?, role = ?, account_status = ?,
+                            failed_attempts = 0
                             WHERE employee_id = ?";
                         
                         $stmt = $conn->prepare($sql);
@@ -300,9 +309,10 @@
                         }
                         
                         $reset_stmt->close();
+                        $message = "User account updated successfully! 2FA has been reset.";
+                    } else {
+                        $message = "User account updated successfully!";
                     }
-                    
-                    $message = "User account updated successfully!";
                 }
                 else if ($action === 'unlock') {
                     // Unlock account
@@ -336,6 +346,27 @@
                     $log_stmt->execute();
                     
                     $message = "Account unlocked successfully!";
+                }
+                else if ($action === 'reset_password') {
+                    // Generate and set a new random password
+                    $password = $auth->generateRandomPassword(12);
+                    $display_password = $password; // Store for display
+                    
+                    // Hash the password
+                    $hashed_password = $auth->hashPassword($password);
+                    
+                    $sql = "UPDATE users SET 
+                        password = ?, failed_attempts = 0
+                        WHERE employee_id = ?";
+                    
+                    $stmt = $conn->prepare($sql);
+                    $stmt->bind_param("si", $hashed_password, $employee_id);
+                    
+                    if (!$stmt->execute()) {
+                        throw new Exception("Error resetting password: " . $stmt->error);
+                    }
+                    
+                    $message = "Password reset successfully! The new password is: <strong>" . $display_password . "</strong>";
                 }
                 else if ($action === 'delete') {
                     // Delete user account
@@ -1406,6 +1437,12 @@
                                             <option value="disabled">Disabled</option>
                                         </select>
                                     </div>
+                                    <div class="col-md-6 d-none" id="auth_status_field">
+                                        <label class="form-label">2FA Status</label>
+                                        <div class="form-control" style="background-color: #f8f9fa;">
+                                            <span id="auth_status_text">Not configured</span>
+                                        </div>
+                                    </div>
                                 </div>
                                 
                                 <div class="mt-3 d-none" id="reset_2fa_field">
@@ -1426,6 +1463,10 @@
                             <div class="d-flex justify-content-between">
                                 <button type="button" id="unlock_account_btn" class="btn btn-success" onclick="setAccountAction('unlock')">
                                     <i class="fas fa-unlock"></i> Unlock Account
+                                </button>
+                                
+                                <button type="button" id="reset_password_btn" class="btn btn-warning" onclick="confirmResetPassword()">
+                                    <i class="fas fa-key"></i> Reset Password
                                 </button>
                                 
                                 <button type="button" id="delete_account_btn" class="btn btn-danger" onclick="confirmDeleteAccount()">
@@ -1593,9 +1634,11 @@
             const passwordLabel = document.getElementById('password_label');
             const passwordNote = document.getElementById('password_note');
             const accountStatusField = document.getElementById('account_status_field');
+            const authStatusField = document.getElementById('auth_status_field');
             const resetTwoFAField = document.getElementById('reset_2fa_field');
             const submitBtn = document.getElementById('account_submit_btn');
             const unlockBtn = document.getElementById('unlock_account_btn');
+            const resetPasswordBtn = document.getElementById('reset_password_btn');
             
             // Reset form
             document.getElementById('account_action').value = hasAccount ? 'update' : 'create';
@@ -1607,6 +1650,7 @@
                 
                 // Show additional fields for existing accounts
                 accountStatusField.classList.remove('d-none');
+                authStatusField.classList.remove('d-none');
                 resetTwoFAField.classList.remove('d-none');
                 accountActions.classList.remove('d-none');
                 
@@ -1625,6 +1669,7 @@
                 
                 // Hide additional fields for new accounts
                 accountStatusField.classList.add('d-none');
+                authStatusField.classList.add('d-none');
                 resetTwoFAField.classList.add('d-none');
                 accountActions.classList.add('d-none');
                 
@@ -1649,18 +1694,68 @@
         
         // Fetch account details via AJAX
         function fetchAccountDetails(employeeId) {
-            // In a real implementation, this would make an AJAX call to get the account details
-            // For demonstration, we'll simulate this with setTimeout
-            setTimeout(() => {
-                // These values would normally come from the server
-                document.getElementById('account_username').value = 'user' + employeeId;
-                document.getElementById('account_email').value = 'user' + employeeId + '@example.com';
-                document.getElementById('account_role').value = 'user';
-                document.getElementById('account_status').value = 'active';
-                document.getElementById('reset_2fa').checked = false;
-            }, 300);
+            // Make an AJAX call to fetch the real account details
+            fetch('get_account_details.php?employee_id=' + employeeId)
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        // Fill in the form fields
+                        document.getElementById('account_username').value = data.username;
+                        document.getElementById('account_email').value = data.email;
+                        document.getElementById('account_role').value = data.role;
+                        document.getElementById('account_status').value = data.account_status;
+                        
+                        // Update the 2FA status text
+                        const authStatusText = document.getElementById('auth_status_text');
+                        if (data.authenticator_secret) {
+                            authStatusText.textContent = 'Configured';
+                            authStatusText.className = 'text-success';
+                            document.getElementById('reset_2fa').disabled = false;
+                        } else {
+                            authStatusText.textContent = 'Not configured';
+                            authStatusText.className = 'text-muted';
+                            document.getElementById('reset_2fa').disabled = true;
+                        }
+                        
+                        // Show/hide the unlock button based on account status
+                        const unlockBtn = document.getElementById('unlock_account_btn');
+                        if (data.account_status === 'locked') {
+                            unlockBtn.style.display = 'block';
+                        } else {
+                            unlockBtn.style.display = 'none';
+                        }
+                    } else {
+                        alert('Failed to fetch account details: ' + data.message);
+                    }
+                })
+                .catch(error => {
+                    console.error('Error fetching account details:', error);
+                    
+                    // Fallback in case the endpoint doesn't exist yet
+                    // These values would normally come from the server
+                    document.getElementById('account_username').value = 'user' + employeeId;
+                    document.getElementById('account_email').value = 'user' + employeeId + '@example.com';
+                    document.getElementById('account_role').value = 'user';
+                    document.getElementById('account_status').value = 'active';
+                    document.getElementById('reset_2fa').checked = false;
+                    
+                    // Show both for fallback
+                    const authStatusText = document.getElementById('auth_status_text');
+                    authStatusText.textContent = 'Unknown';
+                    authStatusText.className = 'text-muted';
+                    
+                    document.getElementById('unlock_account_btn').style.display = 'block';
+                });
         }
         
+        // Confirm password reset
+        function confirmResetPassword() {
+            if (confirm('Are you sure you want to reset this user\'s password? A new random password will be generated.')) {
+                document.getElementById('account_action').value = 'reset_password';
+                document.querySelector('#accountModal form').submit();
+            }
+        }
+
         // Set account action (unlock, delete)
         function setAccountAction(action) {
             document.getElementById('account_action').value = action;

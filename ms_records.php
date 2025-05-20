@@ -799,7 +799,7 @@
 
         <div class="content-body">
             <!-- Project Summary -->
-            <?php if ($project): ?>
+            <?php if ($project && $project_id != 1): ?>
                 <div class="project-summary position-relative">
                     <div class="project-options">
                         <button class="ellipsis-btn" onclick="toggleDropdown(this)">
@@ -829,6 +829,7 @@
                         <p><strong>DESCRIPTION:</strong> <?= htmlspecialchars($project['description']) ?></p>
                     </div>
                 </div>
+            <?php elseif ($project && $project_id == 1): ?>
             <?php else: ?>
                 <p class="text-danger text-center">Project not found.</p>
             <?php endif; ?>
@@ -941,7 +942,9 @@
         </div>
     </div>
     
-    <?php include('edit_project_modal.php'); ?>
+    <?php if ($project_id != 1): ?>
+        <?php include('edit_project_modal.php'); ?>
+    <?php endif; ?>
 
     <script src="js/sidebar.js"></script>
     <script src="js/header.js"></script>
