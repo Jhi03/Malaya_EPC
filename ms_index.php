@@ -8,10 +8,12 @@ $auth = new MalayaSolarAuth();
 // Check if the library is available
 $auth_lib_available = $auth->isLibraryAvailable();
 
-// Initialize error variable
+// Initialize state variables
 $error = '';
 $show_2fa_form = false;
 $show_2fa_setup = false;
+$show_security_questions = false;
+$show_security_recovery = false;
 $qr_code_url = '';
 $auth_secret = '';
 $temp_user_id = '';
@@ -20,15 +22,11 @@ $temp_username = '';
 // Handle login form submission
 if ($_SERVER["REQUEST_METHOD"] == "POST") {
     // If 2FA library is not available, show a message to administrators
-    if (!$auth_lib_available && isset($_POST['auth_code']) || isset($_POST['setup_auth_code'])) {
+    if (!$auth_lib_available && (isset($_POST['auth_code']) || isset($_POST['setup_auth_code']))) {
         $error = "Two-factor authentication library is not available. Please contact the system administrator.";
     }
     // Handle 2FA code submission
     elseif (isset($_POST['auth_code'])) {
-        // Your existing code...
-    }
-    // Handle 2FA code submission
-    if (isset($_POST['auth_code'])) {
         // Get the stored user data from session
         $user_id = $_SESSION['temp_user_id'];
         $auth_secret = $_SESSION['temp_auth_secret'];
@@ -36,10 +34,10 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         
         // Get user info
         $conn = new mysqli("localhost", "root", "", "malayasol");
-        $stmt = $conn->prepare("SELECT username, preferred_2fa FROM users WHERE user_id = ?");
+        $stmt = $conn->prepare("SELECT username, role, preferred_2fa FROM users WHERE user_id = ?");
         $stmt->bind_param("i", $user_id);
         $stmt->execute();
-        $stmt->bind_result($username, $preferred_2fa);
+        $stmt->bind_result($username, $role, $preferred_2fa);
         $stmt->fetch();
         $stmt->close();
         
@@ -49,11 +47,18 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
             // Update the session to indicate user is fully logged in
             $_SESSION['user_id'] = $user_id;
             $_SESSION['username'] = $username;
+            $_SESSION['role'] = $role;
+            
+            // Update last login time
+            $update_stmt = $conn->prepare("UPDATE users SET last_login = NOW() WHERE user_id = ?");
+            $update_stmt->bind_param("i", $user_id);
+            $update_stmt->execute();
+            $update_stmt->close();
             
             // Record the login in login_attempts table
             $ip = $_SERVER['REMOTE_ADDR'];
             $log_sql = "INSERT INTO login_attempts (user_id, attempt_time, ip_address, success, notes) 
-                        VALUES (?, NOW(), ?, 1, '2FA completed: authenticator')";
+                       VALUES (?, NOW(), ?, 1, '2FA completed: authenticator')";
             
             $log_stmt = $conn->prepare($log_sql);
             $log_stmt->bind_param("is", $user_id, $ip);
@@ -84,8 +89,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
             
             $update_sql = "UPDATE users SET 
                            authenticator_secret = ?, 
-                           preferred_2fa = 'authenticator',
-                           account_status = 'active'
+                           preferred_2fa = 'authenticator'
                            WHERE user_id = ?";
             
             $update_stmt = $conn->prepare($update_sql);
@@ -111,19 +115,147 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
             $log_stmt->execute();
             $log_stmt->close();
             
-            // Set the session to indicate user is fully logged in
-            $_SESSION['user_id'] = $user_id;
-            $_SESSION['username'] = $username;
+            // Store temp username for security questions
+            $_SESSION['temp_username'] = $username;
+            
+            // Show security questions form
+            $show_security_questions = true;
+            $show_2fa_setup = false;
             
             $conn->close();
-            
-            // Redirect to dashboard
-            header("Location: ms_dashboard.php");
-            exit();
         } else {
             $error = "Invalid authentication code. Please try again.";
             $show_2fa_setup = true;
             $qr_code_url = $auth->getQRCodeUrl($_SESSION['temp_username'], $auth_secret);
+        }
+    }
+    // Handle security questions setup
+    elseif (isset($_POST['setup_security_questions'])) {
+        $user_id = $_SESSION['temp_user_id'];
+        $question1_id = $_POST['security_question1'];
+        $answer1 = $_POST['security_answer1'];
+        $question2_id = $_POST['security_question2'];
+        $answer2 = $_POST['security_answer2'];
+        
+        // Validate inputs
+        if (empty($question1_id) || empty($answer1) || empty($question2_id) || empty($answer2)) {
+            $error = "Please select two questions and provide answers.";
+            $show_security_questions = true;
+        } elseif ($question1_id == $question2_id) {
+            $error = "Please select two different security questions.";
+            $show_security_questions = true;
+        } else {
+            // Hash the answers for security
+            $answer1_hash = password_hash($answer1, PASSWORD_DEFAULT);
+            $answer2_hash = password_hash($answer2, PASSWORD_DEFAULT);
+            
+            $conn = new mysqli("localhost", "root", "", "malayasol");
+            
+            // Insert security question answers
+            $conn->begin_transaction();
+            
+            try {
+                // Insert first question answer
+                $stmt1 = $conn->prepare("INSERT INTO user_security_answers (user_id, question_id, answer_hash) VALUES (?, ?, ?)");
+                $stmt1->bind_param("iis", $user_id, $question1_id, $answer1_hash);
+                $stmt1->execute();
+                $stmt1->close();
+                
+                // Insert second question answer
+                $stmt2 = $conn->prepare("INSERT INTO user_security_answers (user_id, question_id, answer_hash) VALUES (?, ?, ?)");
+                $stmt2->bind_param("iis", $user_id, $question2_id, $answer2_hash);
+                $stmt2->execute();
+                $stmt2->close();
+                
+                // Update user account status to active
+                $stmt3 = $conn->prepare("UPDATE users SET account_status = 'active' WHERE user_id = ?");
+                $stmt3->bind_param("i", $user_id);
+                $stmt3->execute();
+                $stmt3->close();
+                
+                $conn->commit();
+                
+                // Set session variables
+                $_SESSION['user_id'] = $user_id;
+                $_SESSION['username'] = $_SESSION['temp_username'];
+                
+                // Clear temporary session data
+                unset($_SESSION['temp_user_id']);
+                unset($_SESSION['temp_auth_secret']);
+                unset($_SESSION['temp_username']);
+                
+                // Redirect to dashboard
+                header("Location: ms_dashboard.php");
+                exit();
+                
+            } catch (Exception $e) {
+                $conn->rollback();
+                $error = "An error occurred during setup. Please try again.";
+                $show_security_questions = true;
+            }
+            
+            $conn->close();
+        }
+    }
+    // Handle security recovery questions
+    elseif (isset($_POST['security_recovery'])) {
+        $user_id = $_POST['user_id'];
+        $question_id = $_POST['question_id'];
+        $answer = $_POST['security_answer'];
+        
+        if (empty($answer)) {
+            $error = "Please provide an answer to the security question.";
+            $show_security_recovery = true;
+        } else {
+            $conn = new mysqli("localhost", "root", "", "malayasol");
+            
+            // Get the stored answer hash
+            $stmt = $conn->prepare("SELECT answer_hash FROM user_security_answers WHERE user_id = ? AND question_id = ?");
+            $stmt->bind_param("ii", $user_id, $question_id);
+            $stmt->execute();
+            $stmt->bind_result($stored_hash);
+            $has_result = $stmt->fetch();
+            $stmt->close();
+            
+            if ($has_result && password_verify($answer, $stored_hash)) {
+                // Answer is correct, unlock the account
+                $update = $conn->prepare("UPDATE users SET account_status = 'active', failed_attempts = 0 WHERE user_id = ?");
+                $update->bind_param("i", $user_id);
+                $update->execute();
+                $update->close();
+                
+                // Get user's 2FA secret
+                $stmt = $conn->prepare("SELECT authenticator_secret, username FROM users WHERE user_id = ?");
+                $stmt->bind_param("i", $user_id);
+                $stmt->execute();
+                $stmt->bind_result($auth_secret, $username);
+                $stmt->fetch();
+                $stmt->close();
+                
+                // Store temp info for 2FA verification
+                $_SESSION['temp_user_id'] = $user_id;
+                $_SESSION['temp_auth_secret'] = $auth_secret;
+                
+                // Log the recovery attempt
+                $ip = $_SERVER['REMOTE_ADDR'];
+                $log_sql = "INSERT INTO login_attempts (user_id, attempt_time, ip_address, success, notes) 
+                           VALUES (?, NOW(), ?, 1, 'Account unlocked via security question')";
+                
+                $log_stmt = $conn->prepare($log_sql);
+                $log_stmt->bind_param("is", $user_id, $ip);
+                $log_stmt->execute();
+                $log_stmt->close();
+                
+                // Show 2FA form
+                $show_2fa_form = true;
+                $show_security_recovery = false;
+                
+            } else {
+                $error = "Incorrect answer. Please try again or contact an administrator.";
+                $show_security_recovery = true;
+            }
+            
+            $conn->close();
         }
     }
     // Handle initial login
@@ -155,7 +287,26 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
 
             // Check if account is locked
             if ($user['account_status'] === 'locked') {
-                $error = "Your account is locked. Please contact an administrator.";
+                // Get security questions for this user
+                $q_stmt = $conn->prepare("SELECT q.question_id, q.question_text 
+                                         FROM user_security_answers sa
+                                         JOIN security_questions q ON sa.question_id = q.question_id
+                                         WHERE sa.user_id = ?
+                                         LIMIT 1");
+                $q_stmt->bind_param("i", $user['user_id']);
+                $q_stmt->execute();
+                $q_result = $q_stmt->get_result();
+                $q_stmt->close();
+                
+                if ($q_result->num_rows > 0) {
+                    // Show security question recovery
+                    $security_question = $q_result->fetch_assoc();
+                    $_SESSION['recovery_question'] = $security_question;
+                    $_SESSION['recovery_user_id'] = $user['user_id'];
+                    $show_security_recovery = true;
+                } else {
+                    $error = "Your account is locked. Please contact an administrator.";
+                }
                 
                 // Log failed attempt due to locked account
                 $ip = $_SERVER['REMOTE_ADDR'];
@@ -311,9 +462,23 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
 }
 
 // If already logged in, redirect to dashboard
-if (isset($_SESSION['username']) && !isset($error) && !$show_2fa_form && !$show_2fa_setup) {
+if (isset($_SESSION['username']) && !isset($error) && !$show_2fa_form && !$show_2fa_setup && !$show_security_questions && !$show_security_recovery) {
     header("Location: ms_dashboard.php");
     exit();
+}
+
+// Load security questions if needed
+$security_questions = [];
+if ($show_security_questions || $show_security_recovery) {
+    $conn = new mysqli("localhost", "root", "", "malayasol");
+    $query = "SELECT question_id, question_text FROM security_questions";
+    $result = $conn->query($query);
+    
+    while ($row = $result->fetch_assoc()) {
+        $security_questions[$row['question_id']] = $row['question_text'];
+    }
+    
+    $conn->close();
 }
 ?>
 
@@ -327,110 +492,6 @@ if (isset($_SESSION['username']) && !isset($error) && !$show_2fa_form && !$show_
     <link href="css/index.css" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
-    <style>
-        /* Additional styles for 2FA form */
-        .auth-card {
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            width: 400px;
-            background-color: white;
-            border-radius: 20px;
-            padding: 3rem;
-            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
-            z-index: 10;
-            text-align: center;
-        }
-        
-        .auth-title {
-            font-size: 1.75rem;
-            color: #333;
-            margin-bottom: 0.5rem;
-        }
-        
-        .auth-subtitle {
-            color: #666;
-            font-size: 1rem;
-            margin-bottom: 2rem;
-        }
-        
-        .code-input {
-            letter-spacing: 8px;
-            font-size: 1.5rem;
-            padding: 0.75rem;
-            text-align: center;
-            width: 100%;
-            margin-bottom: 1.5rem;
-        }
-        
-        .qr-code {
-            display: block;
-            margin: 0 auto 1.5rem auto;
-            max-width: 200px;
-            height: auto;
-        }
-        
-        .qr-container {
-            position: relative;
-            margin: 0 auto 1.5rem auto;
-            max-width: 200px;
-        }
-
-        .qr-fallback-info {
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background-color: rgba(255, 255, 255, 0.9);
-            padding: 10px;
-            font-size: 0.8rem;
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-            text-align: center;
-            border-radius: 5px;
-        }
-
-        .otpauth-url {
-            word-break: break-all;
-            background: #f0f0f0;
-            padding: 5px;
-            border-radius: 3px;
-            font-size: 0.7rem;
-            color: #555;
-            max-height: 60px;
-            overflow-y: auto;
-            margin-top: 5px;
-        }
-
-        .auth-instructions {
-            margin-bottom: 2rem;
-            text-align: left;
-            font-size: 0.9rem;
-            color: #555;
-        }
-        
-        .auth-instructions ol {
-            padding-left: 1.5rem;
-        }
-        
-        .auth-instructions li {
-            margin-bottom: 0.5rem;
-        }
-        
-        .secret-key {
-            font-family: monospace;
-            background-color: #f8f9fa;
-            padding: 0.5rem;
-            border-radius: 4px;
-            font-size: 1rem;
-            letter-spacing: 2px;
-            margin: 1rem 0;
-            word-break: break-all;
-        }
-    </style>
 </head>
 <body>
     <div class="login-container">
@@ -479,10 +540,6 @@ if (isset($_SESSION['username']) && !isset($error) && !$show_2fa_form && !$show_
         <?php elseif ($show_2fa_setup): ?>
             <!-- 2FA Setup Card -->
             <div class="auth-card">
-                <div class="auth-header">
-                    <h2 class="auth-title">Setup Two-Factor Authentication</h2>
-                    <p class="auth-subtitle">Scan this QR code with your authenticator app</p>
-                </div>
                 
                 <?php if (!empty($error)): ?>
                 <div class="error-message">
@@ -490,26 +547,155 @@ if (isset($_SESSION['username']) && !isset($error) && !$show_2fa_form && !$show_
                 </div>
                 <?php endif; ?>
                 
-                <div class="qr-code-container">
-                    <!-- Using the QR code URL from GoogleAuthenticator class -->
-                    <img src="<?= $qr_code_url ?>" alt="QR Code" class="qr-code">
+                <div class="setup-container">
+                    <div class="setup-content">
+                        <div class="setup-left">                            
+                            <form action="ms_index.php" method="POST" class="login-form">
+                                <div class="form-group verification-group">
+                                    <div class="auth-header">
+                                        <h2 class="auth-title">Setup Two-Factor Authentication</h2>
+                                        <p class="auth-subtitle">Enhance your account security</p>
+                                    </div>
+
+                                    <label for="verification-code">Verification Code:</label>
+                                    <input type="text" id="verification-code" name="setup_auth_code" class="code-input" 
+                                        placeholder="______" maxlength="6" inputmode="numeric" pattern="[0-9]*" 
+                                        autocomplete="one-time-code" required autofocus>
+                                </div>
+                                
+                                <button type="submit" class="login-btn">Verify</button>
+                            </form>
+                        </div>
+                        
+                        <div class="setup-right">
+                            <div class="qr-code-wrapper">
+                                <img src="<?= $qr_code_url ?>" alt="QR Code" class="qr-code">
+                            </div>
+                            
+                            <div class="manual-entry">
+                                <p>If you can't scan the QR code, enter this key manually:</p>
+                                <div class="secret-key"><?= $auth_secret ?></div>
+                            </div>
+                        </div>
+                    </div>
                 </div>
-                
-                <p>Or enter this key manually:</p>
-                <div class="secret-key"><?= $auth_secret ?></div>
-                
-                <form action="ms_index.php" method="POST" class="login-form">
-                    <input type="text" name="setup_auth_code" class="code-input" 
-                        placeholder="______" maxlength="6" inputmode="numeric" pattern="[0-9]*" 
-                        autocomplete="one-time-code" required autofocus>
-                    
-                    <button type="submit" class="login-btn">Verify and Activate</button>
-                </form>
                 
                 <div class="login-footer">
                     &copy; 2025 Malaya Solar Energies Inc. All rights reserved.
                 </div>
             </div>
+
+            <?php elseif ($show_security_questions): ?>
+                <!-- Security Questions Setup Card -->
+                <div class="auth-card">
+                    <div class="auth-header">
+                        <h2 class="auth-title">Set Up Security Questions</h2>
+                        <p class="auth-subtitle">Choose and answer 2 security questions for account recovery</p>
+                    </div>
+                    
+                    <?php if (!empty($error)): ?>
+                    <div class="error-message">
+                        <?= $error ?>
+                    </div>
+                    <?php endif; ?>
+                    
+                    <form action="ms_index.php" method="POST" class="security-questions-form">
+                        <input type="hidden" name="setup_security_questions" value="1">
+                        
+                        <div class="form-section">
+                            <h3>Question 1</h3>
+                            <div class="form-group">
+                                <label for="security_question1">Choose a security question:</label>
+                                <select id="security_question1" name="security_question1" class="form-select" required>
+                                    <option value="">Select a question...</option>
+                                    <option value="1">What was the name of your first pet?</option>
+                                    <option value="2">What is your mother's maiden name?</option>
+                                    <option value="3">What was the name of your childhood crush?</option>
+                                    <option value="4">In what city were you born?</option>
+                                    <option value="5">What is the name of your favorite childhood teacher?</option>
+                                    <option value="6">What was the name of your first school?</option>
+                                    <option value="7">What is your favorite book?</option>
+                                </select>
+                            </div>
+                            
+                            <div class="form-group">
+                                <label for="security_answer1">Your answer:</label>
+                                <input type="text" id="security_answer1" name="security_answer1" class="form-input" required>
+                            </div>
+                        </div>
+                        
+                        <div class="form-section">
+                            <h3>Question 2</h3>
+                            <div class="form-group">
+                                <label for="security_question2">Choose a security question:</label>
+                                <select id="security_question2" name="security_question2" class="form-select" required>
+                                    <option value="">Select a question...</option>
+                                    <option value="1">What was the name of your first pet?</option>
+                                    <option value="2">What is your mother's maiden name?</option>
+                                    <option value="3">What was the name of your childhood crush?</option>
+                                    <option value="4">In what city were you born?</option>
+                                    <option value="5">What is the name of your favorite childhood teacher?</option>
+                                    <option value="6">What was the name of your first school?</option>
+                                    <option value="7">What is your favorite book?</option>
+                                </select>
+                            </div>
+                            
+                            <div class="form-group">
+                                <label for="security_answer2">Your answer:</label>
+                                <input type="text" id="security_answer2" name="security_answer2" class="form-input" required>
+                            </div>
+                        </div>
+                        
+                        <button type="submit" class="login-btn">Complete Setup</button>
+                    </form>
+                    
+                    <div class="login-footer">
+                        &copy; 2025 Malaya Solar Energies Inc. All rights reserved.
+                    </div>
+                </div>
+                
+            <?php elseif ($show_security_recovery): ?>
+                <!-- Security Recovery Card -->
+                <div class="auth-card">
+                    <div class="auth-header">
+                        <h2 class="auth-title">Account Recovery</h2>
+                        <p class="auth-subtitle">Answer your security question to unlock your account</p>
+                    </div>
+                    
+                    <?php if (!empty($error)): ?>
+                    <div class="error-message">
+                        <?= $error ?>
+                    </div>
+                    <?php endif; ?>
+                    
+                    <form action="ms_index.php" method="POST" class="security-recovery-form">
+                        <input type="hidden" name="security_recovery" value="1">
+                        <input type="hidden" name="user_id" value="<?= $_SESSION['recovery_user_id'] ?>">
+                        <input type="hidden" name="question_id" value="<?= $_SESSION['recovery_question']['question_id'] ?>">
+                        
+                        <div class="form-group">
+                            <label for="security_question">Security Question:</label>
+                            <div class="question-text"><?= $_SESSION['recovery_question']['question_text'] ?></div>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="security_answer">Your answer:</label>
+                            <input type="text" id="security_answer" name="security_answer" class="form-input" required autofocus>
+                        </div>
+                        
+                        <button type="submit" class="login-btn">Submit</button>
+                    </form>
+                    
+                    <div class="login-options">
+                        <a href="ms_index.php" class="back-to-login">Back to Login</a>
+                        <span>|</span>
+                        <a href="#" class="contact-admin">Contact Administrator</a>
+                    </div>
+                    
+                    <div class="login-footer">
+                        &copy; 2025 Malaya Solar Energies Inc. All rights reserved.
+                    </div>
+                </div>
 
         <?php else: ?>
             <!-- Login Card (Centered) -->
@@ -555,8 +741,58 @@ if (isset($_SESSION['username']) && !isset($error) && !$show_2fa_form && !$show_
     </div>
     
     <script>
-        // Auto-focus code input fields when they appear
+        // Prevent selecting the same security question twice
         document.addEventListener('DOMContentLoaded', function() {
+            const question1 = document.getElementById('security_question1');
+            const question2 = document.getElementById('security_question2');
+            
+            if (question1 && question2) {
+                question1.addEventListener('change', function() {
+                    const selectedValue = this.value;
+                    
+                    // Enable all options in question2
+                    Array.from(question2.options).forEach(option => {
+                        option.disabled = false;
+                    });
+                    
+                    // Disable the option that matches the selected value in question1
+                    if (selectedValue) {
+                        const optionToDisable = question2.querySelector(`option[value="${selectedValue}"]`);
+                        if (optionToDisable) {
+                            optionToDisable.disabled = true;
+                        }
+                        
+                        // If question2 has the same value as question1, reset it
+                        if (question2.value === selectedValue) {
+                            question2.value = '';
+                        }
+                    }
+                });
+                
+                question2.addEventListener('change', function() {
+                    const selectedValue = this.value;
+                    
+                    // Enable all options in question1
+                    Array.from(question1.options).forEach(option => {
+                        option.disabled = false;
+                    });
+                    
+                    // Disable the option that matches the selected value in question2
+                    if (selectedValue) {
+                        const optionToDisable = question1.querySelector(`option[value="${selectedValue}"]`);
+                        if (optionToDisable) {
+                            optionToDisable.disabled = true;
+                        }
+                        
+                        // If question1 has the same value as question2, reset it
+                        if (question1.value === selectedValue) {
+                            question1.value = '';
+                        }
+                    }
+                });
+            }
+            
+            // Auto-focus code input fields when they appear
             const codeInput = document.querySelector('.code-input');
             if (codeInput) {
                 codeInput.focus();
