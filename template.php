@@ -55,7 +55,7 @@
     <div class="content-area">
         <?php include 'header.php'; ?>
         <div class="content-body">
-            <!-- ms_workforce.php contents here -->
+            <!-- contents here -->
         </div>
     </div>
 

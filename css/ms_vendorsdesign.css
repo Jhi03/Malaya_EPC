@@ -210,70 +210,82 @@ search-input:focus {
     transition: all 0.3s ease; 
 }
 
-/* Top bar for the vendor list header */
-/* Container for the vendor list */
-
-
-/* Top bar for the vendor list header */
-.vendor-list-header {
-  background: linear-gradient(135deg, #facc15, #eab308);
-    border-radius: 20px;
-    color: #374151;
-    text-align: center;
-    font-weight: bold;
-    font-size: 16px;
-    height: 40px;
-    line-height: 40px;
-    width: 100%;
-    margin-bottom: 15px;
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.04);
+/* Responsive table */
+.table-responsive {
+    overflow-x: auto;
 }
 
-/* Table inside Vendor List */
+/* Table Base Style */
 .vendor-list table {
-     width: 100%;
-    font-size: 14px;
-    margin: 0;
+    width: 100%;
+    margin-top: 10px;
     border-collapse: collapse;
+    font-size: 12px;
+    background-color: #fff;
+    table-layout: fixed;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.03);
+    border-radius: 10px;
+    overflow: hidden;
 }
 
-/* Header row that stays fixed */
+/* Table Head Styling - darker gray */
 .vendor-list table thead th {
- background-color: #f3f4f6;
+    background-color: #e5e7eb; /* darker gray */
     font-weight: 600;
-    padding: 12px;
-    text-align: left;
-    border-bottom: 2px solid #e5e7eb;
+    text-align: center;
+    border: 1px solid #d1d5db;
+    padding: 10px 12px;
     position: sticky;
     top: 0;
     z-index: 1;
 }
 
+/* Table Body Styling */
+.vendor-list table td {
+    border: 1px solid #e5e7eb;
+    padding: 10px 12px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    text-align: left;
+}
+
+/* Hover effect */
+.vendor-list table tbody tr:hover {
+    background-color: #f1f5f9;
+}
+
+/* Column Widths & Specific Alignments for the vendor table (4 columns) */
+.vendor-list table th:nth-child(1),
+.vendor-list table td:nth-child(1) {
+    width: 40px; /* Fixed width for row number/checkbox */
+    text-align: center !important;
+}
+
+.vendor-list table th:nth-child(2),
+.vendor-list table td:nth-child(2) {
+    width: 45%; /* Vendor name/description - widest column */
+}
+
+.vendor-list table th:nth-child(3),
+.vendor-list table td:nth-child(3) {
+    width: 25%; /* Category or contact column */
+}
+
+.vendor-list table th:nth-child(4),
+.vendor-list table td:nth-child(4) {
+    width: 25%; /* Category or type column */
+}
+
 /* Wrapper container for scrollable table body */
 .vendor-list-table-container {
-   scrollbar-width: thin;
+    scrollbar-width: thin;
     scrollbar-color: #d1d5db #f3f4f6;
 }
 
-/* Table rows */
-.vendor-list table tbody tr {
-    cursor: pointer;
-    transition: background-color 0.2s, transform 0.1s;;
-}
-
-.vendor-list table tbody tr:hover {
-    background-color: rgba(250, 204, 21, 0.05);
-    transform: translateY(-1px);
-}
-
-.vendor-list table td {
-     padding: 12px;
-    text-align: left;
-    border-bottom: 1px solid #e5e7eb;
-}
 /* Row number / checkbox cell */
 .row-index-cell {
-    width: 40px;
+    width: 30px;
     text-align: center;
 }
 
@@ -283,24 +295,7 @@ search-input:focus {
 
 .row-index-cell .row-checkbox {
     margin: 0;
-    transform: scale(1.2);
     cursor: pointer;
-}
-/* Optional: Adjust the width of columns if needed */
-.vendor-list table td:nth-child(1) {
-    width: 5%;
-}
-
-.vendor-list table td:nth-child(2) {
-    width: 45%;
-}
-
-.vendor-list table td:nth-child(3) {
-    width: 25%;
-}
-
-.vendor-list table td:nth-child(4) {
-    width: 25%;
 }
 
 /* Right Section - Vendor Details */
@@ -679,55 +674,4 @@ textarea {
 img {
     border: none;
     outline: none;
-}
-
-/* Responsive adjustments */
-@media (max-width: 992px) {
-    .asset-content {
-        flex-direction: column;
-    }
-    
-    .asset-list, .asset-details {
-        margin: 10px 20px;
-    }
-    
-    .asset-list {
-        max-height: 40vh;
-    }
-}
-
-@media (max-width: 768px) {
-    .search-filter-bar {
-        flex-direction: column;
-        align-items: flex-start;
-    }
-    
-    .left-controls, .view-toggle {
-        width: 100%;
-        justify-content: space-between;
-    }
-    
-    .search-container {
-        max-width: 100%;
-    }
-    
-    .custom-modal {
-        width: 90%;
-        padding: 20px;
-    }
-}
-
-@media (max-width: 576px) {
-    .input-row {
-        flex-direction: column;
-        gap: 10px;
-    }
-    
-    .modal-footer {
-        flex-direction: column;
-    }
-    
-    .btn {
-        width: 100%;
-    }
 }
