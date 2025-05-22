@@ -137,7 +137,6 @@
 
                     <div class="search-container">
                         <input type="text" class="search-input" placeholder="Search assets..." id="searchInput">
-                        <img src="icons/search.svg" alt="Search" width="16" class="search-icon">
                     </div>
 
                     <div class="filter-options">
@@ -146,44 +145,21 @@
                                 <img src="icons/arrow-down-up.svg" alt="Sort" width="16"> Sort By
                             </button>
                             <div class="dropdown-menu-custom" id="sortDropdown">
-                                <button class="dropdown-item-custom" data-sort="description-asc">
-                                    <img src="icons/sort-alpha-asc.svg" width="16"> A to Z
-                                </button>
-                                <button class="dropdown-item-custom" data-sort="description-desc">
-                                    <img src="icons/sort-alpha-desc.svg" width="16"> Z to A
-                                </button>
-                                <div class="dropdown-divider-custom"></div>
-                                <button class="dropdown-item-custom" data-sort="date-newest">
-                                    <img src="icons/calendar-desc.svg" width="16"> Newest First
-                                </button>
-                                <button class="dropdown-item-custom" data-sort="date-oldest">
-                                    <img src="icons/calendar-asc.svg" width="16"> Oldest First
-                                </button>
-                                <div class="dropdown-divider-custom"></div>
-                                <button class="dropdown-item-custom" data-sort="value-high">
-                                    <img src="icons/sort-numeric-desc.svg" width="16"> Highest Value
-                                </button>
-                                <button class="dropdown-item-custom" data-sort="value-low">
-                                    <img src="icons/sort-numeric-asc.svg" width="16"> Lowest Value
-                                </button>
+                                <button class="dropdown-item-custom" data-sort="description-asc"> A to Z</button>
+                                <button class="dropdown-item-custom" data-sort="description-desc"> Z to A</button>
+                                <button class="dropdown-item-custom" data-sort="date-newest"> Newest First</button>
+                                <button class="dropdown-item-custom" data-sort="date-oldest"> Oldest First</button>
+                                <button class="dropdown-item-custom" data-sort="value-high"> Highest Value</button>
+                                <button class="dropdown-item-custom" data-sort="value-low"> Lowest Value</button>
                             </div>
                         </div>
                         
                         <div class="dropdown-container">
-                            <button class="filter-btn" id="filterBtn">
-                                <img src="icons/filter.svg" alt="Filter" width="16"> Filter
-                            </button>
+                            <button class="filter-btn" id="filterBtn"> Filter </button>
                             <div class="dropdown-menu-custom" id="filterDropdown">
-                                <button class="dropdown-item-custom active" data-filter="all">
-                                    <img src="icons/list.svg" width="16"> All Assets
-                                </button>
-                                <div class="dropdown-divider-custom"></div>
-                                <button class="dropdown-item-custom" data-filter="tracked">
-                                    <img src="icons/check-circle.svg" width="16"> Tracked Only
-                                </button>
-                                <button class="dropdown-item-custom" data-filter="untracked">
-                                    <img src="icons/alert-triangle.svg" width="16"> Untracked Only
-                                </button>
+                                <button class="dropdown-item-custom active" data-filter="all"> All Assets</button>
+                                <button class="dropdown-item-custom" data-filter="tracked"> Tracked Only</button>
+                                <button class="dropdown-item-custom" data-filter="untracked"> Untracked Only</button>
                             </div>
                         </div>
                     </div>
@@ -198,7 +174,7 @@
                 <!-- Left Section: List of Assets -->
                 <div class="asset-list">
                     <div class="asset-list-header">
-                        <h4>Assets</h4>
+                        <h4>ASSETS</h4>
                         <span class="asset-count" id="assetCount">0 items</span>
                     </div>
 
@@ -227,10 +203,10 @@
                             <thead>
                                 <tr>
                                     <th style="width: 5%;"></th>
-                                    <th style="width: 40%;">Description</th>
-                                    <th style="width: 25%;">Serial No.</th>
-                                    <th style="width: 20%;">Value</th>
-                                    <th style="width: 10%;">Status</th>
+                                    <th style="width: 25%;">Description</th>
+                                    <th style="width: 25%; text-align: center;">Serial No.</th>
+                                    <th style="width: 25%; text-align: center;">Value</th>
+                                    <th style="width: 20%; text-align: center;">Status</th>
                                 </tr>
                             </thead>
                         </table>
@@ -245,17 +221,17 @@
                                         <tr data-id="<?= $row['asset_id'] ?>" data-json='<?= json_encode($row) ?>' class="asset-row">
                                             <td class="row-index-cell">
                                                 <span class="row-number"><?= $counter++ ?></span>
-                                                <input type="checkbox" class="row-checkbox" style="display: none;">
+                                                <input type="checkbox" class="row-checkbox" style="display: none;" style="width: 25%;">
                                             </td>
-                                            <td class="asset-description">
+                                            <td class="asset-description" style="width: 25%;">
                                                 <div class="description-main"><?= htmlspecialchars($row['asset_description']) ?></div>
                                                 <?php if ($row['assigned_to']): ?>
                                                 <div class="description-sub">Assigned to: <?= htmlspecialchars($row['assigned_to']) ?></div>
                                                 <?php endif; ?>
                                             </td>
-                                            <td><?= htmlspecialchars($row['serial_number'] ?: 'N/A') ?></td>
-                                            <td class="asset-value"><?= $assetValue ?></td>
-                                            <td class="asset-status">
+                                            <td style="width: 25%; text-align: center;"><?= htmlspecialchars($row['serial_number'] ?: 'N/A') ?></td>
+                                            <td class="asset-value" style="width: 25%; text-align: right;"><?= $assetValue ?></td>
+                                            <td class="asset-status" style="width: 20%; text-align: center;">
                                                 <?php if ($isUntracked): ?>
                                                     <span class="status-badge untracked">Untracked</span>
                                                 <?php else: ?>
@@ -288,7 +264,6 @@
                 <!-- Right Section: Asset Details -->
                 <div class="asset-details" id="assetDetails">
                     <div id="assetPlaceholder" class="asset-placeholder">
-                        <img src="icons/box-select.svg" alt="Select Asset" width="64">
                         <h4>Select an Asset</h4>
                         <p>Choose an asset from the list to view its details</p>
                     </div>
@@ -305,7 +280,6 @@
 
                         <div class="asset-image-container" id="assetImageContainer">
                             <div class="no-image">
-                                <img src="icons/image.svg" alt="No Image" width="48">
                                 <p>No Image Available</p>
                             </div>
                         </div>
