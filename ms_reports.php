@@ -1,9 +1,7 @@
 <?php
-error_log("=== ms_reports.php FILE LOADED ===");
-error_log("REQUEST_METHOD: " . $_SERVER['REQUEST_METHOD']);
-error_log("POST keys if any: " . (empty($_POST) ? 'NONE' : implode(', ', array_keys($_POST))));
-
 include('validate_login.php');
+require_once 'activity_logger.php';
+    
 $page_title = "REPORTS";
 
 // Database connection
@@ -116,6 +114,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             fputcsv($output, ['Sample Row 1', 'Sample Row 2', 'Sample Row 3']);
             
             fclose($output);
+
+            logUserActivity(
+                'export', 
+                'ms_reports.php', 
+                "export report"
+            );
+            
             error_log("Export completed successfully");
             exit();
             
@@ -301,6 +306,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             fclose($output);
             $stmt->close();
             
+            logUserActivity(
+                'export', 
+                'ms_reports.php', 
+                "export report"
+            );
+            
             error_log("=== PROJECT EXPORT COMPLETED SUCCESSFULLY ===");
             exit();
             
@@ -430,6 +441,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         fputcsv($output, ['Total Corporate Impact', number_format($total_corporate_expense + $total_corporate_rental, 2)]);
 
         fclose($output);
+        
+        logUserActivity(
+            'export', 
+            'ms_reports.php', 
+            "export report"
+        );
+        
         $stmt->close();
         exit();
     }
@@ -585,6 +603,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
         
         fclose($output);
+        
+        logUserActivity(
+            'export', 
+            'ms_reports.php', 
+            "export report"
+        );
+        
         $stmt->close();
         exit();
     }
@@ -671,6 +696,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         fputcsv($output, ['Total Activities', $record_count]);
         
         fclose($output);
+        
+        logUserActivity(
+            'export', 
+            'ms_reports.php', 
+            "export report"
+        );
+        
         $stmt->close();
         exit();
     }
@@ -770,6 +802,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         fputcsv($output, ['Success Rate', $total_attempts > 0 ? round(($successful_logins / $total_attempts) * 100, 2) . '%' : '0%']);
         
         fclose($output);
+        
+        logUserActivity(
+            'export', 
+            'ms_reports.php', 
+            "export report"
+        );
+        
         $stmt->close();
         exit();
     }
@@ -885,6 +924,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             number_format(($grand_total_expense / $grand_total_budget) * 100, 2) . '%' : 'N/A']);
         
         fclose($output);
+        
+        logUserActivity(
+            'export', 
+            'ms_reports.php', 
+            "export report"
+        );
+        
         exit();
     }
     
@@ -1006,6 +1052,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             number_format($grand_total_gross / $total_employees, 2) : '0.00']);
         
         fclose($output);
+        
+        logUserActivity(
+            'export', 
+            'ms_reports.php', 
+            "export report"
+        );
+        
         exit();
     }
     
@@ -1108,6 +1161,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
 
         fclose($output);
+        
+        logUserActivity(
+            'export', 
+            'ms_reports.php', 
+            "export report"
+        );
+        
         exit();
     }
     
@@ -1221,6 +1281,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
         
         fclose($output);
+        
+        logUserActivity(
+            'export', 
+            'ms_reports.php', 
+            "export report"
+        );
+        
         exit();
     }
 }

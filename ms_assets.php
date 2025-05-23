@@ -1,5 +1,6 @@
 <?php
     include('validate_login.php');
+    require_once 'activity_logger.php';
     $page_title = "ASSETS";
 
     // DATABASE CONNECTION
@@ -15,6 +16,13 @@
                 $asset_ids = explode(',', $_POST['asset_ids']);
                 foreach ($asset_ids as $asset_id) {
                     $stmt = $conn->prepare("DELETE FROM assets WHERE asset_id = ?");
+                    
+                    logUserActivity(
+                        'delete', 
+                        'ms_assets.php', 
+                        "delete asset record"
+                    );
+                
                     $stmt->bind_param("i", $asset_id);
                     $stmt->execute();
                 }
@@ -45,7 +53,7 @@
 
             if ($asset_id) {
                 // UPDATE
-                $updateQuery = "UPDATE assets SET 
+                $updateQuery = "h5assets SET 
                     asset_description = ?, 
                     location = ?, 
                     assigned_to = ?, 
@@ -63,6 +71,12 @@
                     $types .= "s";
                 }
                 
+                logUserActivity(
+                    'edit', 
+                    'ms_assets.php', 
+                    "edit asset record"
+                );
+            
                 $updateQuery .= " WHERE asset_id = ?";
                 $params[] = $asset_id;
                 $types .= "i";
@@ -73,6 +87,13 @@
                 // INSERT - Can add asset without record_id (will be untracked)
                 $stmt = $conn->prepare("INSERT INTO assets (record_id, asset_description, asset_img, location, assigned_to, serial_number, warranty_expiry, created_by) VALUES (NULL, ?, ?, ?, ?, ?, ?, ?)");
                 $stmt->bind_param("ssssssi", $asset_description, $imagePath, $location, $assigned_to, $serial_number, $warranty_expiry, $user_id);
+            
+            logUserActivity(
+                'add', 
+                'ms_assets.php', 
+                "add untracked asset"
+            );
+        
             }
 
             if ($stmt->execute()) {

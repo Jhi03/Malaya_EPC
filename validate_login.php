@@ -1,4 +1,7 @@
 <?php
+// Include the activity logger
+require_once 'activity_logger.php';
+
 session_start();
 
 // Check if user is logged in
@@ -33,18 +36,33 @@ if ($result && $result->num_rows == 1) {
 
     // Check if the employee is active and account is not disabled or locked
     if ($user['employment_status'] !== 'active' || $user['account_status'] !== 'active') {
+        // Log the forced logout
+        logUserActivity('logout', 'validate_login.php', 'Forced logout due to account status change');
+        trackUserSession('logout');
+        
         // If the user is not active, log them out and redirect to login
-        session_unset(); // Unset session variables
-        session_destroy(); // Destroy the session
+        session_unset();
+        session_destroy();
         header("Location: ms_index.php");
         exit();
     }
 } else {
+    // Log the forced logout
+    logUserActivity('logout', 'validate_login.php', 'Forced logout - user not found');
+    trackUserSession('logout');
+    
     // If the user is not found or any error occurs, log them out and redirect to login
     session_unset();
     session_destroy();
     header("Location: ms_index.php");
     exit();
+}
+
+// Log page access (optional - you might want to disable this for performance)
+$current_page = basename($_SERVER['PHP_SELF']);
+if (!isset($_SESSION['last_logged_page']) || $_SESSION['last_logged_page'] !== $current_page) {
+    logUserActivity('access', $current_page, 'Page accessed');
+    $_SESSION['last_logged_page'] = $current_page;
 }
 
 $stmt->close();

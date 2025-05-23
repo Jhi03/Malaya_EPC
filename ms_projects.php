@@ -1,5 +1,7 @@
 <?php
     include('validate_login.php');
+    require_once 'activity_logger.php';
+    
     $page_title = "PROJECTS";
 
     // Database connection
@@ -100,6 +102,12 @@
                 edited_by = ? 
                 WHERE project_id = ?");
 
+            logUserActivity(
+                'edit', 
+                'ms_project.php', 
+                "edit project record"
+            );
+
             $stmt->bind_param("sssssssssssssii", 
                 $project_code, $project_name, $first_name, $last_name, $company_name, $description,
                 $contact, $email, $unit, $street, $barangay, $city, $country, $user_id, $project_id);
@@ -108,6 +116,12 @@
             $stmt = $conn->prepare("INSERT INTO projects 
                 (project_code, project_name, first_name, last_name, company_name, description, contact, email, budget, creation_date, created_by)
                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, 0, ?, ?)");
+
+            logUserActivity(
+                'add', 
+                'ms_project.php', 
+                "add new project"
+            );
 
             $stmt->bind_param("ssssssissi", 
                 $project_code, $project_name, $first_name, $last_name, $company_name, $description,
@@ -134,6 +148,13 @@
         }
 
         $stmt = $conn->prepare("DELETE FROM projects WHERE project_id = ?");
+
+        logUserActivity(
+            'delete', 
+            'ms_project.php', 
+            "delete project record"
+        );
+
         $stmt->bind_param("i", $project_id);
 
         if ($stmt->execute()) {

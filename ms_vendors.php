@@ -1,5 +1,7 @@
 <?php
     include('validate_login.php');
+    require_once 'activity_logger.php';
+    
     $page_title = "VENDORS";
 
     // DATABASE CONNECTION
@@ -36,10 +38,22 @@
                 // UPDATE vendor
                 $stmt = $conn->prepare("UPDATE vendors SET vendor_name=?, vendor_type=?, contact_person=?, vendor_email=?, contact_no=?, telephone=?, vendor_unit_bldg_no=?, vendor_street=?, vendor_city=?, vendor_country=?, vendor_remarks=? WHERE vendor_id=?");
                 $stmt->bind_param("sssssssssssi", $vendor_name, $vendor_type, $contact_person, $vendor_email, $contact_no, $telephone, $vendor_unit_bldg_no, $vendor_street, $vendor_city, $vendor_country, $vendor_remarks, $vendor_id);
+                logUserActivity(
+                    'edit', 
+                    'ms_vendors.php', 
+                    "Edit record: {$vendor_id}",
+                    $vendor_id
+                );
             } else {
                 // INSERT vendor
                 $stmt = $conn->prepare("INSERT INTO vendors (vendor_name, vendor_type, contact_person, vendor_email, contact_no, telephone, vendor_unit_bldg_no, vendor_street, vendor_city, vendor_country, vendor_remarks) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
                 $stmt->bind_param("sssssssssss", $vendor_name, $vendor_type, $contact_person, $vendor_email, $contact_no, $telephone, $vendor_unit_bldg_no, $vendor_street, $vendor_city, $vendor_country, $vendor_remarks);
+                logUserActivity(
+                    'add', 
+                    'ms_vendor.php', 
+                    "Add record {$vendor_id}",
+                    $vendor_id
+                );
             }
 
             if ($stmt->execute()) {
@@ -57,16 +71,14 @@
                 foreach ($vendor_ids as $id) {
                     $id = intval($id);
                     $stmt = $conn->prepare("DELETE FROM vendors WHERE vendor_id = ?");
+                    logUserActivity(
+                        'delete', 
+                        'ms_vendors.php', 
+                        "delete record: {$vendor_id}",
+                        $vendor_id
+                    );
                     $stmt->bind_param("i", $id);
                     $stmt->execute();
-                    
-                    // Log the deletion (for auditing)
-                    $log_sql = "INSERT INTO user_activity_log (user_id, action, page, details) VALUES (?, 'DELETE', 'ms_vendors.php', ?)";
-                    $log_stmt = $conn->prepare($log_sql);
-                    $user_id = $_SESSION['user_id'];
-                    $details = "Deleted vendor ID: $id";
-                    $log_stmt->bind_param("is", $user_id, $details);
-                    $log_stmt->execute();
                 }
                 echo "<script>window.location = 'ms_vendors.php';</script>";
                 exit();

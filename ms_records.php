@@ -1,5 +1,7 @@
 <?php
     include('validate_login.php');
+    require_once 'activity_logger.php';
+    
     $page_title = "PROJECTS";
     // Database connection
     $host = 'localhost';
@@ -48,6 +50,13 @@
         if (isset($_POST['delete_project_id'])) {
             $del_id = intval($_POST['delete_project_id']);
             $del_stmt = $conn->prepare("DELETE FROM projects WHERE project_id = ?");
+
+            logUserActivity(
+                'delete', 
+                'ms_records.php', 
+                "delete project"
+            );
+            
             $del_stmt->bind_param("i", $del_id);
             if ($del_stmt->execute()) {
                 echo "success";
@@ -84,6 +93,13 @@
                     edit_date = ?, edited_by = ?
                 WHERE project_id = ?
             ");
+
+            logUserActivity(
+                'edit', 
+                'ms_records.php', 
+                "edit project details"
+            );
+
             $update_stmt->bind_param(
                 "ssssssssssssssii",
                 $project_name, $project_code, $first_name, $last_name, $contact, $email, $company_name,
@@ -230,6 +246,13 @@
                     rental_rate = ?, invoice_no = ?, bill_to_client = ?, is_rental = ?, 
                     is_company_loss = ?, edited_by = ?, edit_date = NOW()
                     WHERE record_id = ?");
+
+                logUserActivity(
+                    'edit', 
+                    'ms_records.php', 
+                    "edit record"
+                );
+                
                 $stmt->bind_param(
                     "sssddsssdddssssii",
                     $category, $subcategory, $purchase_date, $budget, $expense, 
@@ -244,6 +267,13 @@
                 if ($old_is_company_loss === 'No' && $is_company_loss === 'Yes') {
                     // Set the loss_id to point to itself
                     $update_loss_id = $conn->prepare("UPDATE expense SET loss_id = ? WHERE record_id = ?");
+                    
+                    logUserActivity(
+                        'edit', 
+                        'ms_records.php', 
+                        "update loss record"
+                    );
+                    
                     $update_loss_id->bind_param("ii", $edit_id, $edit_id);
                     $update_loss_id->execute();
                     $update_loss_id->close();
@@ -255,6 +285,13 @@
                         payee, record_description, remarks, variance, tax, rental_rate, invoice_no, 
                         bill_to_client, is_rental, is_company_loss, loss_id, created_by, creation_date
                     ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())");
+
+                    logUserActivity(
+                        'add', 
+                        'ms_records.php', 
+                        "add loss record to corporate"
+                    );
+                    
                     $duplicate_stmt->bind_param(
                         "iisssddsssddsssssii",
                         $corporate_project_id, $user_id, $category, $subcategory, $purchase_date, $budget, $expense,
@@ -268,6 +305,13 @@
                 else if ($old_is_company_loss === 'Yes' && $is_company_loss === 'No') {
                     // Remove the loss_id
                     $remove_loss_id = $conn->prepare("UPDATE expense SET loss_id = NULL WHERE record_id = ?");
+
+                    logUserActivity(
+                        'edit', 
+                        'ms_records.php', 
+                        "update loss record"
+                    );
+                    
                     $remove_loss_id->bind_param("i", $edit_id);
                     $remove_loss_id->execute();
                     $remove_loss_id->close();
@@ -277,6 +321,13 @@
                         DELETE FROM expense 
                         WHERE project_id = 1 AND loss_id = ?
                     ");
+
+                    logUserActivity(
+                        'delete', 
+                        'ms_records.php', 
+                        "delete loss record from corporate"
+                    );
+                    
                     $delete_corporate->bind_param("i", $edit_id);
                     $delete_corporate->execute();
                     $delete_corporate->close();
@@ -312,6 +363,13 @@
                                 record_description = ? AND
                                 (loss_id IS NULL OR loss_id != ?)
                         ");
+
+                        logUserActivity(
+                            'delete', 
+                            'ms_records.php', 
+                            "delete loss record from corporate"
+                        );
+                        
                         $delete_stmt->bind_param(
                             "ssssi",
                             $category, $subcategory, $purchase_date, $record_description, $edit_id
@@ -328,6 +386,13 @@
                     payee, record_description, remarks, variance, tax, rental_rate, invoice_no, 
                     bill_to_client, is_rental, is_company_loss, created_by, creation_date
                 ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())");
+
+                logUserActivity(
+                    'add', 
+                    'ms_records.php', 
+                    "add expense record"
+                );
+                
                 $stmt->bind_param(
                     "iisssddsssddsssssi",
                     $project_id, $user_id, $category, $subcategory, $purchase_date, $budget, $expense,
@@ -341,6 +406,13 @@
                 // If this is a company loss, update the loss_id to point to itself
                 if ($is_company_loss === 'Yes') {
                     $update_stmt = $conn->prepare("UPDATE expense SET loss_id = ? WHERE record_id = ?");
+
+                    logUserActivity(
+                        'edit', 
+                        'ms_records.php', 
+                        "update loss record"
+                    );
+                                        
                     $update_stmt->bind_param("ii", $record_id, $record_id);
                     $update_stmt->execute();
                     $update_stmt->close();
@@ -355,6 +427,13 @@
                         payee, record_description, remarks, variance, tax, rental_rate, invoice_no, 
                         bill_to_client, is_rental, is_company_loss, loss_id, created_by, creation_date
                     ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())");
+
+                    logUserActivity(
+                        'add', 
+                        'ms_records.php', 
+                        "add loss record to corporate"
+                    );
+                    
                     $stmt->bind_param(
                         "iisssddsssddsssssii",
                         $corporate_project_id, $user_id, $category, $subcategory, $purchase_date, $budget, $expense,
@@ -370,6 +449,13 @@
                     $asset_stmt = $conn->prepare("INSERT INTO assets (
                         record_id, asset_description, asset_img, created_by, creation_date
                     ) VALUES (?, ?, NULL, ?, NOW())");
+
+                    logUserActivity(
+                        'add', 
+                        'ms_records.php', 
+                        "add expense record to assets"
+                    );
+                    
                     $asset_stmt->bind_param(
                         "isi",
                         $record_id,
@@ -419,6 +505,13 @@
             while ($row = $check_result->fetch_assoc()) {
                 $loss_record_id = $row['record_id'];
                 $delete_loss_stmt = $conn->prepare("DELETE FROM expense WHERE record_id = ?");
+
+                    logUserActivity(
+                        'delete', 
+                        'ms_records.php', 
+                        "delete loss record from corporate"
+                    );
+                    
                 $delete_loss_stmt->bind_param("i", $loss_record_id);
                 $delete_loss_stmt->execute();
                 $delete_loss_stmt->close();
@@ -427,6 +520,13 @@
             
             // Now delete the main record
             $stmt = $conn->prepare("DELETE FROM expense WHERE record_id = ?");
+            
+            logUserActivity(
+                'delete', 
+                'ms_records.php', 
+                "delete expense record"
+            );
+                    
             $stmt->bind_param("i", $id);
             $stmt->execute();
             $stmt->close();

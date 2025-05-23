@@ -1,6 +1,7 @@
 <?php
 session_start();
 require_once 'google_auth.php';
+require_once 'activity_logger.php'; 
 
 // Initialize auth class
 $auth = new MalayaSolarAuth();
@@ -65,6 +66,10 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
             $log_stmt->execute();
             $log_stmt->close();
             
+            //log user activity and session
+            logUserActivity('login', 'ms_index.php', '2FA authentication successful');
+            trackUserSession('login');
+
             // Redirect to dashboard
             header("Location: ms_dashboard.php");
             exit();
@@ -184,6 +189,10 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
                 unset($_SESSION['temp_auth_secret']);
                 unset($_SESSION['temp_username']);
                 
+                // Log the recovery activity
+                logUserActivity('login', 'ms_index.php', 'Account recovered via security question');
+                trackUserSession('login');
+
                 // Redirect to dashboard
                 header("Location: ms_dashboard.php");
                 exit();
@@ -399,6 +408,9 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
                     $log_stmt->bind_param("is", $user['user_id'], $ip);
                     $log_stmt->execute();
                     $log_stmt->close();
+
+                    logUserActivity('login', 'ms_index.php', 'Superadmin login (2FA bypassed)');
+                    trackUserSession('login');
 
                     // Redirect to dashboard
                     header("Location: ms_dashboard.php");

@@ -1,5 +1,7 @@
 <?php
     include('validate_login.php');
+    require_once 'activity_logger.php';
+    
     $page_title = "WORKFORCE";
 
     // Database connection
@@ -38,6 +40,8 @@
         "CEO",
         "CTO",
         "CFO",
+        "Superadmin",
+        "Admin",
         "Manager",
         "Team Lead",
         "Senior Developer",
@@ -97,7 +101,11 @@
                     employee_id, first_name, middle_name, last_name, position, department, employment_status, 
                     contact, unit_no, building, street, barangay, city, country
                 ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
-                
+                logUserActivity(
+                    'add', 
+                    'ms_workforce.php', 
+                    "add employee"
+                );
                 $stmt = $conn->prepare($sql);
                 $stmt->bind_param(
                     "issssssissssss",
@@ -123,6 +131,11 @@
                     $user_sql = "INSERT INTO users (
                         employee_id, username, email, password, role, account_status
                     ) VALUES (?, ?, ?, ?, ?, 'active')";
+                    logUserActivity(
+                        'add', 
+                        'ms_workforce.php', 
+                        "add user"
+                    );
                     
                     $user_stmt = $conn->prepare($user_sql);
                     $user_stmt->bind_param(
@@ -177,6 +190,12 @@
                     employment_status = ?, contact = ?, unit_no = ?, building = ?, street = ?, 
                     barangay = ?, city = ?, country = ?
                     WHERE employee_id = ?";
+
+                logUserActivity(
+                    'edit', 
+                    'ms_workforce.php', 
+                    "edit employee record"
+                );
                     
                 $stmt = $conn->prepare($sql);
                 $stmt->bind_param(
@@ -243,7 +262,12 @@
                     $sql = "INSERT INTO users (
                         employee_id, username, email, password, role, account_status
                     ) VALUES (?, ?, ?, ?, ?, 'new')";
-                    
+                    logUserActivity(
+                        'add', 
+                        'ms_workforce.php', 
+                        "add user"
+                    );
+
                     $stmt = $conn->prepare($sql);
                     $stmt->bind_param(
                         "issss",
@@ -272,6 +296,12 @@
                             username = ?, email = ?, password = ?, role = ?, account_status = ?,
                             failed_attempts = 0
                             WHERE employee_id = ?";
+
+                        logUserActivity(
+                            'edit', 
+                            'ms_workforce.php', 
+                            "edit password"
+                        );
                         
                         $stmt = $conn->prepare($sql);
                         $stmt->bind_param(
@@ -283,6 +313,12 @@
                             username = ?, email = ?, role = ?, account_status = ?,
                             failed_attempts = 0
                             WHERE employee_id = ?";
+                        
+                        logUserActivity(
+                            'edit', 
+                            'ms_workforce.php', 
+                            "edit password"
+                        );
                         
                         $stmt = $conn->prepare($sql);
                         $stmt->bind_param(
@@ -300,6 +336,12 @@
                         $reset_sql = "UPDATE users SET 
                             authenticator_secret = NULL, preferred_2fa = NULL
                             WHERE employee_id = ?";
+
+                        logUserActivity(
+                            'edit', 
+                            'ms_workforce.php', 
+                            "reset authentication"
+                        );
                         
                         $reset_stmt = $conn->prepare($reset_sql);
                         $reset_stmt->bind_param("i", $employee_id);
@@ -319,6 +361,12 @@
                     $sql = "UPDATE users SET 
                         account_status = 'active', failed_attempts = 0
                         WHERE employee_id = ?";
+
+                    logUserActivity(
+                        'edit', 
+                        'ms_workforce.php', 
+                        "unlock account"
+                    );
                     
                     $stmt = $conn->prepare($sql);
                     $stmt->bind_param("i", $employee_id);
@@ -352,12 +400,15 @@
                     $password = $auth->generateRandomPassword(12);
                     $display_password = $password; // Store for display
                     
-                    // Hash the password
-                    $hashed_password = $auth->hashPassword($password);
-                    
                     $sql = "UPDATE users SET 
                         password = ?, failed_attempts = 0
                         WHERE employee_id = ?";
+
+                    logUserActivity(
+                        'edit', 
+                        'ms_workforce.php', 
+                        "reset password"
+                    );
                     
                     $stmt = $conn->prepare($sql);
                     $stmt->bind_param("si", $hashed_password, $employee_id);
@@ -407,28 +458,38 @@
             $check_stmt->bind_param("i", $id_to_delete);
             $check_stmt->execute();
             $check_result = $check_stmt->get_result();
-            
+
             if ($check_result->num_rows > 0) {
-                // Delete user account first
-                $delete_user_stmt = $conn->prepare("DELETE FROM users WHERE employee_id = ?");
-                $delete_user_stmt->bind_param("i", $id_to_delete);
+                $user = $check_result->fetch_assoc();
+                $user_id = $user['user_id'];
+
+                // Delete login attempts first
+                $delete_attempts_stmt = $conn->prepare("DELETE FROM login_attempts WHERE user_id = ?");
+                $delete_attempts_stmt->bind_param("i", $user_id);
+                if (!$delete_attempts_stmt->execute()) {
+                    throw new Exception("Error deleting login attempts: " . $delete_attempts_stmt->error);
+                }
+
+                // Then delete user account
+                $delete_user_stmt = $conn->prepare("DELETE FROM users WHERE user_id = ?");
+                $delete_user_stmt->bind_param("i", $user_id);
                 if (!$delete_user_stmt->execute()) {
                     throw new Exception("Error deleting user account: " . $delete_user_stmt->error);
                 }
             }
-            
+
             // Now delete the employee
             $delete_stmt = $conn->prepare("DELETE FROM employee WHERE employee_id = ?");
             $delete_stmt->bind_param("i", $id_to_delete);
             if (!$delete_stmt->execute()) {
                 throw new Exception("Error deleting employee: " . $delete_stmt->error);
             }
-            
+
             // Commit transaction
             $conn->commit();
             $message = "Employee deleted successfully!";
             $message_type = "success";
-            
+
         } catch (Exception $e) {
             // Roll back transaction on error
             $conn->rollback();
@@ -911,9 +972,7 @@
     <div class="content-area">
         <?php include 'header.php'; ?>
         
-        <div class="content-body">
-            <h3 class="mb-4">Workforce Management</h3>
-            
+        <div class="content-body">            
             <?php if (!empty($message)): ?>
                 <div class="alert-message alert-<?= $message_type === 'success' ? 'success' : 'error' ?>">
                     <i class="fas fa-<?= $message_type === 'success' ? 'check-circle' : 'exclamation-circle' ?> alert-icon"></i>
@@ -925,7 +984,7 @@
             <div class="controls-container">
                 <div class="left-controls">
                     <button class="action-btn add-btn" data-bs-toggle="modal" data-bs-target="#addEmployeeModal">
-                        <i class="fas fa-plus"></i> Add Employee
+                        <i class="fas fa-plus"></i> ADD
                     </button>
                     
                     <form method="GET" action="" class="search-container">

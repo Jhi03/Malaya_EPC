@@ -1,5 +1,7 @@
 <?php
     include('validate_login.php');
+    require_once 'activity_logger.php';
+    
     $page_title = "PAYROLL";
 
     // Database connection
@@ -29,7 +31,14 @@
     // Handle payroll entry deletion
     if (isset($_POST['delete_payroll'])) {
         $payroll_id = $_POST['payroll_id'];
-        $delete_sql = "DELETE FROM payroll WHERE payroll_id = ?";  // Changed 'id' to 'payroll_id'
+        $delete_sql = "DELETE FROM payroll WHERE payroll_id = ?"; 
+
+        logUserActivity(
+            'delete', 
+            'ms_payroll.php', 
+            "delete payroll record"
+        );
+        
         $stmt = $conn->prepare($delete_sql);
         $stmt->bind_param("i", $payroll_id);
         
@@ -84,8 +93,14 @@
                 net_pay = ?, 
                 payment_method = ?, 
                 remarks = ? 
-                WHERE payroll_id = ?";  // Changed 'id' to 'payroll_id'
+                WHERE payroll_id = ?"; 
             
+            logUserActivity(
+                'edit', 
+                'ms_payroll.php', 
+                "edit payroll record"
+            );
+
             $stmt = $conn->prepare($sql);
             $stmt->bind_param("issdddddddddddddssi", 
                 $employee_id, $period_start, $period_end, $gross_pay, $basic_pay, 
@@ -113,6 +128,12 @@
                 $overtime_pay, $allowances, $bonus, $sss, $philhealth, $pagibig, 
                 $loans, $other_deductions, $total_deductions, $tax, $net_pay, 
                 $payment_method, $remarks);
+
+            logUserActivity(
+                'add', 
+                'ms_payroll.php', 
+                "add payroll record"
+            );
             
             if ($stmt->execute()) {
                 $success_message = "Payroll entry added successfully.";
