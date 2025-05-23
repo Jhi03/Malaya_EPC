@@ -7,27 +7,7 @@
     if ($conn->connect_error) {
         die("Connection failed: " . $conn->connect_error);
     }
-
-    // PROJECT DROPDOWN OPTIONS
-    $projectOptions = '';
-    $projectQuery = "SELECT project_id, project_name FROM projects ORDER BY project_name";
-    $projectResult = $conn->query($projectQuery);
-    if ($projectResult->num_rows > 0) {
-        while ($proj = $projectResult->fetch_assoc()) {
-            $projectOptions .= '<option value="' . $proj['project_id'] . '">' . htmlspecialchars($proj['project_name']) . '</option>';
-        }
-    }
-
-    // EMPLOYEE DROPDOWN OPTIONS (for assigned_to)
-    $employeeOptions = '';
-    $employeeQuery = "SELECT employee_id, CONCAT(first_name, ' ', last_name) as full_name FROM employee WHERE employment_status = 'active' ORDER BY first_name";
-    $employeeResult = $conn->query($employeeQuery);
-    if ($employeeResult->num_rows > 0) {
-        while ($emp = $employeeResult->fetch_assoc()) {
-            $employeeOptions .= '<option value="' . htmlspecialchars($emp['full_name']) . '">' . htmlspecialchars($emp['full_name']) . '</option>';
-        }
-    }
-
+    
     // ADD / EDIT / DELETE HANDLER
     if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         if (isset($_POST['delete_assets'])) {
@@ -90,8 +70,8 @@
                 $stmt = $conn->prepare($updateQuery);
                 $stmt->bind_param($types, ...$params);
             } else {
-                // INSERT
-                $stmt = $conn->prepare("INSERT INTO assets (asset_description, asset_img, location, assigned_to, serial_number, warranty_expiry, created_by) VALUES (?, ?, ?, ?, ?, ?, ?)");
+                // INSERT - Can add asset without record_id (will be untracked)
+                $stmt = $conn->prepare("INSERT INTO assets (record_id, asset_description, asset_img, location, assigned_to, serial_number, warranty_expiry, created_by) VALUES (NULL, ?, ?, ?, ?, ?, ?, ?)");
                 $stmt->bind_param("ssssssi", $asset_description, $imagePath, $location, $assigned_to, $serial_number, $warranty_expiry, $user_id);
             }
 
@@ -103,6 +83,10 @@
             }
         }
     }
+    
+    $count_query = "SELECT COUNT(*) as total FROM assets";
+    $count_result = $conn->query($count_query);
+    $total_records = $count_result->fetch_assoc()['total'];
 ?>
 
 <!DOCTYPE html>
@@ -145,28 +129,24 @@
                                 <img src="icons/arrow-down-up.svg" alt="Sort" width="16"> Sort By
                             </button>
                             <div class="dropdown-menu-custom" id="sortDropdown">
-                                <button class="dropdown-item-custom" data-sort="description-asc"> A to Z</button>
-                                <button class="dropdown-item-custom" data-sort="description-desc"> Z to A</button>
-                                <button class="dropdown-item-custom" data-sort="date-newest"> Newest First</button>
-                                <button class="dropdown-item-custom" data-sort="date-oldest"> Oldest First</button>
-                                <button class="dropdown-item-custom" data-sort="value-high"> Highest Value</button>
-                                <button class="dropdown-item-custom" data-sort="value-low"> Lowest Value</button>
+                                <button class="dropdown-item-custom" data-sort="description-asc">A to Z</button>
+                                <button class="dropdown-item-custom" data-sort="description-desc">Z to A</button>
+                                <button class="dropdown-item-custom" data-sort="date-newest">Newest First</button>
+                                <button class="dropdown-item-custom" data-sort="date-oldest">Oldest First</button>
+                                <button class="dropdown-item-custom" data-sort="value-high">Highest Value</button>
+                                <button class="dropdown-item-custom" data-sort="value-low">Lowest Value</button>
                             </div>
                         </div>
                         
                         <div class="dropdown-container">
-                            <button class="filter-btn" id="filterBtn"> Filter </button>
+                            <button class="filter-btn" id="filterBtn">Filter</button>
                             <div class="dropdown-menu-custom" id="filterDropdown">
-                                <button class="dropdown-item-custom active" data-filter="all"> All Assets</button>
-                                <button class="dropdown-item-custom" data-filter="tracked"> Tracked Only</button>
-                                <button class="dropdown-item-custom" data-filter="untracked"> Untracked Only</button>
+                                <button class="dropdown-item-custom active" data-filter="all">All Assets</button>
+                                <button class="dropdown-item-custom" data-filter="tracked">Tracked Only</button>
+                                <button class="dropdown-item-custom" data-filter="untracked">Untracked Only</button>
                             </div>
                         </div>
                     </div>
-                </div>
-
-                <div class="select-items">
-                    <button class="select-btn" id="selectBtn">SELECT</button>
                 </div>
             </div>
 
@@ -175,11 +155,11 @@
                 <div class="asset-list">
                     <div class="asset-list-header">
                         <h4>ASSETS</h4>
-                        <span class="asset-count" id="assetCount">0 items</span>
+                        <span class="asset-count" id="assetCount"><?= $total_records ?> items</span>
                     </div>
 
                     <?php
-                    // Updated query with JOIN to get expense value
+                    // Updated query without pagination
                     $query = "
                         SELECT 
                             a.*,
@@ -194,7 +174,10 @@
                         LEFT JOIN projects p ON e.project_id = p.project_id
                         ORDER BY a.creation_date DESC
                     ";
-                    $result = $conn->query($query);
+                    $stmt = $conn->prepare($query);
+                    $stmt->execute();
+                    $result = $stmt->get_result();
+                    
                     if ($result->num_rows > 0):
                         $counter = 1;
                     ?>
@@ -204,51 +187,54 @@
                                 <tr>
                                     <th style="width: 5%;"></th>
                                     <th style="width: 25%;">Description</th>
-                                    <th style="width: 25%; text-align: center;">Serial No.</th>
-                                    <th style="width: 25%; text-align: center;">Value</th>
-                                    <th style="width: 20%; text-align: center;">Status</th>
+                                    <th style="width: 15%;">Serial No.</th>
+                                    <th style="width: 15%;">Value</th>
+                                    <th style="width: 15%;">Status</th>
+                                    <th style="width: 25%;">Created</th>
                                 </tr>
                             </thead>
+                            <tbody id="assetTableBody">
+                                <?php while ($row = $result->fetch_assoc()): 
+                                    $isUntracked = is_null($row['record_id']);
+                                    $assetValue = $row['asset_value'] ? '₱' . number_format($row['asset_value'], 2) : 'N/A';
+                                    $createdDate = date('M d, Y h:i A', strtotime($row['creation_date']));
+                                ?>
+                                    <tr data-id="<?= $row['asset_id'] ?>" data-json='<?= json_encode($row) ?>' class="asset-row">
+                                        <td class="row-index-cell">
+                                            <span class="row-number"><?= $counter++ ?></span>
+                                            <input type="checkbox" class="row-checkbox" style="display: none;">
+                                        </td>
+                                        <td class="asset-description">
+                                            <div class="description-main"><?= htmlspecialchars($row['asset_description']) ?></div>
+                                            <?php if ($row['assigned_to']): ?>
+                                            <div class="description-sub">Assigned to: <?= htmlspecialchars($row['assigned_to']) ?></div>
+                                            <?php endif; ?>
+                                        </td>
+                                        <td><?= htmlspecialchars($row['serial_number'] ?: 'N/A') ?></td>
+                                        <td class="asset-value"><?= $assetValue ?></td>
+                                        <td class="asset-status">
+                                            <?php if ($isUntracked): ?>
+                                                <span class="status-badge untracked">Untracked</span>
+                                            <?php else: ?>
+                                                <span class="status-badge tracked">Tracked</span>
+                                            <?php endif; ?>
+                                        </td>
+                                        <td class="asset-created"><?= $createdDate ?></td>
+                                    </tr>
+                                <?php endwhile; ?>
+                            </tbody>
                         </table>
-
-                        <div class="asset-list-table-body-container">
-                            <table class="asset-list-table">
-                                <tbody id="assetTableBody">
-                                    <?php while ($row = $result->fetch_assoc()): 
-                                        $isUntracked = is_null($row['record_id']);
-                                        $assetValue = $row['asset_value'] ? '₱' . number_format($row['asset_value'], 2) : 'N/A';
-                                    ?>
-                                        <tr data-id="<?= $row['asset_id'] ?>" data-json='<?= json_encode($row) ?>' class="asset-row">
-                                            <td class="row-index-cell">
-                                                <span class="row-number"><?= $counter++ ?></span>
-                                                <input type="checkbox" class="row-checkbox" style="display: none;" style="width: 25%;">
-                                            </td>
-                                            <td class="asset-description" style="width: 25%;">
-                                                <div class="description-main"><?= htmlspecialchars($row['asset_description']) ?></div>
-                                                <?php if ($row['assigned_to']): ?>
-                                                <div class="description-sub">Assigned to: <?= htmlspecialchars($row['assigned_to']) ?></div>
-                                                <?php endif; ?>
-                                            </td>
-                                            <td style="width: 25%; text-align: center;"><?= htmlspecialchars($row['serial_number'] ?: 'N/A') ?></td>
-                                            <td class="asset-value" style="width: 25%; text-align: right;"><?= $assetValue ?></td>
-                                            <td class="asset-status" style="width: 20%; text-align: center;">
-                                                <?php if ($isUntracked): ?>
-                                                    <span class="status-badge untracked">Untracked</span>
-                                                <?php else: ?>
-                                                    <span class="status-badge tracked">Tracked</span>
-                                                <?php endif; ?>
-                                            </td>
-                                        </tr>
-                                    <?php endwhile; ?>
-                                </tbody>
-                            </table>
-                        </div>
                     </div>
 
-                    <!-- Floating delete button -->
-                    <button class="delete-selected-btn" id="deleteBtn" style="display: none;">
-                        <img src="icons/trash.svg" alt="Delete" width="20">
-                    </button>
+                    <!-- Updated footer with right-aligned select button -->
+                    <div class="asset-list-footer">
+                        <div class="footer-right">
+                            <button class="delete-selected-btn" id="deleteBtn" style="display: none;">
+                                <img src="icons/trash.svg" alt="Delete" width="16">
+                            </button>
+                            <button class="select-btn" id="selectBtn">SELECT</button>
+                        </div>
+                    </div>
 
                     <?php else: ?>
                         <div class="no-assets">
@@ -269,54 +255,58 @@
                     </div>
 
                     <div id="assetInfo" style="display: none;">
-                        <div class="asset-header">
-                            <h4 id="assetTitle"></h4>
-                            <div class="asset-actions">
-                                <button class="btn-edit" id="editAssetBtn">
-                                    <img src="icons/pencil-white.svg" width="16"> Edit
-                                </button>
+                        <div class="asset-details-content">
+                            <div class="asset-header">
+                                <h4 id="assetTitle"></h4>
+                            </div>
+
+                            <div class="asset-image-container" id="assetImageContainer">
+                                <div class="no-image">
+                                    <img src="icons/image.svg" alt="No Image" width="48">
+                                </div>
+                            </div>
+
+                            <div class="asset-info-grid">
+                                <div class="info-item">
+                                    <label>Serial Number</label>
+                                    <span id="detailSerial">N/A</span>
+                                </div>
+                                <div class="info-item">
+                                    <label>Location</label>
+                                    <span id="detailLocation">N/A</span>
+                                </div>
+                                <div class="info-item">
+                                    <label>Assigned To</label>
+                                    <span id="detailAssigned">N/A</span>
+                                </div>
+                                <div class="info-item">
+                                    <label>Value</label>
+                                    <span id="detailValue">N/A</span>
+                                </div>
+                                <div class="info-item">
+                                    <label>Warranty Expiry</label>
+                                    <span id="detailWarranty">N/A</span>
+                                </div>
+                                <div class="info-item">
+                                    <label>Project</label>
+                                    <span id="detailProject">N/A</span>
+                                </div>
+                            </div>
+
+                            <div class="untracked-notice" id="untrackedNotice" style="display: none;">
+                                <div class="notice-icon">⚠️</div>
+                                <div class="notice-content">
+                                    <strong>Untracked Expense</strong>
+                                    <p>This item is an untracked expense. Please add if expense is incurred.</p>
+                                </div>
                             </div>
                         </div>
 
-                        <div class="asset-image-container" id="assetImageContainer">
-                            <div class="no-image">
-                                <p>No Image Available</p>
-                            </div>
-                        </div>
-
-                        <div class="asset-info-grid">
-                            <div class="info-item">
-                                <label>Serial Number</label>
-                                <span id="detailSerial">N/A</span>
-                            </div>
-                            <div class="info-item">
-                                <label>Location</label>
-                                <span id="detailLocation">N/A</span>
-                            </div>
-                            <div class="info-item">
-                                <label>Assigned To</label>
-                                <span id="detailAssigned">N/A</span>
-                            </div>
-                            <div class="info-item">
-                                <label>Value</label>
-                                <span id="detailValue">N/A</span>
-                            </div>
-                            <div class="info-item">
-                                <label>Warranty Expiry</label>
-                                <span id="detailWarranty">N/A</span>
-                            </div>
-                            <div class="info-item">
-                                <label>Project</label>
-                                <span id="detailProject">N/A</span>
-                            </div>
-                        </div>
-
-                        <div class="untracked-notice" id="untrackedNotice" style="display: none;">
-                            <div class="notice-icon">⚠️</div>
-                            <div class="notice-content">
-                                <strong>Untracked Expense</strong>
-                                <p>This item is an untracked expense. Please add if expense is incurred.</p>
-                            </div>
+                        <!-- New white footer -->
+                        <div class="asset-details-footer">
+                            <button class="asset-edit-btn" id="editAssetBtn">
+                                <img src="icons/pencil-white.svg" width="16">
+                            </button>
                         </div>
                     </div>
                 </div>
@@ -361,11 +351,13 @@
                             <div class="row g-3">
                                 <div class="col-md-8">
                                     <label for="asset_description" class="form-label">Description *</label>
-                                    <input type="text" class="form-control" id="asset_description" name="asset_description" required>
+                                    <input type="text" class="form-control" id="asset_description" name="asset_description" 
+                                           placeholder="Enter asset description" required>
                                 </div>
                                 <div class="col-md-4">
                                     <label for="serial_number" class="form-label">Serial Number</label>
-                                    <input type="text" class="form-control" id="serial_number" name="serial_number">
+                                    <input type="text" class="form-control" id="serial_number" name="serial_number"
+                                           placeholder="Enter serial number">
                                 </div>
                             </div>
                         </div>
@@ -375,14 +367,13 @@
                             <div class="row g-3">
                                 <div class="col-md-6">
                                     <label for="location" class="form-label">Location</label>
-                                    <input type="text" class="form-control" id="location" name="location">
+                                    <input type="text" class="form-control" id="location" name="location"
+                                           placeholder="Enter location">
                                 </div>
                                 <div class="col-md-6">
                                     <label for="assigned_to" class="form-label">Assigned To</label>
-                                    <select class="form-select" id="assigned_to" name="assigned_to">
-                                        <option value="">-- Select Employee --</option>
-                                        <?= $employeeOptions ?>
-                                    </select>
+                                    <input type="text" class="form-control" id="assigned_to" name="assigned_to"
+                                           placeholder="Enter person or department">
                                 </div>
                             </div>
                         </div>
@@ -420,5 +411,11 @@
     <script src="js/sidebar.js"></script>
     <script src="js/header.js"></script>
     <script src="js/ms_assets.js"></script>
+    
+    <script>
+        function changePage(page) {
+            window.location.href = 'ms_assets.php?page=' + page;
+        }
+    </script>
 </body>
 </html>

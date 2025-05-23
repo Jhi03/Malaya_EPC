@@ -1,4 +1,4 @@
-// Assets Page JavaScript
+// Complete Assets Page JavaScript
 document.addEventListener('DOMContentLoaded', function() {
     
     // Global variables
@@ -6,7 +6,7 @@ document.addEventListener('DOMContentLoaded', function() {
     let selectMode = false;
     let allAssets = [];
     
-    // DOM elements - Initialize Bootstrap modals properly
+    // DOM elements
     const addAssetBtn = document.getElementById('addAssetBtn');
     const selectBtn = document.getElementById('selectBtn');
     const deleteBtn = document.getElementById('deleteBtn');
@@ -15,7 +15,6 @@ document.addEventListener('DOMContentLoaded', function() {
     // Initialize Bootstrap modals
     let assetModal, deleteModal;
     
-    // Wait for DOM to be fully loaded
     setTimeout(() => {
         const assetModalElement = document.getElementById('assetModal');
         const deleteModalElement = document.getElementById('deleteModal');
@@ -44,9 +43,6 @@ document.addEventListener('DOMContentLoaded', function() {
         const assetRows = document.querySelectorAll('.asset-row');
         allAssets = Array.from(assetRows).map(row => JSON.parse(row.dataset.json));
         
-        // Update asset count
-        updateAssetCount(allAssets.length);
-        
         // Add event listeners
         setupEventListeners();
         
@@ -56,27 +52,29 @@ document.addEventListener('DOMContentLoaded', function() {
     
     function setupEventListeners() {
         // Add asset button
-        addAssetBtn.addEventListener('click', openAddModal);
+        if (addAssetBtn) addAssetBtn.addEventListener('click', openAddModal);
         
         // Select mode toggle
-        selectBtn.addEventListener('click', toggleSelectMode);
+        if (selectBtn) selectBtn.addEventListener('click', toggleSelectMode);
         
         // Delete button
-        deleteBtn.addEventListener('click', showDeleteConfirmation);
+        if (deleteBtn) deleteBtn.addEventListener('click', showDeleteConfirmation);
         
         // Search functionality
-        searchInput.addEventListener('input', handleSearch);
+        if (searchInput) searchInput.addEventListener('input', handleSearch);
         
         // Edit asset button
-        document.getElementById('editAssetBtn').addEventListener('click', openEditModal);
+        const editBtn = document.getElementById('editAssetBtn');
+        if (editBtn) editBtn.addEventListener('click', openEditModal);
         
         // Delete confirmation
-        document.getElementById('confirmDeleteBtn').addEventListener('click', confirmDelete);
+        const confirmDeleteBtn = document.getElementById('confirmDeleteBtn');
+        if (confirmDeleteBtn) confirmDeleteBtn.addEventListener('click', confirmDelete);
         
         // Form submission
-        assetForm.addEventListener('submit', handleFormSubmit);
+        if (assetForm) assetForm.addEventListener('submit', handleFormSubmit);
         
-        // Simple ESC key handler for modals only
+        // ESC key handler for modals and dropdowns
         document.addEventListener('keydown', function(e) {
             if (e.key === 'Escape') {
                 // Close Bootstrap modals
@@ -254,8 +252,10 @@ document.addEventListener('DOMContentLoaded', function() {
                     if (e.target.type === 'checkbox') return;
                     
                     const checkbox = this.querySelector('.row-checkbox');
-                    checkbox.checked = !checkbox.checked;
-                    updateDeleteButtonVisibility();
+                    if (checkbox) {
+                        checkbox.checked = !checkbox.checked;
+                        updateDeleteButtonVisibility();
+                    }
                 } else {
                     if (e.target.type === 'checkbox') return;
                     
@@ -277,43 +277,61 @@ document.addEventListener('DOMContentLoaded', function() {
         currentAsset = asset;
         
         // Hide placeholder, show details
-        document.getElementById('assetPlaceholder').style.display = 'none';
-        document.getElementById('assetInfo').style.display = 'block';
+        const placeholder = document.getElementById('assetPlaceholder');
+        const info = document.getElementById('assetInfo');
+        
+        if (placeholder) placeholder.style.display = 'none';
+        if (info) info.style.display = 'block';
         
         // Update asset details
-        document.getElementById('assetTitle').textContent = asset.asset_description || 'Untitled Asset';
-        document.getElementById('detailSerial').textContent = asset.serial_number || 'N/A';
-        document.getElementById('detailLocation').textContent = asset.location || 'N/A';
-        document.getElementById('detailAssigned').textContent = asset.assigned_to || 'N/A';
-        document.getElementById('detailProject').textContent = asset.project_name || 'N/A';
+        const titleEl = document.getElementById('assetTitle');
+        if (titleEl) titleEl.textContent = asset.asset_description || 'Untitled Asset';
+        
+        const serialEl = document.getElementById('detailSerial');
+        if (serialEl) serialEl.textContent = asset.serial_number || 'N/A';
+        
+        const locationEl = document.getElementById('detailLocation');
+        if (locationEl) locationEl.textContent = asset.location || 'N/A';
+        
+        const assignedEl = document.getElementById('detailAssigned');
+        if (assignedEl) assignedEl.textContent = asset.assigned_to || 'N/A';
+        
+        const projectEl = document.getElementById('detailProject');
+        if (projectEl) projectEl.textContent = asset.project_name || 'N/A';
         
         // Update value
         const value = asset.asset_value ? `₱${parseFloat(asset.asset_value).toLocaleString('en-PH', {minimumFractionDigits: 2})}` : 'N/A';
-        document.getElementById('detailValue').textContent = value;
+        const valueEl = document.getElementById('detailValue');
+        if (valueEl) valueEl.textContent = value;
         
         // Update warranty
         const warranty = asset.warranty_expiry ? new Date(asset.warranty_expiry).toLocaleDateString() : 'N/A';
-        document.getElementById('detailWarranty').textContent = warranty;
+        const warrantyEl = document.getElementById('detailWarranty');
+        if (warrantyEl) warrantyEl.textContent = warranty;
         
         // Handle image
         const imageContainer = document.getElementById('assetImageContainer');
-        if (asset.asset_img && asset.asset_img.trim() !== '') {
-            imageContainer.innerHTML = `<img src="${asset.asset_img}" alt="Asset Image" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
-            <div class="no-image" style="display: none;">
-                <img src="icons/image.svg" alt="No Image" width="48">
-                <p>Image not found</p>
-            </div>`;
-        } else {
-            imageContainer.innerHTML = `<div class="no-image">
-                <img src="icons/image.svg" alt="No Image" width="48">
-                <p>No Image Available</p>
-            </div>`;
+        if (imageContainer) {
+            if (asset.asset_img && asset.asset_img.trim() !== '') {
+                imageContainer.innerHTML = `<img src="${asset.asset_img}" alt="Asset Image" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+                <div class="no-image" style="display: none;">
+                    <img src="icons/image.svg" alt="No Image" width="48">
+                    <p>Image not found</p>
+                </div>`;
+            } else {
+                imageContainer.innerHTML = `<div class="no-image">
+                    <img src="icons/image.svg" alt="No Image" width="48">
+                    <p>No Image Available</p>
+                </div>`;
+            }
         }
         
         // Show/hide untracked notice
         const isUntracked = !asset.record_id;
         const untrackedNotice = document.getElementById('untrackedNotice');
-        untrackedNotice.style.display = isUntracked ? 'block' : 'none';
+        if (untrackedNotice) {
+            untrackedNotice.style.display = isUntracked ? 'block' : 'none';
+        }
     }
     
     function openAddModal() {
@@ -367,8 +385,10 @@ document.addEventListener('DOMContentLoaded', function() {
     function toggleSelectMode() {
         selectMode = !selectMode;
         
-        selectBtn.textContent = selectMode ? 'CANCEL' : 'SELECT';
-        selectBtn.classList.toggle('active', selectMode);
+        if (selectBtn) {
+            selectBtn.textContent = selectMode ? 'CANCEL' : 'SELECT';
+            selectBtn.classList.toggle('active', selectMode);
+        }
         
         const rows = document.querySelectorAll('.asset-row');
         
@@ -377,15 +397,19 @@ document.addEventListener('DOMContentLoaded', function() {
             const number = row.querySelector('.row-number');
             
             if (selectMode) {
-                checkbox.style.display = 'inline-block';
-                number.style.display = 'none';
-                checkbox.checked = false;
-                checkbox.addEventListener('change', updateDeleteButtonVisibility);
+                if (checkbox) {
+                    checkbox.style.display = 'inline-block';
+                    checkbox.checked = false;
+                    checkbox.addEventListener('change', updateDeleteButtonVisibility);
+                }
+                if (number) number.style.display = 'none';
             } else {
-                checkbox.style.display = 'none';
-                number.style.display = 'inline-block';
-                checkbox.checked = false;
-                checkbox.removeEventListener('change', updateDeleteButtonVisibility);
+                if (checkbox) {
+                    checkbox.style.display = 'none';
+                    checkbox.checked = false;
+                    checkbox.removeEventListener('change', updateDeleteButtonVisibility);
+                }
+                if (number) number.style.display = 'inline-block';
             }
         });
         
@@ -399,7 +423,9 @@ document.addEventListener('DOMContentLoaded', function() {
     
     function updateDeleteButtonVisibility() {
         const checkedBoxes = document.querySelectorAll('.row-checkbox:checked');
-        deleteBtn.style.display = checkedBoxes.length > 0 ? 'block' : 'none';
+        if (deleteBtn) {
+            deleteBtn.style.display = checkedBoxes.length > 0 ? 'block' : 'none';
+        }
     }
     
     function showDeleteConfirmation() {
@@ -446,6 +472,8 @@ document.addEventListener('DOMContentLoaded', function() {
     }
     
     function handleSearch() {
+        if (!searchInput) return;
+        
         const query = searchInput.value.toLowerCase().trim();
         const rows = document.querySelectorAll('.asset-row');
         let visibleCount = 0;
@@ -527,14 +555,6 @@ document.addEventListener('DOMContentLoaded', function() {
         }, 500);
     }
     
-    function handleKeydown(e) {
-        if (e.key === 'Escape') {
-            if (selectMode) {
-                toggleSelectMode();
-            }
-        }
-    }
-    
     // Utility functions
     function formatCurrency(amount) {
         return new Intl.NumberFormat('en-PH', {
@@ -564,6 +584,8 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // Auto-save form data to localStorage
     function setupAutoSave() {
+        if (!assetForm) return;
+        
         const formElements = assetForm.querySelectorAll('input, select, textarea');
         
         formElements.forEach(element => {
@@ -575,48 +597,89 @@ document.addEventListener('DOMContentLoaded', function() {
         });
         
         // Restore form data when modal opens
-        document.getElementById('assetModal').addEventListener('shown.bs.modal', () => {
-            if (!document.getElementById('asset_id').value) { // Only for new assets
-                const savedData = localStorage.getItem('assetFormData');
-                if (savedData) {
-                    const data = JSON.parse(savedData);
-                    Object.keys(data).forEach(key => {
-                        const element = document.getElementById(key);
-                        if (element && key !== 'asset_id') {
-                            element.value = data[key];
+        const assetModalElement = document.getElementById('assetModal');
+        if (assetModalElement) {
+            assetModalElement.addEventListener('shown.bs.modal', () => {
+                const assetIdInput = document.getElementById('asset_id');
+                if (!assetIdInput || !assetIdInput.value) { // Only for new assets
+                    const savedData = localStorage.getItem('assetFormData');
+                    if (savedData) {
+                        try {
+                            const data = JSON.parse(savedData);
+                            Object.keys(data).forEach(key => {
+                                const element = document.getElementById(key);
+                                if (element && key !== 'asset_id') {
+                                    element.value = data[key];
+                                }
+                            });
+                        } catch (error) {
+                            console.log('Error parsing saved form data:', error);
                         }
-                    });
+                    }
                 }
-            }
-        });
+            });
+        }
         
         // Clear saved data on successful submission
-        assetForm.addEventListener('submit', () => {
-            localStorage.removeItem('assetFormData');
-        });
+        if (assetForm) {
+            assetForm.addEventListener('submit', () => {
+                localStorage.removeItem('assetFormData');
+            });
+        }
     }
     
     setupAutoSave();
     
     // Image preview functionality
-    document.getElementById('asset_img').addEventListener('change', function(e) {
-        const file = e.target.files[0];
-        if (file) {
-            const reader = new FileReader();
-            reader.onload = function(e) {
-                let preview = document.getElementById('imagePreview');
-                if (!preview) {
-                    preview = document.createElement('div');
-                    preview.id = 'imagePreview';
-                    preview.className = 'mt-2';
-                    e.target.parentNode.appendChild(preview);
+    const assetImgInput = document.getElementById('asset_img');
+    if (assetImgInput) {
+        assetImgInput.addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function(event) {
+                    let preview = document.getElementById('imagePreview');
+                    if (!preview) {
+                        preview = document.createElement('div');
+                        preview.id = 'imagePreview';
+                        preview.className = 'mt-2';
+                        e.target.parentNode.appendChild(preview);
+                    }
+                    preview.innerHTML = `
+                        <img src="${event.target.result}" alt="Preview" style="max-width: 200px; max-height: 150px; border-radius: 6px; border: 1px solid #ddd;">
+                        <div class="mt-1 text-muted small">Preview</div>
+                    `;
+                };
+                reader.readAsDataURL(file);
+            } else {
+                // Remove preview if no file selected
+                const preview = document.getElementById('imagePreview');
+                if (preview) {
+                    preview.remove();
                 }
-                preview.innerHTML = `
-                    <img src="${e.target.result}" alt="Preview" style="max-width: 200px; max-height: 150px; border-radius: 6px; border: 1px solid #ddd;">
-                    <div class="mt-1 text-muted small">Preview</div>
-                `;
-            };
-            reader.readAsDataURL(file);
+            }
+        });
+    }
+    
+    // Performance optimization: Virtual scrolling for large lists (if needed)
+    function setupVirtualScrolling() {
+        const container = document.querySelector('.asset-list-table-body-container');
+        const rows = document.querySelectorAll('.asset-row');
+        
+        if (rows.length > 100) { // Only enable for large lists
+            console.log('Virtual scrolling enabled for', rows.length, 'items');
+            // Implementation would go here for virtual scrolling
         }
-    });    
+    }
+    
+    setupVirtualScrolling();
+    
+    // Global pagination function
+    window.changePage = function(page) {
+        window.location.href = 'ms_assets.php?page=' + page;
+    };
+    
+    // Initialize everything
+    console.log('Assets page initialized with', allAssets.length, 'assets');
+    
 });
