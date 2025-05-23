@@ -1412,9 +1412,7 @@ $users_result = $conn->query($users_query);
     <div class="content-area">
         <?php include 'header.php'; ?>
 
-        <div class="content-body">
-            <h4 class="page-title text-center"> Reports & Analytics Center</h4>
-            
+        <div class="content-body">            
             <!-- Global Quick Dates Section -->
             <div class="quick-dates-container">
                 <div class="d-flex align-items-center justify-content-between">
@@ -1880,7 +1878,7 @@ $users_result = $conn->query($users_query);
                         setTimeout(() => {
                             submitButton.innerHTML = originalText;
                             submitButton.disabled = false;
-                        }, 15000);
+                        }, 1000);
                         
                         return true;
                     });
