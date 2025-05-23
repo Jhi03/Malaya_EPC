@@ -100,7 +100,7 @@
                 
                 $stmt = $conn->prepare($sql);
                 $stmt->bind_param(
-                    "issssssissssssf",
+                    "issssssissssss",
                     $employee_id, $first_name, $middle_name, $last_name, $position, $department, $employment_status, 
                     $contact, $unit_no, $building, $street, $barangay, $city, $country
                 );
