@@ -176,12 +176,17 @@
                     <input type="text" class="search-input" placeholder="SEARCH">
                 </div>
                 <div class="filter-options">
-                    <button class="sort-btn">
-                        <img src="icons/arrow-down-up.svg" alt="SortIcon" width="16"> Sort By
-                    </button>                    
-                    <button class="filter-btn">
-                        <img src="icons/filter.svg" alt="FilterIcon" width="16"> Filter
-                    </button>
+                    <div class="dropdown sort-dropdown">
+                        <button class="sort-btn" type="button" id="sortDropdown">
+                            <img src="icons/arrow-down-up.svg" alt="SortIcon" width="16"> Sort By
+                        </button>
+                        <ul class="dropdown-menu sort-menu" aria-labelledby="sortDropdown">
+                            <li><a class="dropdown-item sort-option" data-sort="name-a-z" href="#">Name (A to Z)</a></li>
+                            <li><a class="dropdown-item sort-option" data-sort="name-z-a" href="#">Name (Z to A)</a></li>
+                            <li><a class="dropdown-item sort-option" data-sort="oldest-newest" href="#">Oldest to Newest</a></li>
+                            <li><a class="dropdown-item sort-option" data-sort="newest-oldest" href="#">Newest to Oldest</a></li>
+                        </ul>
+                    </div>
                 </div>
             </div>
 
@@ -252,101 +257,122 @@
         </div>
     </div>
 
-    <!-- Pop-up Modal -->
-    <div id="addProjectModal" class="modal">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h4 class="modal-title" id="modalTitle">NEW PROJECT</h4>
-            </div>
-            <div class="modal-body">
+    <!-- Updated Add/Edit Project Modal -->
+    <div class="modal fade" id="addProjectModal" tabindex="-1" aria-labelledby="projectModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
                 <form id="projectForm" method="POST">
                     <input type="hidden" name="form_mode" id="formMode" value="add">
                     <input type="hidden" name="project_id" id="editProjectId">
-
-                    <div class="form-row">
-                        <div class="form-group">
-                            <label for="projectName">Project Name</label>
-                            <input type="text" name="projectName" id="projectName" placeholder="Project Name" required>
-                        </div>
-                        <div class="form-group">
-                            <label for="projectCode">Project Code</label>
-                            <input type="text" name="projectCode" id="projectCode" placeholder="Project Code" required>
-                        </div>
-                    </div>
-
-                    <div class="form-row">
-                        <div class="form-group">
-                            <label for="clientFirstName">Client Name</label>
-                            <input type="text" name="clientFirstName" id="clientFirstName" placeholder="First Name" required>
-                        </div>
-                        <div class="form-group">
-                            <input type="text" name="clientLastName" id="clientLastName" placeholder="Last Name" required>
-                        </div>
-                    </div>
-                    <!-- Contact and Email (visible in add mode) -->
-                    <div id="contactEmailGroup" class="form-row">
-                        <div class="form-group">
-                            <label for="contact">Contact</label>
-                            <input type="text" name="contact" id="contact" placeholder="Contact Number">
-                        </div>
-                        <div class="form-group">
-                            <label for="email">Email Address</label>
-                            <input type="email" name="email" id="email" placeholder="Email Address">
-                        </div>
-                    </div>
-
-                    <div class="form-group">
-                        <label for="companyName">Company</label>
-                        <input type="text" name="companyName" id="companyName" placeholder="Company Name" required>
-                    </div>
-                    <!-- Address Fields (visible in edit mode) -->
-                    <div id="addressGroup" class="form-row" style="display: none;">
-                        <div class="form-group">
-                            <label for="unit">Unit/Building No.</label>
-                            <input type="text" name="unit" id="unit" placeholder="Unit or Building No.">
-                        </div>
-                        <div class="form-group">
-                            <label for="street">Street</label>
-                            <input type="text" name="street" id="street" placeholder="Street">
-                        </div>
-                    </div>
-
-                    <div id="locationGroup" class="form-row" style="display: none;">
-                        <div class="form-group">
-                            <label for="barangay">Barangay</label>
-                            <input type="text" name="barangay" id="barangay" placeholder="Barangay">
-                        </div>
-                        <div class="form-group">
-                            <label for="city">City</label>
-                            <input type="text" name="city" id="city" placeholder="City">
-                        </div>
-                        <div class="form-group">
-                            <label for="country">Country</label>
-                            <input type="text" name="country" id="country" placeholder="Country">
-                        </div>
-                    </div>
-
-                    <div class="form-group">
-                        <label for="description">Description</label>
-                        <textarea name="description" id="description" placeholder="Project Description" required></textarea>
+                    
+                    <div class="modal-header">
+                        <h5 class="modal-title" id="projectModalLabel">Add New Project</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close">&times;</button>
                     </div>
                     
-                    <div id="recordMeta" class="record-meta" style="display: none;">
-                        <div style="display: inline-flex; gap: 20px; width: 100%;">
-                            <div class="meta-left">
-                                <div>Added by: <strong id="createdByMeta">Unknown</strong></div>
-                                <div>Edited by: <strong id="editedByMeta">Unknown</strong></div>
+                    <div class="modal-body">
+                        <div class="form-section">
+                            <div class="form-section-title">Project Information</div>
+                            <div class="row g-3">
+                                <div class="col-md-6">
+                                    <label for="projectName" class="form-label">Project Name</label>
+                                    <input type="text" class="form-control" id="projectName" name="projectName" placeholder="Enter project name" required>
+                                </div>
+                                <div class="col-md-6">
+                                    <label for="projectCode" class="form-label">Project Code</label>
+                                    <input type="text" class="form-control" id="projectCode" name="projectCode" placeholder="Enter project code" required>
+                                </div>
                             </div>
-                            <div class="meta-right">
-                                <div>Added on: <strong id="createdOnMeta">Unknown</strong></div>
-                                <div>Edited on: <strong id="editedOnMeta">Unknown</strong></div>
+                        </div>
+                        
+                        <div class="form-section">
+                            <div class="form-section-title">Client Information</div>
+                            <div class="row g-3">
+                                <div class="col-md-6">
+                                    <label for="clientFirstName" class="form-label">First Name</label>
+                                    <input type="text" class="form-control" id="clientFirstName" name="clientFirstName" placeholder="Enter first name" required>
+                                </div>
+                                <div class="col-md-6">
+                                    <label for="clientLastName" class="form-label">Last Name</label>
+                                    <input type="text" class="form-control" id="clientLastName" name="clientLastName" placeholder="Enter last name" required>
+                                </div>
+                                <div class="col-md-6">
+                                    <label for="contact" class="form-label">Contact</label>
+                                    <input type="text" class="form-control" id="contact" name="contact" placeholder="Enter 11-digit contact number" maxlength="11" pattern="[0-9]{11}" required>
+                                </div>
+                                <div class="col-md-6">
+                                    <label for="email" class="form-label">Email</label>
+                                    <input type="email" class="form-control" id="email" name="email" placeholder="Enter email address" required>
+                                </div>
+                                <div class="col-md-12">
+                                    <label for="companyName" class="form-label">Company</label>
+                                    <input type="text" class="form-control" id="companyName" name="companyName" placeholder="Enter company name" required>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="form-section" id="addressSection" style="display: none;">
+                            <div class="form-section-title">Address</div>
+                            <div class="row g-3">
+                                <div class="col-md-6">
+                                    <label for="unit" class="form-label">Unit/Building No.</label>
+                                    <input type="text" class="form-control" id="unit" name="unit" placeholder="Enter unit or building number">
+                                </div>
+                                <div class="col-md-6">
+                                    <label for="street" class="form-label">Street</label>
+                                    <input type="text" class="form-control" id="street" name="street" placeholder="Enter street address">
+                                </div>
+                                <div class="col-md-6">
+                                    <label for="barangay" class="form-label">Barangay</label>
+                                    <input type="text" class="form-control" id="barangay" name="barangay" placeholder="Enter barangay">
+                                </div>
+                                <div class="col-md-6">
+                                    <label for="city" class="form-label">City</label>
+                                    <input type="text" class="form-control" id="city" name="city" placeholder="Enter city">
+                                </div>
+                                <div class="col-md-12">
+                                    <label for="country" class="form-label">Country</label>
+                                    <input type="text" class="form-control" id="country" name="country" placeholder="Enter country">
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="form-section">
+                            <div class="form-section-title">Additional Information</div>
+                            <div class="row g-3">
+                                <div class="col-md-12">
+                                    <label for="description" class="form-label">Description</label>
+                                    <textarea class="form-control" id="description" name="description" rows="4" placeholder="Enter project description" required></textarea>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div id="recordMeta" class="form-section" style="display: none;">
+                            <div class="form-section-title">Record Information</div>
+                            <div class="row g-3">
+                                <div class="col-md-6">
+                                    <label class="form-label">Created By</label>
+                                    <div class="form-control-plaintext" id="createdByMeta">Unknown</div>
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label">Creation Date</label>
+                                    <div class="form-control-plaintext" id="createdOnMeta">Unknown</div>
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label">Last Edited By</label>
+                                    <div class="form-control-plaintext" id="editedByMeta">Unknown</div>
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label">Last Edit Date</label>
+                                    <div class="form-control-plaintext" id="editedOnMeta">Unknown</div>
+                                </div>
                             </div>
                         </div>
                     </div>
-
+                    
                     <div class="modal-footer">
-                        <button type="submit" id="submitButton" class="btn-add" style="background-color: #38b6ff;">ADD</button>
-                        <button type="button" class="btn-cancel" id="closeModal">CANCEL</button>
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                        <button type="submit" id="submitButton" class="btn btn-primary">Add Project</button>
                     </div>
                 </form>
             </div>
@@ -379,239 +405,330 @@
             company: document.getElementById("companyName"),
             description: document.getElementById("description")
         };
-
-        // For the "Add Project" button - keep this as-is
-        const addProjectBtn = document.getElementById("addProjectBtn");
-        addProjectBtn.addEventListener("click", () => {
-            const modal = document.getElementById("addProjectModal");
-            const modalTitle = document.getElementById("modalTitle");
-            const form = document.getElementById("projectForm");
-            const submitButton = document.getElementById("submitButton");
-            const formMode = document.getElementById("formMode");
-            
-            modalTitle.textContent = "NEW PROJECT";
-            submitButton.textContent = "ADD";
-            submitButton.style.backgroundColor = "#38b6ff";
-            formMode.value = "add";
-
-            form.reset();
-            document.getElementById("contactEmailGroup").style.display = "flex";
-            document.getElementById("addressGroup").style.display = "none";
-            document.getElementById("locationGroup").style.display = "none";
-            document.getElementById("recordMeta").style.display = "none";
-
-            modal.style.display = "flex";
-        });
         
-        // Edit button handler - use this instead of the existing edit handler
-        function openEditModal(button) {
-            const card = button.closest(".project-card");
-            const modal = document.getElementById("addProjectModal");
-            const modalTitle = document.getElementById("modalTitle");
-            const submitButton = document.getElementById("submitButton");
-            const formMode = document.getElementById("formMode");
+        document.addEventListener('DOMContentLoaded', function() {
+            // Search functionality
+            const searchInput = document.querySelector('.search-input');
+            const projectCards = document.querySelectorAll('.project-card:not(.add-project)');
             
-            // Fill in basic project info
-            document.getElementById("projectName").value = card.dataset.projectName || "";
-            document.getElementById("projectCode").value = card.dataset.projectCode || "";
-            document.getElementById("clientFirstName").value = card.dataset.firstName || "";
-            document.getElementById("clientLastName").value = card.dataset.lastName || "";
-            document.getElementById("companyName").value = card.dataset.companyName || "";
-            document.getElementById("description").value = card.dataset.description || "";
-            document.getElementById("contact").value = card.dataset.contact || "";
-            document.getElementById("email").value = card.dataset.email || "";
-            document.getElementById("editProjectId").value = card.dataset.projectId || "";
+            if (searchInput) {
+                searchInput.addEventListener('input', function() {
+                    const searchTerm = this.value.toLowerCase().trim();
+                    
+                    projectCards.forEach(card => {
+                        const projectName = card.dataset.projectName ? card.dataset.projectName.toLowerCase() : '';
+                        const projectCode = card.dataset.projectCode ? card.dataset.projectCode.toLowerCase() : '';
+                        const companyName = card.dataset.companyName ? card.dataset.companyName.toLowerCase() : '';
+                        
+                        const matches = projectName.includes(searchTerm) || 
+                                    projectCode.includes(searchTerm) || 
+                                    companyName.includes(searchTerm);
+                        
+                        if (searchTerm === '' || matches) {
+                            card.style.display = 'block';
+                        } else {
+                            card.style.display = 'none';
+                        }
+                    });
+                });
+            }
 
-            // Configure modal appearance
-            modalTitle.textContent = "EDIT PROJECT";
-            submitButton.textContent = "SAVE";
-            submitButton.style.backgroundColor = "#ff5757";
-            formMode.value = "edit";
-
-            // Show additional sections
-            document.getElementById("addressGroup").style.display = "flex";
-            document.getElementById("locationGroup").style.display = "flex";
-            document.getElementById("recordMeta").style.display = "flex";
-
-            // Optional address fields
-            document.getElementById("unit").value = card.dataset.unit || "";
-            document.getElementById("street").value = card.dataset.street || "";
-            document.getElementById("barangay").value = card.dataset.barangay || "";
-            document.getElementById("city").value = card.dataset.city || "";
-            document.getElementById("country").value = card.dataset.country || "";
-
-            // Update metadata fields
-            document.getElementById("createdByMeta").textContent = card.dataset.createdBy || "Unknown";
-            document.getElementById("editedByMeta").textContent = card.dataset.editedBy || "Unknown";
-            document.getElementById("createdOnMeta").textContent = formatDate(card.dataset.createdOn) || "Unknown";
-            document.getElementById("editedOnMeta").textContent = formatDate(card.dataset.editedOn) || "Unknown";
-
-            // Display the modal
-            modal.style.display = "flex";
-        }
-
-        // Helper function to format dates nicely
-        function formatDate(dateString) {
-            if (!dateString) return "";
-            const date = new Date(dateString);
-            if (isNaN(date.getTime())) return dateString;
+            // Sort functionality
+            const sortBtn = document.getElementById('sortDropdown');
+            const sortMenu = document.querySelector('.sort-menu');
+            const sortOptions = document.querySelectorAll('.sort-option');
+            const projectGrid = document.querySelector('.project-grid');
             
-            return date.toLocaleString('en-US', {
-                year: 'numeric',
-                month: 'short',
-                day: 'numeric',
-                hour: '2-digit',
-                minute: '2-digit'
-            });
-        }
-
-        // Close modal logic
-        document.getElementById("closeModal").addEventListener("click", () => {
-            modal.style.display = "none";
-            form.reset();
-        });
-
-        // Close modal on outside click or ESC
-        window.addEventListener("click", (event) => {
-            if (event.target === modal) {
-                modal.style.display = "none";
-                form.reset();
-            }
-        });
-        window.addEventListener("keydown", (event) => {
-            if (event.key === "Escape") {
-                modal.style.display = "none";
-                form.reset();
-            }
-        });
-
-        // Submit form via POST
-        form.addEventListener("submit", function (e) {
-            e.preventDefault();
-            const formData = new FormData(form);
-
-            fetch("", {
-                method: "POST",
-                body: formData,
-            })
-            .then((res) => res.text())
-            .then((data) => {
-                if (data.trim() === "success") {
-                    location.reload();
-                } else {
-                    alert("Error: " + data);
-                }
-            });
-        });
-        
-        //Project Card Dropdown [EDIT and DELETE]      
-        function toggleDropdown(event, el) {
-            event.stopPropagation(); // Prevent outside click handler
-            const menu = el.nextElementSibling;
-            const isOpen = menu.style.display === 'block';
-
-            // Close all open dropdowns
-            document.querySelectorAll('.dropdown-menu').forEach(m => m.style.display = 'none');
-
-            // Toggle current one
-            if (!isOpen) {
-                menu.style.display = 'block';
+            // Toggle sort dropdown
+            if (sortBtn && sortMenu) {
+                sortBtn.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    sortMenu.classList.toggle('show');
+                });
             }
             
             // Close dropdown when clicking outside
             document.addEventListener('click', function(e) {
-                if (!e.target.closest('.project-menu')) {
-                    document.querySelectorAll('.dropdown-menu').forEach(m => m.style.display = 'none');
+                if (!e.target.closest('.sort-dropdown')) {
+                    sortMenu?.classList.remove('show');
                 }
             });
-
-            // Close dropdown on Escape key
-            document.addEventListener('keydown', function(e) {
-                if (e.key === 'Escape') {
-                    document.querySelectorAll('.dropdown-menu').forEach(m => m.style.display = 'none');
-                }
+            
+            // Sort options click handlers
+            sortOptions.forEach(option => {
+                option.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    
+                    const sortType = this.getAttribute('data-sort');
+                    sortProjects(sortType);
+                    
+                    // Close dropdown
+                    sortMenu.classList.remove('show');
+                    
+                    // Update button state
+                    sortBtn.classList.add('active');
+                });
             });
-        }
-
-        //DELETION
-        function deleteProject(button) {
-            const card = button.closest(".project-card");
-            const projectId = card.dataset.projectId;
-
-            if (!projectId) {
-                alert("Project ID not found.");
-                return;
+            
+            // Sort function
+            function sortProjects(sortType) {
+                const projectCards = Array.from(document.querySelectorAll('.project-card:not(.add-project)'));
+                const addProjectCard = document.querySelector('.project-card.add-project');
+                
+                projectCards.sort((a, b) => {
+                    switch (sortType) {
+                        case 'name-a-z':
+                            const nameA = a.dataset.projectName || '';
+                            const nameB = b.dataset.projectName || '';
+                            return nameA.localeCompare(nameB);
+                            
+                        case 'name-z-a':
+                            const nameA2 = a.dataset.projectName || '';
+                            const nameB2 = b.dataset.projectName || '';
+                            return nameB2.localeCompare(nameA2);
+                            
+                        case 'oldest-newest':
+                            const dateA = new Date(a.dataset.createdOn || '');
+                            const dateB = new Date(b.dataset.createdOn || '');
+                            return dateA - dateB;
+                            
+                        case 'newest-oldest':
+                            const dateA2 = new Date(a.dataset.createdOn || '');
+                            const dateB2 = new Date(b.dataset.createdOn || '');
+                            return dateB2 - dateA2;
+                            
+                        default:
+                            return 0;
+                    }
+                });
+                
+                // Clear the grid
+                projectGrid.innerHTML = '';
+                
+                // Re-add the add project card first (if it exists)
+                if (addProjectCard) {
+                    projectGrid.appendChild(addProjectCard);
+                }
+                
+                // Add sorted project cards
+                projectCards.forEach(card => {
+                    projectGrid.appendChild(card);
+                });
             }
 
-            if (confirm("Are you sure you want to delete this project?")) {
-                const formData = new FormData();
-                formData.append("delete_project_id", projectId);
+            // Contact number validation - digits only, max 11 characters
+            const contactInput = document.getElementById('contact');
+            if (contactInput) {
+                contactInput.addEventListener('input', function(e) {
+                    let value = e.target.value.replace(/\D/g, '');
+                    if (value.length > 11) {
+                        value = value.slice(0, 11);
+                    }
+                    e.target.value = value;
+                });
+                
+                contactInput.addEventListener('keypress', function(e) {
+                    if (!/\d/.test(e.key) && !['Backspace', 'Delete', 'Tab', 'Escape', 'Enter', 'Home', 'End', 'ArrowLeft', 'ArrowRight'].includes(e.key)) {
+                        e.preventDefault();
+                    }
+                });
+            }
+
+            // Modal functionality (keeping your existing modal code)
+            const modal = document.getElementById("addProjectModal");
+            const modalTitle = document.getElementById("projectModalLabel");
+            const form = document.getElementById("projectForm");
+            const submitButton = document.getElementById("submitButton");
+            const formMode = document.getElementById("formMode");
+
+            // Add Project button handler
+            const addProjectBtn = document.getElementById("addProjectBtn");
+            if (addProjectBtn) {
+                addProjectBtn.addEventListener("click", () => {
+                    openProjectModal('add');
+                });
+            }
+
+            // Function to open modal in add or edit mode
+            function openProjectModal(mode, projectData = null) {
+                const bsModal = new bootstrap.Modal(modal);
+                
+                if (mode === 'add') {
+                    modalTitle.textContent = "Add New Project";
+                    submitButton.textContent = "Add Project";
+                    submitButton.className = "btn btn-primary";
+                    formMode.value = "add";
+                    form.reset();
+                    document.getElementById("addressSection").style.display = "none";
+                    document.getElementById("recordMeta").style.display = "none";
+                } else if (mode === 'edit' && projectData) {
+                    modalTitle.textContent = "Edit Project";
+                    submitButton.textContent = "Update Project";
+                    submitButton.className = "btn btn-warning";
+                    formMode.value = "edit";
+                    
+                    // Fill form with project data
+                    document.getElementById("editProjectId").value = projectData.id;
+                    document.getElementById("projectName").value = projectData.name;
+                    document.getElementById("projectCode").value = projectData.code;
+                    document.getElementById("clientFirstName").value = projectData.firstName;
+                    document.getElementById("clientLastName").value = projectData.lastName;
+                    document.getElementById("contact").value = projectData.contact;
+                    document.getElementById("email").value = projectData.email;
+                    document.getElementById("companyName").value = projectData.company;
+                    document.getElementById("description").value = projectData.description;
+                    
+                    // Show address section for edit mode
+                    document.getElementById("addressSection").style.display = "block";
+                    document.getElementById("unit").value = projectData.unit || '';
+                    document.getElementById("street").value = projectData.street || '';
+                    document.getElementById("barangay").value = projectData.barangay || '';
+                    document.getElementById("city").value = projectData.city || '';
+                    document.getElementById("country").value = projectData.country || '';
+                    
+                    // Show metadata section
+                    document.getElementById("recordMeta").style.display = "block";
+                    document.getElementById("createdByMeta").textContent = projectData.createdBy || 'Unknown';
+                    document.getElementById("editedByMeta").textContent = projectData.editedBy || 'Unknown';
+                    document.getElementById("createdOnMeta").textContent = formatDate(projectData.createdOn) || 'Unknown';
+                    document.getElementById("editedOnMeta").textContent = formatDate(projectData.editedOn) || 'Unknown';
+                }
+                
+                bsModal.show();
+            }
+
+            // Edit button handler
+            window.openEditModal = function(button) {
+                const card = button.closest(".project-card");
+                const projectData = {
+                    id: card.dataset.projectId,
+                    name: card.dataset.projectName,
+                    code: card.dataset.projectCode,
+                    firstName: card.dataset.firstName,
+                    lastName: card.dataset.lastName,
+                    company: card.dataset.companyName,
+                    description: card.dataset.description,
+                    contact: card.dataset.contact,
+                    email: card.dataset.email,
+                    unit: card.dataset.unit,
+                    street: card.dataset.street,
+                    barangay: card.dataset.barangay,
+                    city: card.dataset.city,
+                    country: card.dataset.country,
+                    createdBy: card.dataset.createdBy,
+                    editedBy: card.dataset.editedBy,
+                    createdOn: card.dataset.createdOn,
+                    editedOn: card.dataset.editedOn
+                };
+                
+                openProjectModal('edit', projectData);
+            };
+
+            // Helper function to format dates
+            function formatDate(dateString) {
+                if (!dateString) return "";
+                const date = new Date(dateString);
+                if (isNaN(date.getTime())) return dateString;
+                
+                return date.toLocaleString('en-US', {
+                    year: 'numeric',
+                    month: 'short',
+                    day: 'numeric',
+                    hour: '2-digit',
+                    minute: '2-digit'
+                });
+            }
+
+            // Form submission
+            form.addEventListener("submit", function (e) {
+                e.preventDefault();
+                const formData = new FormData(form);
 
                 fetch("", {
                     method: "POST",
-                    body: formData
+                    body: formData,
                 })
-                .then(response => response.text())
-                .then(data => {
+                .then((res) => res.text())
+                .then((data) => {
                     if (data.trim() === "success") {
                         location.reload();
                     } else {
                         alert("Error: " + data);
                     }
-                })
-                .catch(error => {
-                    console.error("Delete error:", error);
-                    alert("An error occurred.");
                 });
-            }
-        }
+            });
+
+            // Keep existing dropdown and delete functionality
+            window.toggleDropdown = function(event, el) {
+                event.stopPropagation();
+                const menu = el.nextElementSibling;
+                const isOpen = menu.style.display === 'block';
+
+                // Close all other dropdowns first
+                document.querySelectorAll('.project-menu .dropdown-menu').forEach(m => {
+                    if (m !== menu) {
+                        m.style.display = 'none';
+                    }
+                });
+
+                // Toggle current dropdown
+                if (!isOpen) {
+                    menu.style.display = 'block';
+                } else {
+                    menu.style.display = 'none';
+                }
+            };
+
+            // Close edit/delete dropdowns when clicking outside or pressing ESC
+            document.addEventListener('click', function(e) {
+                if (!e.target.closest('.project-menu')) {
+                    document.querySelectorAll('.project-menu .dropdown-menu').forEach(menu => {
+                        menu.style.display = 'none';
+                    });
+                }
+            });
+
+            document.addEventListener('keydown', function(e) {
+                if (e.key === 'Escape') {
+                    document.querySelectorAll('.project-menu .dropdown-menu').forEach(menu => {
+                        menu.style.display = 'none';
+                    });
+                }
+            });
+
+            window.deleteProject = function(button) {
+                const card = button.closest(".project-card");
+                const projectId = card.dataset.projectId;
+
+                if (!projectId) {
+                    alert("Project ID not found.");
+                    return;
+                }
+
+                if (confirm("Are you sure you want to delete this project?")) {
+                    const formData = new FormData();
+                    formData.append("delete_project_id", projectId);
+
+                    fetch("", {
+                        method: "POST",
+                        body: formData
+                    })
+                    .then(response => response.text())
+                    .then(data => {
+                        if (data.trim() === "success") {
+                            location.reload();
+                        } else {
+                            alert("Error: " + data);
+                        }
+                    })
+                    .catch(error => {
+                        console.error("Delete error:", error);
+                        alert("An error occurred.");
+                    });
+                }
+            };
+        });
     </script>
 </body>
 </html>
-
-<!-- 
-NOTES: 
-    04-05-25
-    - Add new project: save projects form inputs in a database [done]
-    - PHP: Filled out form will display "project card" in Projects page [done]
-    - PHP: Selecting "Records" or "Anlytics" will take project id( ? | refer to database later ) to open a Records/Analytics Page [done]
-
-    - added href for CamSur "record" and "analytics" to create template for records and analytics page [removed]
-
-    04-13-25
-    CHANGES:
-    - Added PHP connection and commands to add form input from "Add New Project"
-    - project id, project name, client name, company, description are added taken as input
-    - backend adds budget as zero (0) by default and creation date for documentation
-    - form inputs are "trimmed" for white space
-    -   consider removing trim for project name ; only project code is important to be trimmed to avoid query issues (filtering) later
-    - form will not continue with creation if fields are not filled out 
-    - project cards are updated to dynamically display existing projects
-
-    04-20-25
-    CHANGES:
-    - Added script for the modal to close when thru: button, outside click or "esc" key 
-    - side bar: won't scroll, and animation added
-    - topbar: contents will scroll under it
-
-    TO BE WORKED ON:
-    - project card: analytics button not yet working [done]
-        - redirect user to analytics view when analytics button is selected
-    - analytics button: update its icon to svg file [done]
-
-    NOT YET FUNCTIONAL:
-    - search bar, sort by and filter   
-    - analytics button in project card
-    - user profile button [done]
-
-    04-24-25
-    CHANGES:
-    - login page: login and session tracking added
-    - user menu: added settings and logout button
-
-    TO BE WORKED ON:
-    - project card: add meatball for edit and deletion of project
-
-    NO FUNCTION:
-    - settings: from user menu
--->

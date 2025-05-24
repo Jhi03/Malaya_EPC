@@ -315,9 +315,8 @@
                             </div>
 
                             <div class="untracked-notice" id="untrackedNotice" style="display: none;">
-                                <div class="notice-icon">⚠️</div>
+                                <div class="notice-icon">⚠️ <strong style="font-size: 12px;">Untracked Expense</strong></div>
                                 <div class="notice-content">
-                                    <strong>Untracked Expense</strong>
                                     <p>This item is an untracked expense. Please add if expense is incurred.</p>
                                 </div>
                             </div>
