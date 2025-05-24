@@ -2,21 +2,18 @@
     include('validate_login.php');
     require_once 'activity_logger.php';
     
-    // Additional verification for settings access (belt and suspenders approach)
+    // Additional verification for settings access
     $current_user_department = getCurrentUserDepartment();
     $current_user_role = getCurrentUserRole();
     
     if ($current_user_department !== 'IT Infrastructure & Cybersecurity Division' || 
         !in_array(strtolower($current_user_role), ['superadmin', 'admin'])) {
         
-        // Log unauthorized access attempt
         logUserActivity('access_denied', 'ms_settings.php', 'Unauthorized settings access attempt');
-        
         header("Location: access_denied.php");
         exit();
     }
     
-    // Log successful settings access
     logUserActivity('access', 'ms_settings.php', "Settings accessed by {$current_user_role} from {$current_user_department}");
     
     $page_title = "System Settings - Malaya Solar Energies Inc.";
@@ -46,7 +43,7 @@
         .content-body {
             padding: 20px 40px 20px 40px;
             flex: 1;
-            overflow: hidden;
+            overflow-y: auto;
             display: flex;
             flex-direction: column;
             width: 100%;
@@ -67,7 +64,6 @@
         .settings-container {
             display: flex;
             flex-direction: column;
-            height: 100%;
             gap: 20px;
         }
         
@@ -96,7 +92,6 @@
             border-radius: 8px;
             padding: 20px;
             box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
-            flex: 1;
         }
 
         .backup-section h3 {
@@ -112,10 +107,29 @@
             margin-bottom: 20px;
         }
 
+        .backup-tabs {
+            margin-bottom: 20px;
+        }
+
+        .backup-tabs .nav-link {
+            font-size: 12px;
+            padding: 8px 16px;
+            color: #666;
+            border: 1px solid #ddd;
+            background: #f8f9fa;
+        }
+
+        .backup-tabs .nav-link.active {
+            background: #007bff;
+            color: white;
+            border-color: #007bff;
+        }
+
         .backup-options {
             display: grid;
             grid-template-columns: repeat(3, 1fr);
             gap: 15px;
+            margin-top: 20px;
             margin-bottom: 20px;
         }
 
@@ -131,10 +145,10 @@
             border-color: #007bff;
         }
 
-        .backup-card h4 {
+        .backup-card h5 {
             margin-bottom: 8px;
             color: #333;
-            font-size: 14px;
+            font-size: 12px;
             font-weight: 600;
         }
 
@@ -194,6 +208,12 @@
             color: #0c5460;
         }
 
+        .backup-status.warning {
+            background: #fff3cd;
+            border: 1px solid #ffeaa7;
+            color: #856404;
+        }
+
         .backup-progress {
             margin-top: 8px;
         }
@@ -245,6 +265,84 @@
             0% { transform: rotate(0deg); }
             100% { transform: rotate(360deg); }
         }
+
+        /* Restore specific styles */
+        .restore-table {
+            font-size: 11px;
+        }
+
+        .restore-table th {
+            background: #f8f9fa;
+            font-weight: 600;
+            padding: 8px;
+        }
+
+        .restore-table td {
+            padding: 6px 8px;
+            vertical-align: middle;
+        }
+
+        .btn-restore {
+            background: #28a745;
+            border: 1px solid #28a745;
+            color: white;
+            padding: 4px 8px;
+            border-radius: 3px;
+            font-size: 10px;
+            cursor: pointer;
+            margin-right: 4px;
+        }
+
+        .btn-restore:hover {
+            background: #218838;
+        }
+
+        .btn-delete {
+            background: #dc3545;
+            border: 1px solid #dc3545;
+            color: white;
+            padding: 4px 8px;
+            border-radius: 3px;
+            font-size: 10px;
+            cursor: pointer;
+        }
+
+        .btn-delete:hover {
+            background: #c82333;
+        }
+
+        .type-badge {
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-size: 9px;
+            font-weight: 600;
+        }
+
+        .type-database {
+            background: #007bff;
+            color: white;
+        }
+
+        .type-files {
+            background: #28a745;
+            color: white;
+        }
+
+        .refresh-btn {
+            background: #6c757d;
+            border: 1px solid #6c757d;
+            color: white;
+            padding: 6px 12px;
+            border-radius: 4px;
+            font-size: 11px;
+            cursor: pointer;
+            margin-top: 20px;
+            margin-bottom: 15px;
+        }
+
+        .refresh-btn:hover {
+            background: #5a6268;
+        }
     </style>
 </head>
 <body>
@@ -256,37 +354,76 @@
         <?php include 'header.php'; ?>
         <div class="content-body">
             <div class="settings-container">
+                <!-- Access Info -->
+                <div class="access-info">
+                    <h6>Administrator Access</h6>
+                    <p><strong>Role:</strong> <?= htmlspecialchars($current_user_role) ?></p>
+                    <p><strong>Department:</strong> <?= htmlspecialchars($current_user_department) ?></p>
+                </div>
+                
                 <!-- Backup Section -->
                 <div class="backup-section">
-                    <h3>SYSTEM BACKUP</h3>
-                    <p>Create backups of your database and application files to ensure data safety.</p>
+                    <h3>System Backup & Restore</h3>
+                    <p>Create backups of your database and application files, or restore from existing backups.</p>
                     
-                    <div class="backup-options">
-                        <div class="backup-card">
-                            <h4>Database Backup</h4>
-                            <p>Export all database tables and data to a SQL file</p>
-                            <button class="backup-btn" onclick="performBackup('database')">
-                                <img src="icons/backup.svg" alt="Backup" width="12">
-                                Backup Database
+                    <!-- Tabs -->
+                    <ul class="nav nav-tabs backup-tabs" id="backupTabs" role="tablist">
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link active" id="backup-tab" data-bs-toggle="tab" data-bs-target="#backup-panel" type="button" role="tab">
+                                Create Backup
                             </button>
+                        </li>
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link" id="restore-tab" data-bs-toggle="tab" data-bs-target="#restore-panel" type="button" role="tab">
+                                Restore from Backup
+                            </button>
+                        </li>
+                    </ul>
+                    
+                    <!-- Tab Content -->
+                    <div class="tab-content" id="backupTabContent">
+                        <!-- Backup Panel -->
+                        <div class="tab-pane fade show active" id="backup-panel" role="tabpanel">
+                            <div class="backup-options">
+                                <div class="backup-card">
+                                    <h5>Database Backup</h5>
+                                    <p>Export all database tables and data to a SQL file</p>
+                                    <button class="backup-btn" onclick="performBackup('database')">
+                                        <img src="icons/backup.svg" alt="Backup" width="12">
+                                        Backup Database
+                                    </button>
+                                </div>
+                                
+                                <div class="backup-card">
+                                    <h5>Files Backup</h5>
+                                    <p>Create an archive of all PHP files, CSS, JS, and images</p>
+                                    <button class="backup-btn" onclick="performBackup('files')">
+                                        <img src="icons/backup.svg" alt="Backup" width="12">
+                                        Backup Files
+                                    </button>
+                                </div>
+                                
+                                <div class="backup-card">
+                                    <h5>Full System Backup</h5>
+                                    <p>Complete backup including both database and files</p>
+                                    <button class="backup-btn" onclick="performBackup('full')">
+                                        <img src="icons/backup.svg" alt="Backup" width="12">
+                                        Full Backup
+                                    </button>
+                                </div>
+                            </div>
                         </div>
                         
-                        <div class="backup-card">
-                            <h4>Files Backup</h4>
-                            <p>Create an archive of all PHP files, CSS, JS, and images</p>
-                            <button class="backup-btn" onclick="performBackup('files')">
-                                <img src="icons/backup.svg" alt="Backup" width="12">
-                                Backup Files
+                        <!-- Restore Panel -->
+                        <div class="tab-pane fade" id="restore-panel" role="tabpanel">
+                            <button class="refresh-btn" onclick="loadBackupList()">
+                                <img src="icons/refresh.svg" alt="Refresh" width="12">
+                                Refresh List
                             </button>
-                        </div>
-                        
-                        <div class="backup-card">
-                            <h4>Full System Backup</h4>
-                            <p>Complete backup including both database and files</p>
-                            <button class="backup-btn" onclick="performBackup('full')">
-                                <img src="icons/backup.svg" alt="Backup" width="12">
-                                Full Backup
-                            </button>
+                            
+                            <div id="backup-list-container">
+                                <p>Loading backup files...</p>
+                            </div>
                         </div>
                     </div>
                     
@@ -312,6 +449,158 @@
     <script src="js/header.js"></script>
     
     <script>
+        // Load backup list when restore tab is shown
+        document.getElementById('restore-tab').addEventListener('shown.bs.tab', function () {
+            loadBackupList();
+        });
+
+        // Load backup list on page load if restore tab is active
+        document.addEventListener('DOMContentLoaded', function() {
+            // Auto-load backup list when page loads
+            loadBackupList();
+        });
+
+        async function loadBackupList() {
+            const container = document.getElementById('backup-list-container');
+            container.innerHTML = '<p>Loading backup files...</p>';
+            
+            try {
+                const formData = new FormData();
+                formData.append('action', 'list_backups');
+                
+                const response = await fetch('backup_handler.php', {
+                    method: 'POST',
+                    body: formData
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    if (result.files.length === 0) {
+                        container.innerHTML = '<p>No backup files found.</p>';
+                    } else {
+                        let html = `
+                            <table class="table table-striped restore-table">
+                                <thead>
+                                    <tr>
+                                        <th>File Name</th>
+                                        <th>Type</th>
+                                        <th>Size</th>
+                                        <th>Date</th>
+                                        <th>Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                        `;
+                        
+                        result.files.forEach(file => {
+                            html += `
+                                <tr>
+                                    <td>${file.name}</td>
+                                    <td><span class="type-badge type-${file.type}">${file.type.toUpperCase()}</span></td>
+                                    <td>${file.size}</td>
+                                    <td>${file.date}</td>
+                                    <td>
+                                        ${file.type === 'database' ? 
+                                            `<button class="btn-restore" onclick="restoreBackup('${file.name}')">Restore</button>` : 
+                                            '<span style="font-size: 10px; color: #666; padding: 0px 4px 0px 4px; margin-right: 7px;">Files only</span>'
+                                        }
+                                        <button class="btn-delete" style="margin: 4px;" onclick="deleteBackup('${file.name}')">Delete</button>
+                                        <a style="padding:0px 4px 0px 4px;" href="backups/${file.name}" class="download-link" download>Download</a>
+                                    </td>
+                                </tr>
+                            `;
+                        });
+                        
+                        html += '</tbody></table>';
+                        container.innerHTML = html;
+                    }
+                } else {
+                    container.innerHTML = `<p class="text-danger">Error loading backup files: ${result.message}</p>`;
+                }
+            } catch (error) {
+                container.innerHTML = `<p class="text-danger">Error: ${error.message}</p>`;
+            }
+        }
+
+        async function restoreBackup(filename) {
+            if (!confirm(`Are you sure you want to restore the database from "${filename}"?\n\nThis will overwrite all current data. This action cannot be undone.`)) {
+                return;
+            }
+            
+            const statusDiv = document.getElementById('backup-status');
+            const messageDiv = document.getElementById('backup-message');
+            const progressDiv = document.getElementById('backup-progress');
+            
+            // Show status
+            statusDiv.className = 'backup-status info';
+            statusDiv.style.display = 'block';
+            messageDiv.textContent = 'Starting database restore...';
+            progressDiv.style.display = 'block';
+            
+            try {
+                const formData = new FormData();
+                formData.append('action', 'restore_database');
+                formData.append('filename', filename);
+                
+                const response = await fetch('backup_handler.php', {
+                    method: 'POST',
+                    body: formData
+                });
+                
+                const result = await response.json();
+                
+                progressDiv.style.display = 'none';
+                
+                if (result.success) {
+                    statusDiv.className = 'backup-status success';
+                    messageDiv.textContent = result.message;
+                } else {
+                    statusDiv.className = 'backup-status error';
+                    messageDiv.textContent = result.message;
+                }
+            } catch (error) {
+                progressDiv.style.display = 'none';
+                statusDiv.className = 'backup-status error';
+                messageDiv.textContent = 'Restore failed: ' + error.message;
+            }
+        }
+
+        async function deleteBackup(filename) {
+            if (!confirm(`Are you sure you want to delete "${filename}"?\n\nThis action cannot be undone.`)) {
+                return;
+            }
+            
+            try {
+                const formData = new FormData();
+                formData.append('action', 'delete_backup');
+                formData.append('filename', filename);
+                
+                const response = await fetch('backup_handler.php', {
+                    method: 'POST',
+                    body: formData
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    // Refresh the backup list
+                    loadBackupList();
+                    
+                    // Show success message
+                    const statusDiv = document.getElementById('backup-status');
+                    const messageDiv = document.getElementById('backup-message');
+                    statusDiv.className = 'backup-status success';
+                    statusDiv.style.display = 'block';
+                    messageDiv.textContent = result.message;
+                } else {
+                    alert('Delete failed: ' + result.message);
+                }
+            } catch (error) {
+                alert('Error: ' + error.message);
+            }
+        }
+
         async function performBackup(type) {
             const statusDiv = document.getElementById('backup-status');
             const messageDiv = document.getElementById('backup-message');
@@ -327,7 +616,6 @@
             const originalButtonContents = [];
             
             buttons.forEach((btn, index) => {
-                // Store original content
                 originalButtonContents[index] = btn.innerHTML;
                 btn.disabled = true;
                 const spinner = document.createElement('span');
@@ -351,10 +639,9 @@
                 const response = await fetch('backup_handler.php', {
                     method: 'POST',
                     body: formData,
-                    credentials: 'same-origin' // Ensure session is included
+                    credentials: 'same-origin'
                 });
                 
-                // Check if response is ok
                 if (!response.ok) {
                     throw new Error(`HTTP error! status: ${response.status}`);
                 }
@@ -367,7 +654,6 @@
                 
                 const result = await response.json();
                 
-                // Hide progress
                 progressDiv.style.display = 'none';
                 
                 if (result.success) {
@@ -387,6 +673,12 @@
                             filesUl.appendChild(li);
                         });
                     }
+                    
+                    // Refresh backup list if restore tab is visible
+                    const restoreTab = document.getElementById('restore-panel');
+                    if (restoreTab.classList.contains('active')) {
+                        setTimeout(() => loadBackupList(), 1000);
+                    }
                 } else {
                     statusDiv.className = 'backup-status error';
                     messageDiv.textContent = result.message || 'Backup failed';
@@ -404,30 +696,7 @@
                 btn.disabled = false;
                 btn.innerHTML = originalButtonContents[index];
             });
-            
-            // Keep status visible - don't hide it
-            // The status will remain on screen until the next backup operation
         }
-
-        // Prevent any form submissions on the page
-        document.addEventListener('DOMContentLoaded', function() {
-            // Prevent any forms from submitting
-            const forms = document.querySelectorAll('form');
-            forms.forEach(form => {
-                form.addEventListener('submit', function(e) {
-                    e.preventDefault();
-                    return false;
-                });
-            });
-            
-            // Prevent page refresh on any button clicks
-            document.addEventListener('click', function(e) {
-                if (e.target.type === 'submit') {
-                    e.preventDefault();
-                    return false;
-                }
-            });
-        });
     </script>
 </body>
 </html>

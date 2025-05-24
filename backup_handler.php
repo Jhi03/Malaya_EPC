@@ -34,17 +34,21 @@ try {
             break;
         case 'backup_full':
             $db_result = backupDatabase();
-            if (!$db_result['success']) {
-                $result = $db_result;
-                break;
-            }
-            
             $files_result = backupFiles();
             $result = [
                 'success' => $db_result['success'] && $files_result['success'],
                 'message' => $db_result['message'] . ' ' . $files_result['message'],
                 'files' => array_merge($db_result['files'] ?? [], $files_result['files'] ?? [])
             ];
+            break;
+        case 'list_backups':
+            $result = listBackups();
+            break;
+        case 'restore_database':
+            $result = restoreDatabase();
+            break;
+        case 'delete_backup':
+            $result = deleteBackup();
             break;
         default:
             $result = ['success' => false, 'message' => 'Invalid action'];
@@ -255,5 +259,173 @@ function formatBytes($size, $precision = 2) {
     $units = array('B', 'KB', 'MB', 'GB', 'TB');
     $base = log($size, 1024);
     return round(pow(1024, $base - floor($base)), $precision) . ' ' . $units[floor($base)];
+}
+
+// Add these new functions at the end of backup_handler.php (before the existing functions)
+
+function listBackups() {
+    global $backup_dir;
+    
+    try {
+        if (!is_dir($backup_dir)) {
+            return ['success' => true, 'files' => []];
+        }
+        
+        $files = [];
+        $scan = scandir($backup_dir);
+        
+        foreach ($scan as $file) {
+            if ($file === '.' || $file === '..') continue;
+            
+            $filepath = $backup_dir . $file;
+            if (is_file($filepath)) {
+                $files[] = [
+                    'name' => $file,
+                    'size' => formatBytes(filesize($filepath)),
+                    'date' => date('Y-m-d H:i:s', filemtime($filepath)),
+                    'type' => getBackupType($file)
+                ];
+            }
+        }
+        
+        // Sort by date (newest first)
+        usort($files, function($a, $b) {
+            return strtotime($b['date']) - strtotime($a['date']);
+        });
+        
+        return [
+            'success' => true,
+            'files' => $files
+        ];
+        
+    } catch (Exception $e) {
+        return [
+            'success' => false,
+            'message' => 'Failed to list backups: ' . $e->getMessage()
+        ];
+    }
+}
+
+function getBackupType($filename) {
+    if (strpos($filename, 'database_backup_') === 0) {
+        return 'database';
+    } elseif (strpos($filename, 'files_backup_') === 0) {
+        return 'files';
+    } else {
+        return 'unknown';
+    }
+}
+
+function restoreDatabase() {
+    global $backup_config, $backup_dir;
+    
+    if (!isset($_POST['filename'])) {
+        return ['success' => false, 'message' => 'No backup file specified'];
+    }
+    
+    $filename = basename($_POST['filename']); // Security: prevent path traversal
+    $filepath = $backup_dir . $filename;
+    
+    try {
+        if (!file_exists($filepath)) {
+            throw new Exception("Backup file not found");
+        }
+        
+        if (getBackupType($filename) !== 'database') {
+            throw new Exception("Selected file is not a database backup");
+        }
+        
+        $conn = new mysqli(
+            $backup_config['host'],
+            $backup_config['username'],
+            $backup_config['password'],
+            $backup_config['database']
+        );
+        
+        if ($conn->connect_error) {
+            throw new Exception("Database connection failed: " . $conn->connect_error);
+        }
+        
+        // Read SQL file
+        $sql_content = file_get_contents($filepath);
+        if ($sql_content === false) {
+            throw new Exception("Failed to read backup file");
+        }
+        
+        // Disable foreign key checks temporarily
+        $conn->query("SET FOREIGN_KEY_CHECKS = 0");
+        
+        // Split SQL into individual statements
+        $statements = explode(';', $sql_content);
+        $executed = 0;
+        $errors = [];
+        
+        foreach ($statements as $statement) {
+            $statement = trim($statement);
+            if (empty($statement)) continue;
+            
+            if (!$conn->query($statement)) {
+                $errors[] = "Error executing statement: " . $conn->error;
+                if (count($errors) > 10) {
+                    $errors[] = "... and more errors";
+                    break;
+                }
+            } else {
+                $executed++;
+            }
+        }
+        
+        // Re-enable foreign key checks
+        $conn->query("SET FOREIGN_KEY_CHECKS = 1");
+        $conn->close();
+        
+        if (!empty($errors)) {
+            $error_msg = implode('; ', array_slice($errors, 0, 5));
+            throw new Exception("Restore completed with errors ($executed statements executed): $error_msg");
+        }
+        
+        return [
+            'success' => true,
+            'message' => "Database restored successfully ($executed statements executed)",
+        ];
+        
+    } catch (Exception $e) {
+        return [
+            'success' => false,
+            'message' => 'Database restore failed: ' . $e->getMessage()
+        ];
+    }
+}
+
+function deleteBackup() {
+    global $backup_dir;
+    
+    if (!isset($_POST['filename'])) {
+        return ['success' => false, 'message' => 'No backup file specified'];
+    }
+    
+    $filename = basename($_POST['filename']); // Security: prevent path traversal
+    $filepath = $backup_dir . $filename;
+    
+    try {
+        if (!file_exists($filepath)) {
+            throw new Exception("Backup file not found");
+        }
+        
+        if (unlink($filepath)) {
+            return [
+                'success' => true,
+                'message' => 'Backup file deleted successfully'
+            ];
+        } else {
+            throw new Exception("Failed to delete backup file");
+        }
+        
+    } catch (Exception $e) {
+        return [
+            'success' => false,
+            'message' => 'Delete failed: ' . $e->getMessage()
+        ];
+    }
 }
 ?>
