@@ -97,7 +97,6 @@ body {
     object-fit: cover;
     object-position: center;
     transition: transform 8s ease;
-
 }
 
 .image-panel:hover .background-image {
@@ -155,14 +154,13 @@ body {
 }
 
 /* Form elements */
-
 .form-group {
     position: relative;
     margin-bottom: 1.5rem;
 }
 
 .form-input {
-    width: 100%;
+    width: 100% !important;
     padding: 1rem 1rem 1rem 3rem;
     border: 1px solid var(--input-border);
     border-radius: 50px;
@@ -248,7 +246,7 @@ body {
 
 .auth-header {
     text-align: center;
-    margin-bottom: 4rem;
+    margin-bottom: 2rem;
 }
 
 .auth-title {
@@ -379,12 +377,28 @@ body {
     margin-bottom: 1rem;
     transition: border-color 0.3s, box-shadow 0.3s;
     background-color: #fff;
+    color: var(--text-dark);
 }
 
 .form-select:focus {
     outline: none;
     border-color: var(--primary-color);
     box-shadow: 0 0 0 2px rgba(246, 215, 87, 0.2);
+}
+
+/* Form inputs for security questions */
+.form-section .form-input {
+    padding: 0.75rem;
+    border-radius: 8px;
+    margin-bottom: 0;
+}
+
+/* Form labels */
+.form-section label {
+    display: block;
+    margin-bottom: 0.5rem;
+    font-weight: 600;
+    color: var(--text-dark);
 }
 
 /* Security Recovery */
@@ -420,6 +434,16 @@ body {
 
 .login-options span {
     color: var(--input-border);
+}
+
+.back-to-login {
+    color: var(--primary-color);
+    text-decoration: none;
+}
+
+.contact-admin {
+    color: var(--primary-color);
+    text-decoration: none;
 }
 
 /* Responsive adjustments */
@@ -467,5 +491,11 @@ body {
     
     .auth-card {
         padding: 1.5rem;
+        width: 95%;
+        max-width: none;
+    }
+    
+    .form-section {
+        padding: 1rem;
     }
 }

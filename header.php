@@ -1,3 +1,18 @@
+<?php
+// Include access control functions
+require_once 'access_control.php';
+
+// Get current user's role and department
+$current_user_role = getCurrentUserRole();
+$current_user_department = getCurrentUserDepartment();
+
+// Check if user can access settings
+$can_access_settings = (
+    $current_user_department === 'IT Infrastructure & Cybersecurity Division' && 
+    in_array(strtolower($current_user_role), ['superadmin', 'admin'])
+);
+?>
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -140,16 +155,34 @@
     color: #000;
 }
 
+/* Settings item - special styling for IT admin access */
+.dropdown-item.settings-item {
+    border-top: 1px solid #eee;
+}
+
+.dropdown-item.settings-item:hover {
+    background-color: #e3f2fd;
+    color: #1976d2;
+}
+
 /* Logout section */
 .logout-btn {
     color: #d63031;
     font-weight: 600;
     margin-top: 3px; /* Reduced from 4px */
+    border-top: 1px solid #eee;
 }
 
 .logout-btn:hover {
     background-color: #ffe5e5;
     color: #b71c1c;
+}
+
+/* Role indicator for settings access */
+.role-indicator {
+    font-size: 0.6rem;
+    color: #666;
+    font-style: italic;
 }
 
 /* Responsive adjustments */
@@ -159,32 +192,40 @@
     }
 }
 </style>
+
 <!-- Header Section -->
 <header class="top-bar">
     <button class="hamburger" id="toggleSidebar">
         <img src="icons/hamburger.svg" alt="Toggle Sidebar">
     </button>    
-        <div class="user-dropdown">
+    <div class="user-dropdown">
         <button class="user-icon" id="userDropdownBtn">
             <img src="icons/header-icons/circle-user-round.svg" alt="User Icon" width="30">
         </button>
         <div class="dropdown-menu" id="userDropdownMenu">
-            <div class="user-info d-flex align-items-center">
+            <div class="user-info d-flex align-items-center flex-column">
                 <img src="icons/header-icons/circle-user-round.svg" alt="User Icon" width="20">
                 <span><?php echo isset($_SESSION['username']) ? $_SESSION['username'] : 'User'; ?></span>
+                <?php if ($can_access_settings): ?>
+                    <span class="role-indicator">IT Admin</span>
+                <?php endif; ?>
             </div>
             <div class="dropdown-divider"></div>
-            <a href="ms_settings.php" class="dropdown-item d-flex align-items-center">
-                <img src="icons/header-icons/settings.svg" alt="Settings Icon" width="18" class="me-2">
-                Settings
-            </a>
+            
+            <?php if ($can_access_settings): ?>
+                <a href="ms_settings.php" class="dropdown-item settings-item d-flex align-items-center">
+                    <img src="icons/header-icons/settings.svg" alt="Settings Icon" width="18" class="me-2">
+                    Settings
+                </a>
+            <?php endif; ?>
+            
             <a href="ms_logout.php" class="dropdown-item logout-btn d-flex align-items-center">
                 <img src="icons/header-icons/logout.svg" alt="Logout Icon" width="18" class="me-2">
                 Logout
             </a>
         </div>
     </div>
-
 </header>
+
 <script src="js/sidebar.js"></script>
 <script src="js/header.js"></script>

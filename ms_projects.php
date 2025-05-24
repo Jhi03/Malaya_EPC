@@ -1,5 +1,6 @@
 <?php
-    include('validate_login.php');
+    // Include validation and access control
+    include('validate_login.php'); // This now includes access_control.php
     require_once 'activity_logger.php';
     
     $page_title = "PROJECTS";
@@ -15,47 +16,27 @@
     }
 
     $user_id = $_SESSION['user_id'];
-    $role = $_SESSION['role'] ?? '';
 
-    // Fetch employee department (if linked)
-    $employee_department = null;
-    $emp_stmt = $conn->prepare("
-        SELECT e.department 
-        FROM users u 
-        LEFT JOIN employee e ON u.employee_id = e.employee_id 
-        WHERE u.user_id = ?
-    ");
-    $emp_stmt->bind_param("i", $user_id);
-    $emp_stmt->execute();
-    $emp_stmt->bind_result($employee_department);
-    $emp_stmt->fetch();
-    $emp_stmt->close();
+    $projectQuery = "
+        SELECT 
+            p.*,
+            CONCAT(creator.first_name, ' ', creator.last_name) AS created_by_name,
+            CONCAT(editor.first_name, ' ', editor.last_name) AS edited_by_name
+        FROM projects p
+        LEFT JOIN users creator_user ON p.created_by = creator_user.user_id
+        LEFT JOIN employee creator ON creator_user.employee_id = creator.employee_id
+        LEFT JOIN users editor_user ON p.edited_by = editor_user.user_id
+        LEFT JOIN employee editor ON editor_user.employee_id = editor.employee_id
+        WHERE p.project_id != 1
+        ORDER BY p.creation_date ASC
+    ";
+    
+    $projectResult = $conn->query($projectQuery);
 
-    // Access control allowed IF superadmin or the right dept
-    $allowed_department = "Operations & Project Management Department";
-    if ($role !== 'superadmin' && $employee_department !== $allowed_department) {
-        echo "<h2>Access Denied</h2>";
-        echo "<p>You do not have permission to view this page.</p>";
-        exit;
-    }
-
-    // Fetch projects depending on role
-    if ($role === 'superadmin') {
-        $projectQuery = "
-            SELECT 
-                p.*,
-                CONCAT(creator.first_name, ' ', creator.last_name) AS created_by_name,
-                CONCAT(editor.first_name, ' ', editor.last_name) AS edited_by_name
-            FROM projects p
-            LEFT JOIN users creator_user ON p.created_by = creator_user.user_id
-            LEFT JOIN employee creator ON creator_user.employee_id = creator.employee_id
-            LEFT JOIN users editor_user ON p.edited_by = editor_user.user_id
-            LEFT JOIN employee editor ON editor_user.employee_id = editor.employee_id
-            WHERE p.project_id != 1
-            ORDER BY p.creation_date ASC
-        ";
-        $projectResult = $conn->query($projectQuery);
-    }
+    // Get user info for logging and display purposes
+    $user_info = getUserAccessInfo($user_id);
+    $current_user_role = $user_info['role'] ?? 'unknown';
+    $current_user_department = $user_info['department'] ?? 'unknown';
 
     // Handle the form submission for INSERT or UPDATE
     if ($_SERVER["REQUEST_METHOD"] === "POST" && !isset($_POST['delete_project_id'])) {
@@ -206,7 +187,11 @@
 
             <!-- Project Cards Grid -->
             <div class="project-grid">
-                <?php if ($role === 'manager' || $role === 'superadmin'): ?>
+                <?php 
+                // Check if user can add projects (exclude 'user' role)
+                $can_add_projects = !hasRole('user');
+                if ($can_add_projects): 
+                ?>
                 <div id="addProjectBtn" class="project-card add-project">
                     <div class="add-project-content">
                         <img src="icons/circle-plus.svg" alt="AddProjectIcon" width="50">
@@ -237,7 +222,11 @@
                         data-created-on="<?= htmlspecialchars($row['creation_date']) ?>"
                         data-edited-on="<?= htmlspecialchars($row['edit_date']) ?>">
                         
-                        <?php if ($role === 'manager' || $role === 'superadmin'): ?>
+                        <?php 
+                        // Check if user can edit/delete projects (exclude 'user' role)
+                        $can_edit_projects = !hasRole('user');
+                        if ($can_edit_projects): 
+                        ?>
                             <div class="project-menu">
                                 <img src="icons/ellipsis.svg" alt="Menu" class="ellipsis-icon" onclick="toggleDropdown(event, this)">
                                 <div class="dropdown-menu">

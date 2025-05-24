@@ -879,52 +879,6 @@ if ($show_security_question_1 || $show_security_question_2 || $show_security_rec
             });
         });
 
-        // Validation helper functions
-        function validateField(field) {
-            clearValidationError(field);
-            
-            if (field.hasAttribute('required') && !field.value.trim()) {
-                showValidationError(field, 'This field is required');
-                return false;
-            }
-            
-            if (field.type === 'text' && field.value.trim().length > 0 && field.value.trim().length < 2) {
-                showValidationError(field, 'Must be at least 2 characters long');
-                return false;
-            }
-            
-            return true;
-        }
-
-        function showValidationError(field, message) {
-            clearValidationError(field);
-            
-            field.style.borderColor = '#e74c3c';
-            field.style.boxShadow = '0 0 0 2px rgba(231, 76, 60, 0.2)';
-            
-            const errorDiv = document.createElement('div');
-            errorDiv.className = 'field-error';
-            errorDiv.style.cssText = `
-                color: #e74c3c;
-                font-size: 0.8rem;
-                margin-top: 0.25rem;
-                margin-bottom: 0.5rem;
-            `;
-            errorDiv.textContent = message;
-            
-            field.parentNode.appendChild(errorDiv);
-        }
-
-        function clearValidationError(field) {
-            field.style.borderColor = '';
-            field.style.boxShadow = '';
-            
-            const existingError = field.parentNode.querySelector('.field-error');
-            if (existingError) {
-                existingError.remove();
-            }
-        }
-
         // Prevent form double submission
         document.addEventListener('submit', function(e) {
             const submitBtn = e.target.querySelector('button[type="submit"]');

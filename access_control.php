@@ -49,6 +49,9 @@ function getPagePermissions() {
             'IT Infrastructure & Cybersecurity Division' => ['superadmin', 'admin'],
             'Operations & Project Management Department' => ['manager', 'office administrator'],
             'Finance & Digital Accounting Department' => ['cfo', 'accountant']
+        ],
+        'ms_settings.php' => [
+            'IT Infrastructure & Cybersecurity Division' => ['superadmin', 'admin']
         ]
     ];
 }
