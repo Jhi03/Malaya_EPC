@@ -4,7 +4,7 @@
     $page_title = "ASSETS";
 
     // DATABASE CONNECTION
-    $conn = new mysqli("localhost", "root", "", "malayasol");
+    $conn = new mysqli("localhost", "u188693564_adminsolar", "@Malayasolarenergies1", "u188693564_malayasol");
     if ($conn->connect_error) {
         die("Connection failed: " . $conn->connect_error);
     }

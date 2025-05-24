@@ -2,9 +2,9 @@
 // Database configuration for backup
 $backup_config = [
     'host' => 'localhost',
-    'username' => 'root',
-    'password' => '',
-    'database' => 'malayasol'
+    'username' => 'u188693564_adminsolar',
+    'password' => '@Malayasolarenergies1',
+    'database' => 'u188693564_malayasol'
 ];
 
 // Backup directories and files

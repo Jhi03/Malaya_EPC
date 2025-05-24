@@ -60,7 +60,7 @@ function getPagePermissions() {
  * Get user's department and role information
  */
 function getUserAccessInfo($user_id) {
-    $conn = new mysqli("localhost", "root", "", "malayasol");
+    $conn = new mysqli("localhost", "u188693564_adminsolar", "@Malayasolarenergies1", "u188693564_malayasol");
     
     if ($conn->connect_error) {
         return false;

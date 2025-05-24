@@ -6,9 +6,9 @@
 
     // Database connection
     $host = 'localhost';
-    $user = 'root';
-    $password = '';
-    $database = 'malayasol';
+    $username = "u188693564_adminsolar";
+    $password = "@Malayasolarenergies1";
+    $dbname = "u188693564_malayasol";
     $conn = new mysqli($host, $user, $password, $database);
 
     // Check connection

@@ -16,7 +16,7 @@ function logUserActivity($action, $page, $details = null, $record_id = null) {
     }
     
     try {
-        $conn = new mysqli("localhost", "root", "", "malayasol");
+        $conn = new mysqli("localhost", "u188693564_adminsolar", "@Malayasolarenergies1", "u188693564_malayasol");
         
         if ($conn->connect_error) {
             error_log("Activity Logger DB Error: " . $conn->connect_error);
@@ -74,7 +74,7 @@ function trackUserSession($action = 'login') {
     }
     
     try {
-        $conn = new mysqli("localhost", "root", "", "malayasol");
+        $conn = new mysqli("localhost", "u188693564_adminsolar", "@Malayasolarenergies1", "u188693564_malayasol");
         
         if ($conn->connect_error) {
             return false;
@@ -132,7 +132,7 @@ function getUserRecentActivities($user_id = null, $limit = 50) {
     }
     
     try {
-        $conn = new mysqli("localhost", "root", "", "malayasol");
+        $conn = new mysqli("localhost", "u188693564_adminsolar", "@Malayasolarenergies1", "u188693564_malayasol");
         
         if ($conn->connect_error) {
             return [];

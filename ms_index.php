@@ -35,7 +35,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         $auth_code = $_POST['auth_code'];
         
         // Get user info
-        $conn = new mysqli("localhost", "root", "", "malayasol");
+        $conn = new mysqli("localhost", "u188693564_adminsolar", "@Malayasolarenergies1", "u188693564_malayasol");
         $stmt = $conn->prepare("SELECT username, role, preferred_2fa FROM users WHERE user_id = ?");
         $stmt->bind_param("i", $user_id);
         $stmt->execute();
@@ -91,7 +91,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         // Verify the code to ensure the setup was correct
         if ($auth->verifyCode($auth_secret, $auth_code)) {
             // Update the user record with the new secret and 2FA preference
-            $conn = new mysqli("localhost", "root", "", "malayasol");
+            $conn = new mysqli("localhost", "u188693564_adminsolar", "@Malayasolarenergies1", "u188693564_malayasol");
             
             $update_sql = "UPDATE users SET 
                            authenticator_secret = ?, 
@@ -149,7 +149,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
             // Hash the answer for security
             $answer1_hash = password_hash($answer1, PASSWORD_DEFAULT);
             
-            $conn = new mysqli("localhost", "root", "", "malayasol");
+            $conn = new mysqli("localhost", "u188693564_adminsolar", "@Malayasolarenergies1", "u188693564_malayasol");
             
             $conn->begin_transaction();
             
@@ -201,7 +201,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
             // Hash the answer for security
             $answer2_hash = password_hash($answer2, PASSWORD_DEFAULT);
             
-            $conn = new mysqli("localhost", "root", "", "malayasol");
+            $conn = new mysqli("localhost", "u188693564_adminsolar", "@Malayasolarenergies1", "u188693564_malayasol");
             
             $conn->begin_transaction();
             
@@ -263,7 +263,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
             $error = "Please provide an answer to the security question.";
             $show_security_recovery = true;
         } else {
-            $conn = new mysqli("localhost", "root", "", "malayasol");
+            $conn = new mysqli("localhost", "u188693564_adminsolar", "@Malayasolarenergies1", "u188693564_malayasol");
             
             // Get the stored answer hash
             $stmt = $conn->prepare("SELECT answer_hash FROM user_security_answers WHERE user_id = ? AND question_id = ?");
@@ -320,7 +320,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         $password = $_POST['password'];
 
         // Database connection
-        $conn = new mysqli("localhost", "root", "", "malayasol");
+        $conn = new mysqli("localhost", "u188693564_adminsolar", "@Malayasolarenergies1", "u188693564_malayasol");
 
         if ($conn->connect_error) {
             die("Database connection failed: " . $conn->connect_error);
@@ -516,7 +516,7 @@ if (isset($_SESSION['username']) && !isset($error) && !$show_2fa_form && !$show_
 // Load security questions if needed
 $security_questions = [];
 if ($show_security_question_1 || $show_security_question_2 || $show_security_recovery) {
-    $conn = new mysqli("localhost", "root", "", "malayasol");
+    $conn = new mysqli("localhost", "u188693564_adminsolar", "@Malayasolarenergies1", "u188693564_malayasol");
     $query = "SELECT question_id, question_text FROM security_questions ORDER BY question_id";
     $result = $conn->query($query);
     

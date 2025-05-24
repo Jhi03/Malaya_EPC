@@ -6,9 +6,9 @@
 
     // Database connection
     $host = 'localhost';
-    $user = 'root';
-    $password = '';
-    $database = 'malayasol';
+    $username = "u188693564_adminsolar";
+    $password = "@Malayasolarenergies1";
+    $dbname = "u188693564_malayasol";
 
     $conn = new mysqli($host, $user, $password, $database);
 
@@ -1594,16 +1594,6 @@
                                     <td>Manager</td>
                                     <td>Department or team manager</td>
                                     <td>User permissions + manage projects and department employees</td>
-                                </tr>
-                                <tr>
-                                    <td>Admin</td>
-                                    <td>System administrator</td>
-                                    <td>Manager permissions + user management, system configuration</td>
-                                </tr>
-                                <tr>
-                                    <td>Super Admin</td>
-                                    <td>Complete system control</td>
-                                    <td>Admin permissions + manage other admins, access all system functions</td>
                                 </tr>
                             </tbody>
                         </table>
