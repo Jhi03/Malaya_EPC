@@ -1,6 +1,7 @@
 <?php
-// Include the activity logger
+// Include the activity logger and access control
 require_once 'activity_logger.php';
+require_once 'access_control.php';
 
 session_start();
 
@@ -58,8 +59,18 @@ if ($result && $result->num_rows == 1) {
     exit();
 }
 
-// Log page access (optional - you might want to disable this for performance)
+// Check if user has access to current page
 $current_page = basename($_SERVER['PHP_SELF']);
+if (!canAccessPage($current_page, $user_id)) {
+    // Log unauthorized access attempt
+    logUserActivity('access_denied', $current_page, 'Unauthorized access attempt');
+    
+    // Redirect to access denied page
+    header("Location: access_denied.php");
+    exit();
+}
+
+// Log page access (optional - you might want to disable this for performance)
 if (!isset($_SESSION['last_logged_page']) || $_SESSION['last_logged_page'] !== $current_page) {
     logUserActivity('access', $current_page, 'Page accessed');
     $_SESSION['last_logged_page'] = $current_page;

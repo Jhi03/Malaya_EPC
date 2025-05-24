@@ -13,7 +13,8 @@ $auth_lib_available = $auth->isLibraryAvailable();
 $error = '';
 $show_2fa_form = false;
 $show_2fa_setup = false;
-$show_security_questions = false;
+$show_security_question_1 = false;
+$show_security_question_2 = false;
 $show_security_recovery = false;
 $qr_code_url = '';
 $auth_secret = '';
@@ -123,8 +124,8 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
             // Store temp username for security questions
             $_SESSION['temp_username'] = $username;
             
-            // Show security questions form
-            $show_security_questions = true;
+            // Show first security question form
+            $show_security_question_1 = true;
             $show_2fa_setup = false;
             
             $conn->close();
@@ -134,35 +135,80 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
             $qr_code_url = $auth->getQRCodeUrl($_SESSION['temp_username'], $auth_secret);
         }
     }
-    // Handle security questions setup
-    elseif (isset($_POST['setup_security_questions'])) {
+    // Handle first security question setup
+    elseif (isset($_POST['setup_security_question_1'])) {
         $user_id = $_SESSION['temp_user_id'];
-        $question1_id = $_POST['security_question1'];
-        $answer1 = $_POST['security_answer1'];
-        $question2_id = $_POST['security_question2'];
-        $answer2 = $_POST['security_answer2'];
+        $question1_id = $_POST['security_question_1'];
+        $answer1 = $_POST['security_answer_1'];
         
         // Validate inputs
-        if (empty($question1_id) || empty($answer1) || empty($question2_id) || empty($answer2)) {
-            $error = "Please select two questions and provide answers.";
-            $show_security_questions = true;
-        } elseif ($question1_id == $question2_id) {
-            $error = "Please select two different security questions.";
-            $show_security_questions = true;
+        if (empty($question1_id) || empty($answer1)) {
+            $error = "Please select a question and provide an answer.";
+            $show_security_question_1 = true;
         } else {
-            // Hash the answers for security
+            // Hash the answer for security
             $answer1_hash = password_hash($answer1, PASSWORD_DEFAULT);
+            
+            $conn = new mysqli("localhost", "root", "", "malayasol");
+            
+            $conn->begin_transaction();
+            
+            try {
+                // Update user record with first security question
+                $stmt1 = $conn->prepare("UPDATE users SET security_question_1 = ? WHERE user_id = ?");
+                $stmt1->bind_param("ii", $question1_id, $user_id);
+                $stmt1->execute();
+                $stmt1->close();
+                
+                // Insert first question answer
+                $stmt2 = $conn->prepare("INSERT INTO user_security_answers (user_id, question_id, answer_hash) VALUES (?, ?, ?)");
+                $stmt2->bind_param("iis", $user_id, $question1_id, $answer1_hash);
+                $stmt2->execute();
+                $stmt2->close();
+                
+                $conn->commit();
+                
+                // Store the selected question in session to exclude from next step
+                $_SESSION['selected_question_1'] = $question1_id;
+                
+                // Show second security question form
+                $show_security_question_2 = true;
+                $show_security_question_1 = false;
+                
+            } catch (Exception $e) {
+                $conn->rollback();
+                $error = "An error occurred during setup. Please try again.";
+                $show_security_question_1 = true;
+            }
+            
+            $conn->close();
+        }
+    }
+    // Handle second security question setup
+    elseif (isset($_POST['setup_security_question_2'])) {
+        $user_id = $_SESSION['temp_user_id'];
+        $question2_id = $_POST['security_question_2'];
+        $answer2 = $_POST['security_answer_2'];
+        
+        // Validate inputs
+        if (empty($question2_id) || empty($answer2)) {
+            $error = "Please select a question and provide an answer.";
+            $show_security_question_2 = true;
+        } elseif ($question2_id == $_SESSION['selected_question_1']) {
+            $error = "Please select a different security question.";
+            $show_security_question_2 = true;
+        } else {
+            // Hash the answer for security
             $answer2_hash = password_hash($answer2, PASSWORD_DEFAULT);
             
             $conn = new mysqli("localhost", "root", "", "malayasol");
             
-            // Insert security question answers
             $conn->begin_transaction();
             
             try {
-                // Insert first question answer
-                $stmt1 = $conn->prepare("INSERT INTO user_security_answers (user_id, question_id, answer_hash) VALUES (?, ?, ?)");
-                $stmt1->bind_param("iis", $user_id, $question1_id, $answer1_hash);
+                // Update user record with second security question
+                $stmt1 = $conn->prepare("UPDATE users SET security_question_2 = ? WHERE user_id = ?");
+                $stmt1->bind_param("ii", $question2_id, $user_id);
                 $stmt1->execute();
                 $stmt1->close();
                 
@@ -188,9 +234,10 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
                 unset($_SESSION['temp_user_id']);
                 unset($_SESSION['temp_auth_secret']);
                 unset($_SESSION['temp_username']);
+                unset($_SESSION['selected_question_1']);
                 
-                // Log the recovery activity
-                logUserActivity('login', 'ms_index.php', 'Account recovered via security question');
+                // Log the completion
+                logUserActivity('login', 'ms_index.php', 'Account setup completed');
                 trackUserSession('login');
 
                 // Redirect to dashboard
@@ -200,7 +247,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
             } catch (Exception $e) {
                 $conn->rollback();
                 $error = "An error occurred during setup. Please try again.";
-                $show_security_questions = true;
+                $show_security_question_2 = true;
             }
             
             $conn->close();
@@ -282,7 +329,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         // Fetch user record by username
         $stmt = $conn->prepare("SELECT u.user_id, u.username, u.password, u.role, u.account_status, 
                                 u.employee_id, e.employment_status, u.authenticator_secret, u.preferred_2fa, 
-                                u.failed_attempts
+                                u.failed_attempts, u.security_question_1, u.security_question_2
                                 FROM users u 
                                 LEFT JOIN employee e ON u.employee_id = e.employee_id 
                                 WHERE u.username = ?");
@@ -363,9 +410,14 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
                 $reset_stmt->execute();
                 $reset_stmt->close();
                 
-                // Check if 2FA is needed
-                if (!empty($user['authenticator_secret']) && $user['preferred_2fa'] === 'authenticator') {
-                    // Store minimal info in session for 2FA check
+                // Check if user setup is complete
+                $setup_complete = !empty($user['authenticator_secret']) && 
+                                 !empty($user['security_question_1']) && 
+                                 !empty($user['security_question_2']) && 
+                                 $user['account_status'] === 'active';
+                
+                if ($setup_complete) {
+                    // User has completed setup, proceed with 2FA
                     $_SESSION['temp_user_id'] = $user['user_id'];
                     $_SESSION['temp_auth_secret'] = $user['authenticator_secret'];
                     
@@ -373,25 +425,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
                     $show_2fa_form = true;
                     $temp_user_id = $user['user_id'];
                 }
-                // Check if this is a new account that needs 2FA setup
-                elseif ($user['account_status'] === 'new') {
-                    // Generate a new secret for the user
-                    $new_secret = $auth->createSecret();
-                    
-                    // Store in session for verification
-                    $_SESSION['temp_user_id'] = $user['user_id'];
-                    $_SESSION['temp_auth_secret'] = $new_secret;
-                    $_SESSION['temp_username'] = $user['username'];
-                    
-                    // Prepare the QR code URL
-                    $qr_code_url = $auth->getQRCodeUrl($user['username'], $new_secret);
-                    
-                    // Show the 2FA setup form
-                    $show_2fa_setup = true;
-                    $auth_secret = $new_secret;
-                    $temp_username = $user['username'];
-                }
-                // Super admin bypasses 2FA for demonstration
+                // Super admin bypasses setup for demonstration
                 elseif ($user['role'] === 'superadmin') {
                     // Set session variables
                     $_SESSION['user_id'] = $user['user_id'];
@@ -402,7 +436,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
                     // Record the login in login_attempts table
                     $ip = $_SERVER['REMOTE_ADDR'];
                     $log_sql = "INSERT INTO login_attempts (user_id, attempt_time, ip_address, success, notes) 
-                               VALUES (?, NOW(), ?, 1, 'Admin login (2FA skipped)')";
+                               VALUES (?, NOW(), ?, 1, 'Superadmin login (2FA bypassed)')";
                     
                     $log_stmt = $conn->prepare($log_sql);
                     $log_stmt->bind_param("is", $user['user_id'], $ip);
@@ -416,7 +450,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
                     header("Location: ms_dashboard.php");
                     exit();
                 }
-                // No 2FA configured yet - Show setup screen
+                // User needs to complete setup - start with 2FA setup
                 else {
                     // Generate a new secret for the user
                     $new_secret = $auth->createSecret();
@@ -474,16 +508,16 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
 }
 
 // If already logged in, redirect to dashboard
-if (isset($_SESSION['username']) && !isset($error) && !$show_2fa_form && !$show_2fa_setup && !$show_security_questions && !$show_security_recovery) {
+if (isset($_SESSION['username']) && !isset($error) && !$show_2fa_form && !$show_2fa_setup && !$show_security_question_1 && !$show_security_question_2 && !$show_security_recovery) {
     header("Location: ms_dashboard.php");
     exit();
 }
 
 // Load security questions if needed
 $security_questions = [];
-if ($show_security_questions || $show_security_recovery) {
+if ($show_security_question_1 || $show_security_question_2 || $show_security_recovery) {
     $conn = new mysqli("localhost", "root", "", "malayasol");
-    $query = "SELECT question_id, question_text FROM security_questions";
+    $query = "SELECT question_id, question_text FROM security_questions ORDER BY question_id";
     $result = $conn->query($query);
     
     while ($row = $result->fetch_assoc()) {
@@ -493,13 +527,12 @@ if ($show_security_questions || $show_security_recovery) {
     $conn->close();
 }
 ?>
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Malaya Solar Energies Inc.</title>
+    <title>Malaya Solar Technologies Inc.</title>
     <link rel="icon" href="images/Malaya_Logo.png" type="image/png">
     <link href="css/index.css" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&display=swap" rel="stylesheet">
@@ -511,7 +544,7 @@ if ($show_security_questions || $show_security_recovery) {
         <div class="brand-panel">
             <div class="brand-content">
                 <img src="images/Malaya_Logo.png" alt="Malaya Solar Energies Logo" class="brand-logo">
-                <h1 class="brand-title">Malaya Solar Energies</h1>
+                <h1 class="brand-title">Malaya Solar Technologies</h1>
                 <p class="brand-description">Access the system to manage your solar projects efficiently and track financial performance.</p>
             </div>
         </div>
@@ -575,7 +608,7 @@ if ($show_security_questions || $show_security_recovery) {
                                         autocomplete="one-time-code" required autofocus>
                                 </div>
                                 
-                                <button type="submit" class="login-btn">Verify</button>
+                                <button type="submit" class="login-btn">Verify & Continue</button>
                             </form>
                         </div>
                         
@@ -597,117 +630,134 @@ if ($show_security_questions || $show_security_recovery) {
                 </div>
             </div>
 
-            <?php elseif ($show_security_questions): ?>
-                <!-- Security Questions Setup Card -->
-                <div class="auth-card">
-                    <div class="auth-header">
-                        <h2 class="auth-title">Set Up Security Questions</h2>
-                        <p class="auth-subtitle">Choose and answer 2 security questions for account recovery</p>
-                    </div>
-                    
-                    <?php if (!empty($error)): ?>
-                    <div class="error-message">
-                        <?= $error ?>
-                    </div>
-                    <?php endif; ?>
-                    
-                    <form action="ms_index.php" method="POST" class="security-questions-form">
-                        <input type="hidden" name="setup_security_questions" value="1">
-                        
-                        <div class="form-section">
-                            <h3>Question 1</h3>
-                            <div class="form-group">
-                                <label for="security_question1">Choose a security question:</label>
-                                <select id="security_question1" name="security_question1" class="form-select" required>
-                                    <option value="">Select a question...</option>
-                                    <option value="1">What was the name of your first pet?</option>
-                                    <option value="2">What is your mother's maiden name?</option>
-                                    <option value="3">What was the name of your childhood crush?</option>
-                                    <option value="4">In what city were you born?</option>
-                                    <option value="5">What is the name of your favorite childhood teacher?</option>
-                                    <option value="6">What was the name of your first school?</option>
-                                    <option value="7">What is your favorite book?</option>
-                                </select>
-                            </div>
-                            
-                            <div class="form-group">
-                                <label for="security_answer1">Your answer:</label>
-                                <input type="text" id="security_answer1" name="security_answer1" class="form-input" required>
-                            </div>
-                        </div>
-                        
-                        <div class="form-section">
-                            <h3>Question 2</h3>
-                            <div class="form-group">
-                                <label for="security_question2">Choose a security question:</label>
-                                <select id="security_question2" name="security_question2" class="form-select" required>
-                                    <option value="">Select a question...</option>
-                                    <option value="1">What was the name of your first pet?</option>
-                                    <option value="2">What is your mother's maiden name?</option>
-                                    <option value="3">What was the name of your childhood crush?</option>
-                                    <option value="4">In what city were you born?</option>
-                                    <option value="5">What is the name of your favorite childhood teacher?</option>
-                                    <option value="6">What was the name of your first school?</option>
-                                    <option value="7">What is your favorite book?</option>
-                                </select>
-                            </div>
-                            
-                            <div class="form-group">
-                                <label for="security_answer2">Your answer:</label>
-                                <input type="text" id="security_answer2" name="security_answer2" class="form-input" required>
-                            </div>
-                        </div>
-                        
-                        <button type="submit" class="login-btn">Complete Setup</button>
-                    </form>
-                    
-                    <div class="login-footer">
-                        &copy; 2025 Malaya Solar Energies Inc. All rights reserved.
-                    </div>
+        <?php elseif ($show_security_question_1): ?>
+            <!-- First Security Question Setup Card -->
+            <div class="auth-card">
+                <div class="auth-header">
+                    <h2 class="auth-title">Setup Security Questions</h2>
+                    <p class="auth-subtitle">Step 1 of 2: Choose your first security question</p>
                 </div>
                 
-            <?php elseif ($show_security_recovery): ?>
-                <!-- Security Recovery Card -->
-                <div class="auth-card">
-                    <div class="auth-header">
-                        <h2 class="auth-title">Account Recovery</h2>
-                        <p class="auth-subtitle">Answer your security question to unlock your account</p>
-                    </div>
-                    
-                    <?php if (!empty($error)): ?>
-                    <div class="error-message">
-                        <?= $error ?>
-                    </div>
-                    <?php endif; ?>
-                    
-                    <form action="ms_index.php" method="POST" class="security-recovery-form">
-                        <input type="hidden" name="security_recovery" value="1">
-                        <input type="hidden" name="user_id" value="<?= $_SESSION['recovery_user_id'] ?>">
-                        <input type="hidden" name="question_id" value="<?= $_SESSION['recovery_question']['question_id'] ?>">
-                        
-                        <div class="form-group">
-                            <label for="security_question">Security Question:</label>
-                            <div class="question-text"><?= $_SESSION['recovery_question']['question_text'] ?></div>
-                        </div>
-                        
-                        <div class="form-group">
-                            <label for="security_answer">Your answer:</label>
-                            <input type="text" id="security_answer" name="security_answer" class="form-input" required autofocus>
-                        </div>
-                        
-                        <button type="submit" class="login-btn">Submit</button>
-                    </form>
-                    
-                    <div class="login-options">
-                        <a href="ms_index.php" class="back-to-login">Back to Login</a>
-                        <span>|</span>
-                        <a href="#" class="contact-admin">Contact Administrator</a>
-                    </div>
-                    
-                    <div class="login-footer">
-                        &copy; 2025 Malaya Solar Energies Inc. All rights reserved.
-                    </div>
+                <?php if (!empty($error)): ?>
+                <div class="error-message">
+                    <?= $error ?>
                 </div>
+                <?php endif; ?>
+                
+                <form action="ms_index.php" method="POST" class="security-questions-form">
+                    <input type="hidden" name="setup_security_question_1" value="1">
+                    
+                    <div class="form-section">
+                        <div class="form-group">
+                            <label for="security_question_1">Choose your first security question:</label>
+                            <select id="security_question_1" name="security_question_1" class="form-select" required>
+                                <option value="">Select a question...</option>
+                                <?php foreach ($security_questions as $id => $text): ?>
+                                    <option value="<?= $id ?>"><?= htmlspecialchars($text) ?></option>
+                                <?php endforeach; ?>
+                            </select>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="security_answer_1">Your answer:</label>
+                            <input type="text" id="security_answer_1" name="security_answer_1" class="form-input" required>
+                        </div>
+                    </div>
+                    
+                    <button type="submit" class="login-btn">Continue to Next Question</button>
+                </form>
+                
+                <div class="login-footer">
+                    &copy; 2025 Malaya Solar Energies Inc. All rights reserved.
+                </div>
+            </div>
+
+        <?php elseif ($show_security_question_2): ?>
+            <!-- Second Security Question Setup Card -->
+            <div class="auth-card">
+                <div class="auth-header">
+                    <h2 class="auth-title">Setup Security Questions</h2>
+                    <p class="auth-subtitle">Step 2 of 2: Choose your second security question</p>
+                </div>
+                
+                <?php if (!empty($error)): ?>
+                <div class="error-message">
+                    <?= $error ?>
+                </div>
+                <?php endif; ?>
+                
+                <form action="ms_index.php" method="POST" class="security-questions-form">
+                    <input type="hidden" name="setup_security_question_2" value="1">
+                    
+                    <div class="form-section">
+                        <div class="form-group">
+                            <label for="security_question_2">Choose your second security question:</label>
+                            <select id="security_question_2" name="security_question_2" class="form-select" required>
+                                <option value="">Select a question...</option>
+                                <?php foreach ($security_questions as $id => $text): ?>
+                                    <?php if ($id != $_SESSION['selected_question_1']): ?>
+                                        <option value="<?= $id ?>"><?= htmlspecialchars($text) ?></option>
+                                    <?php endif; ?>
+                                <?php endforeach; ?>
+                            </select>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="security_answer_2">Your answer:</label>
+                            <input type="text" id="security_answer_2" name="security_answer_2" class="form-input" required>
+                        </div>
+                    </div>
+                    
+                    <button type="submit" class="login-btn">Complete Setup</button>
+                </form>
+                
+                <div class="login-footer">
+                    &copy; 2025 Malaya Solar Energies Inc. All rights reserved.
+                </div>
+            </div>
+                
+        <?php elseif ($show_security_recovery): ?>
+            <!-- Security Recovery Card -->
+            <div class="auth-card">
+                <div class="auth-header">
+                    <h2 class="auth-title">Account Recovery</h2>
+                    <p class="auth-subtitle">Answer your security question to unlock your account</p>
+                </div>
+                
+                <?php if (!empty($error)): ?>
+                <div class="error-message">
+                    <?= $error ?>
+                </div>
+                <?php endif; ?>
+                
+                <form action="ms_index.php" method="POST" class="security-recovery-form">
+                    <input type="hidden" name="security_recovery" value="1">
+                    <input type="hidden" name="user_id" value="<?= $_SESSION['recovery_user_id'] ?>">
+                    <input type="hidden" name="question_id" value="<?= $_SESSION['recovery_question']['question_id'] ?>">
+                    
+                    <div class="form-group">
+                        <label for="security_question">Security Question:</label>
+                        <div class="question-text"><?= $_SESSION['recovery_question']['question_text'] ?></div>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="security_answer">Your answer:</label>
+                        <input type="text" id="security_answer" name="security_answer" class="form-input" required autofocus>
+                    </div>
+                    
+                    <button type="submit" class="login-btn">Submit</button>
+                </form>
+                
+                <div class="login-options">
+                    <a href="ms_index.php" class="back-to-login">Back to Login</a>
+                    <span>|</span>
+                    <a href="#" class="contact-admin">Contact Administrator</a>
+                </div>
+                
+                <div class="login-footer">
+                    &copy; 2025 Malaya Solar Energies Inc. All rights reserved.
+                </div>
+            </div>
 
         <?php else: ?>
             <!-- Login Card (Centered) -->
@@ -753,61 +803,173 @@ if ($show_security_questions || $show_security_recovery) {
     </div>
     
     <script>
-        // Prevent selecting the same security question twice
+        // Enhanced JavaScript for security questions setup
         document.addEventListener('DOMContentLoaded', function() {
-            const question1 = document.getElementById('security_question1');
-            const question2 = document.getElementById('security_question2');
-            
-            if (question1 && question2) {
-                question1.addEventListener('change', function() {
-                    const selectedValue = this.value;
-                    
-                    // Enable all options in question2
-                    Array.from(question2.options).forEach(option => {
-                        option.disabled = false;
-                    });
-                    
-                    // Disable the option that matches the selected value in question1
-                    if (selectedValue) {
-                        const optionToDisable = question2.querySelector(`option[value="${selectedValue}"]`);
-                        if (optionToDisable) {
-                            optionToDisable.disabled = true;
-                        }
-                        
-                        // If question2 has the same value as question1, reset it
-                        if (question2.value === selectedValue) {
-                            question2.value = '';
-                        }
-                    }
-                });
+            // Auto-focus functionality
+            const codeInput = document.querySelector('.code-input');
+            if (codeInput) {
+                codeInput.focus();
                 
-                question2.addEventListener('change', function() {
-                    const selectedValue = this.value;
+                // Format code input as user types
+                codeInput.addEventListener('input', function(e) {
+                    // Remove any non-numeric characters
+                    this.value = this.value.replace(/[^0-9]/g, '');
                     
-                    // Enable all options in question1
-                    Array.from(question1.options).forEach(option => {
-                        option.disabled = false;
-                    });
-                    
-                    // Disable the option that matches the selected value in question2
-                    if (selectedValue) {
-                        const optionToDisable = question1.querySelector(`option[value="${selectedValue}"]`);
-                        if (optionToDisable) {
-                            optionToDisable.disabled = true;
-                        }
-                        
-                        // If question1 has the same value as question2, reset it
-                        if (question1.value === selectedValue) {
-                            question1.value = '';
-                        }
+                    // Limit to 6 digits
+                    if (this.value.length > 6) {
+                        this.value = this.value.slice(0, 6);
                     }
                 });
             }
             
-            // Auto-focus code input fields when they appear
-            const codeInput = document.querySelector('.code-input');
-            if (codeInput) {
-                codeInput.focus();
+            // Focus first required input if no code input exists
+            const firstInput = document.querySelector('input[required]:not([type="hidden"])');
+            if (firstInput && !codeInput) {
+                firstInput.focus();
+            }
+            
+            // Enhanced form validation for security questions
+            const securityForm = document.querySelector('.security-questions-form');
+            if (securityForm) {
+                securityForm.addEventListener('submit', function(e) {
+                    const questionSelect = securityForm.querySelector('select[required]');
+                    const answerInput = securityForm.querySelector('input[type="text"][required]');
+                    
+                    if (questionSelect && !questionSelect.value) {
+                        e.preventDefault();
+                        questionSelect.focus();
+                        showValidationError(questionSelect, 'Please select a security question');
+                        return false;
+                    }
+                    
+                    if (answerInput && !answerInput.value.trim()) {
+                        e.preventDefault();
+                        answerInput.focus();
+                        showValidationError(answerInput, 'Please provide an answer');
+                        return false;
+                    }
+                    
+                    if (answerInput && answerInput.value.trim().length < 2) {
+                        e.preventDefault();
+                        answerInput.focus();
+                        showValidationError(answerInput, 'Answer must be at least 2 characters long');
+                        return false;
+                    }
+                });
+            }
+            
+            // Real-time validation feedback
+            const requiredInputs = document.querySelectorAll('input[required], select[required]');
+            requiredInputs.forEach(input => {
+                input.addEventListener('blur', function() {
+                    validateField(this);
+                });
+                
+                input.addEventListener('input', function() {
+                    clearValidationError(this);
+                });
+            });
+            
+            // Security question selection validation
+            const questionSelects = document.querySelectorAll('select[name^="security_question"]');
+            questionSelects.forEach(select => {
+                select.addEventListener('change', function() {
+                    validateField(this);
+                });
+            });
+        });
+
+        // Validation helper functions
+        function validateField(field) {
+            clearValidationError(field);
+            
+            if (field.hasAttribute('required') && !field.value.trim()) {
+                showValidationError(field, 'This field is required');
+                return false;
+            }
+            
+            if (field.type === 'text' && field.value.trim().length > 0 && field.value.trim().length < 2) {
+                showValidationError(field, 'Must be at least 2 characters long');
+                return false;
+            }
+            
+            return true;
+        }
+
+        function showValidationError(field, message) {
+            clearValidationError(field);
+            
+            field.style.borderColor = '#e74c3c';
+            field.style.boxShadow = '0 0 0 2px rgba(231, 76, 60, 0.2)';
+            
+            const errorDiv = document.createElement('div');
+            errorDiv.className = 'field-error';
+            errorDiv.style.cssText = `
+                color: #e74c3c;
+                font-size: 0.8rem;
+                margin-top: 0.25rem;
+                margin-bottom: 0.5rem;
+            `;
+            errorDiv.textContent = message;
+            
+            field.parentNode.appendChild(errorDiv);
+        }
+
+        function clearValidationError(field) {
+            field.style.borderColor = '';
+            field.style.boxShadow = '';
+            
+            const existingError = field.parentNode.querySelector('.field-error');
+            if (existingError) {
+                existingError.remove();
+            }
+        }
+
+        // Prevent form double submission
+        document.addEventListener('submit', function(e) {
+            const submitBtn = e.target.querySelector('button[type="submit"]');
+            if (submitBtn && !submitBtn.disabled) {
+                submitBtn.disabled = true;
+                submitBtn.textContent = submitBtn.textContent.includes('Continue') ? 'Processing...' : 'Please wait...';
+                
+                // Re-enable after 3 seconds in case of network issues
+                setTimeout(() => {
+                    submitBtn.disabled = false;
+                    submitBtn.textContent = submitBtn.textContent.replace('Processing...', 'Continue to Next Question');
+                    submitBtn.textContent = submitBtn.textContent.replace('Please wait...', 'Complete Setup');
+                }, 3000);
+            }
+        });
+
+        // Auto-resize text inputs based on content
+        document.addEventListener('input', function(e) {
+            if (e.target.matches('input[type="text"]')) {
+                // Auto-expand input if content is long
+                const minWidth = 200;
+                const maxWidth = 400;
+                const charWidth = 8;
+                const newWidth = Math.min(maxWidth, Math.max(minWidth, e.target.value.length * charWidth + 20));
+                e.target.style.width = newWidth + 'px';
+            }
+        });
+
+        // Enhanced accessibility
+        document.addEventListener('keydown', function(e) {
+            // Allow Enter key to submit forms
+            if (e.key === 'Enter' && e.target.matches('input, select')) {
+                const form = e.target.closest('form');
+                if (form) {
+                    const submitBtn = form.querySelector('button[type="submit"]');
+                    if (submitBtn && !submitBtn.disabled) {
+                        submitBtn.click();
+                    }
+                }
+            }
+            
+            // Allow Escape key to clear current field
+            if (e.key === 'Escape' && e.target.matches('input[type="text"]')) {
+                e.target.value = '';
+                e.target.focus();
             }
         });
     </script>

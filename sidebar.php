@@ -1,3 +1,11 @@
+<?php
+// Include access control functions
+require_once 'access_control.php';
+
+// Get list of pages the current user can access
+$accessible_pages = getUserAccessiblePages();
+?>
+
 <style>
 body {
     font-family: 'Atkinson Hyperlegible', sans-serif;
@@ -131,36 +139,82 @@ body {
     border-left: none;
     border-right: 3px solid #ffc107; /* updated from 4 to 3 */
 }
+
+/* Hidden navigation items */
+.nav-link-item.hidden {
+    display: none;
+}
 </style>
+
 <div class="logo">
     <img src="Malaya_Logo.png" alt="Logo"> 
     <span>Malaya Solar<br>Accounting System</span>
 </div>
+
 <div class="nav-buttons d-flex flex-column gap-2">
-    <a class="nav-link-item <?php echo (basename($_SERVER['PHP_SELF']) == 'ms_dashboard.php') ? 'active' : ''; ?>" href="ms_dashboard.php">
-        <img src="icons/sidebar-icons/dashboard.svg" alt="Dashboard Icon" class="me-2" width="24"></i><span>Dashboard</span>
-    </a>
-    <a class="nav-link-item <?php echo (basename($_SERVER['PHP_SELF']) == 'ms_projects.php') ? 'active' : ''; ?>" href="ms_projects.php">
-        <img src="icons/sidebar-icons/projects.svg" alt="Projects Icon" class="me-2" width="24"></i><span>Projects</span>
-    </a>
-    <a class="nav-link-item <?php echo (basename($_SERVER['PHP_SELF']) == 'ms_assets.php') ? 'active' : ''; ?>" href="ms_assets.php">
-        <img src="icons/sidebar-icons/assets.svg" alt="Assets Icon" class="me-2" width="24"></i><span>Assets</span>
-    </a>
-    <a class="nav-link-item <?php echo (basename($_SERVER['PHP_SELF']) == 'ms_expenses.php' || (basename($_SERVER['PHP_SELF']) == 'ms_records.php' && isset($_GET['projectId']) && $_GET['projectId'] == 1)) ? 'active' : ''; ?>" href="ms_records.php?projectId=1">
-        <img src="icons/sidebar-icons/expense.svg" alt="Expense Icon" class="me-2" width="24"></i><span>Expenses</span>
-    </a>
-    <a class="nav-link-item <?php echo (basename($_SERVER['PHP_SELF']) == 'ms_workforce.php') ? 'active' : ''; ?>" href="ms_workforce.php">
-        <img src="icons/sidebar-icons/workforce.svg" alt="Workforce Icon" class="me-2" width="24"></i><span>Workforce</span>
-    </a>
-    <a class="nav-link-item <?php echo (basename($_SERVER['PHP_SELF']) == 'ms_payroll.php') ? 'active' : ''; ?>" href="ms_payroll.php">
-        <img src="icons/sidebar-icons/payroll.svg" alt="Payroll Icon" class="me-2" width="24"></i><span>Payroll</span>
-    </a>
-    <a class="nav-link-item <?php echo (basename($_SERVER['PHP_SELF']) == 'ms_vendors.php') ? 'active' : ''; ?>" href="ms_vendors.php">
-        <img src="icons/sidebar-icons/vendors.svg" alt="Vendors Icon" class="me-2" width="24"></i><span>Vendors</span>
-    </a>
-    <a class="nav-link-item <?php echo (basename($_SERVER['PHP_SELF']) == 'ms_reports.php') ? 'active' : ''; ?>" href="ms_reports.php">
-        <img src="icons/sidebar-icons/reports.svg" alt="Reports Icon" class="me-2" width="24"></i><span>Reports</span>
-    </a>
+    <!-- Dashboard -->
+    <?php if (in_array('ms_dashboard.php', $accessible_pages)): ?>
+        <a class="nav-link-item <?php echo (basename($_SERVER['PHP_SELF']) == 'ms_dashboard.php') ? 'active' : ''; ?>" href="ms_dashboard.php">
+            <img src="icons/sidebar-icons/dashboard.svg" alt="Dashboard Icon" class="me-2" width="24">
+            <span>Dashboard</span>
+        </a>
+    <?php endif; ?>
+
+    <!-- Projects -->
+    <?php if (in_array('ms_projects.php', $accessible_pages)): ?>
+        <a class="nav-link-item <?php echo (basename($_SERVER['PHP_SELF']) == 'ms_projects.php') ? 'active' : ''; ?>" href="ms_projects.php">
+            <img src="icons/sidebar-icons/projects.svg" alt="Projects Icon" class="me-2" width="24">
+            <span>Projects</span>
+        </a>
+    <?php endif; ?>
+
+    <!-- Assets -->
+    <?php if (in_array('ms_assets.php', $accessible_pages)): ?>
+        <a class="nav-link-item <?php echo (basename($_SERVER['PHP_SELF']) == 'ms_assets.php') ? 'active' : ''; ?>" href="ms_assets.php">
+            <img src="icons/sidebar-icons/assets.svg" alt="Assets Icon" class="me-2" width="24">
+            <span>Assets</span>
+        </a>
+    <?php endif; ?>
+
+    <!-- Expenses -->
+    <?php if (in_array('ms_records.php', $accessible_pages)): ?>
+        <a class="nav-link-item <?php echo (basename($_SERVER['PHP_SELF']) == 'ms_expenses.php' || (basename($_SERVER['PHP_SELF']) == 'ms_records.php' && isset($_GET['projectId']) && $_GET['projectId'] == 1)) ? 'active' : ''; ?>" href="ms_records.php?projectId=1">
+            <img src="icons/sidebar-icons/expense.svg" alt="Expense Icon" class="me-2" width="24">
+            <span>Expenses</span>
+        </a>
+    <?php endif; ?>
+
+    <!-- Workforce -->
+    <?php if (in_array('ms_workforce.php', $accessible_pages)): ?>
+        <a class="nav-link-item <?php echo (basename($_SERVER['PHP_SELF']) == 'ms_workforce.php') ? 'active' : ''; ?>" href="ms_workforce.php">
+            <img src="icons/sidebar-icons/workforce.svg" alt="Workforce Icon" class="me-2" width="24">
+            <span>Workforce</span>
+        </a>
+    <?php endif; ?>
+
+    <!-- Payroll -->
+    <?php if (in_array('ms_payroll.php', $accessible_pages)): ?>
+        <a class="nav-link-item <?php echo (basename($_SERVER['PHP_SELF']) == 'ms_payroll.php') ? 'active' : ''; ?>" href="ms_payroll.php">
+            <img src="icons/sidebar-icons/payroll.svg" alt="Payroll Icon" class="me-2" width="24">
+            <span>Payroll</span>
+        </a>
+    <?php endif; ?>
+
+    <!-- Vendors -->
+    <?php if (in_array('ms_vendors.php', $accessible_pages)): ?>
+        <a class="nav-link-item <?php echo (basename($_SERVER['PHP_SELF']) == 'ms_vendors.php') ? 'active' : ''; ?>" href="ms_vendors.php">
+            <img src="icons/sidebar-icons/vendors.svg" alt="Vendors Icon" class="me-2" width="24">
+            <span>Vendors</span>
+        </a>
+    <?php endif; ?>
+
+    <!-- Reports -->
+    <?php if (in_array('ms_reports.php', $accessible_pages)): ?>
+        <a class="nav-link-item <?php echo (basename($_SERVER['PHP_SELF']) == 'ms_reports.php') ? 'active' : ''; ?>" href="ms_reports.php">
+            <img src="icons/sidebar-icons/reports.svg" alt="Reports Icon" class="me-2" width="24">
+            <span>Reports</span>
+        </a>
+    <?php endif; ?>
 </div>
 
 <script src="js/sidebar.js"></script>
