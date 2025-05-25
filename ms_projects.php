@@ -17,6 +17,23 @@
 
     $user_id = $_SESSION['user_id'];
 
+    $projectQuery = "
+        SELECT 
+            p.*,
+            CONCAT(creator.first_name, ' ', creator.last_name) AS created_by_name,
+            CONCAT(editor.first_name, ' ', editor.last_name) AS edited_by_name
+        FROM projects p
+        LEFT JOIN users creator_user ON p.created_by = creator_user.user_id
+        LEFT JOIN employee creator ON creator_user.employee_id = creator.employee_id
+        LEFT JOIN users editor_user ON p.edited_by = editor_user.user_id
+        LEFT JOIN employee editor ON editor_user.employee_id = editor.employee_id
+        WHERE p.project_id != 1
+        ORDER BY p.creation_date ASC
+    ";
+    
+    $projectResult = $conn->query($projectQuery);
+
+    // Get user info for logging and display purposes
     $user_info = getUserAccessInfo($user_id);
     $current_user_role = $user_info['role'] ?? 'unknown';
     $current_user_department = $user_info['department'] ?? 'unknown';
