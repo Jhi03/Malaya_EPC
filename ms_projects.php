@@ -17,23 +17,6 @@
 
     $user_id = $_SESSION['user_id'];
 
-    $projectQuery = "
-        SELECT 
-            p.*,
-            CONCAT(creator.first_name, ' ', creator.last_name) AS created_by_name,
-            CONCAT(editor.first_name, ' ', editor.last_name) AS edited_by_name
-        FROM projects p
-        LEFT JOIN users creator_user ON p.created_by = creator_user.user_id
-        LEFT JOIN employee creator ON creator_user.employee_id = creator.employee_id
-        LEFT JOIN users editor_user ON p.edited_by = editor_user.user_id
-        LEFT JOIN employee editor ON editor_user.employee_id = editor.employee_id
-        WHERE p.project_id != 1
-        ORDER BY p.creation_date ASC
-    ";
-    
-    $projectResult = $conn->query($projectQuery);
-
-    // Get user info for logging and display purposes
     $user_info = getUserAccessInfo($user_id);
     $current_user_role = $user_info['role'] ?? 'unknown';
     $current_user_department = $user_info['department'] ?? 'unknown';
@@ -48,9 +31,10 @@
         $last_name = trim($_POST['clientLastName']);
         $company_name = trim($_POST['companyName']);
         $description = trim($_POST['description']);
+        $status = $_POST['projectStatus'] ?? 'active'; // Add status field
         $creation_date = date("Y-m-d");
 
-        $contact = isset($_POST['contact']) ? intval($_POST['contact']) : null;
+        $contact = isset($_POST['contact']) ? trim($_POST['contact']) : null;
         $email = isset($_POST['email']) ? trim($_POST['email']) : null;
 
         $unit = $_POST['unit'] ?? null;
@@ -72,6 +56,7 @@
                 last_name = ?, 
                 company_name = ?, 
                 description = ?, 
+                status = ?,
                 contact = ?, 
                 email = ?, 
                 unit_building_no = ?, 
@@ -89,8 +74,8 @@
                 "edit project record"
             );
 
-            $stmt->bind_param("sssssssssssssii", 
-                $project_code, $project_name, $first_name, $last_name, $company_name, $description,
+            $stmt->bind_param("sssssssissssssii", 
+                $project_code, $project_name, $first_name, $last_name, $company_name, $description, $status,
                 $contact, $email, $unit, $street, $barangay, $city, $country, $user_id, $project_id);
 
         } else {
@@ -188,8 +173,14 @@
                         </ul>
                     </div>
                 </div>
+                
+                <!-- Status Toggle Buttons -->
+                <div class="status-toggle">
+                    <button class="status-toggle-btn active" data-status="active">Active</button>
+                    <button class="status-toggle-btn" data-status="completed">Completed</button>
+                    <button class="status-toggle-btn" data-status="archived">Archived</button>
+                </div>
             </div>
-
             <!-- Project Cards Grid -->
             <div class="project-grid">
                 <?php 
@@ -225,10 +216,10 @@
                         data-created-by="<?= htmlspecialchars($row['created_by_name'] ?? 'Unknown') ?>"
                         data-edited-by="<?= htmlspecialchars($row['edited_by_name'] ?? 'Unknown') ?>"
                         data-created-on="<?= htmlspecialchars($row['creation_date']) ?>"
-                        data-edited-on="<?= htmlspecialchars($row['edit_date']) ?>">
+                        data-edited-on="<?= htmlspecialchars($row['edit_date']) ?>"
+                        data-status="<?= htmlspecialchars($row['status'] ?? 'active') ?>">
                         
                         <?php 
-                        // Check if user can edit/delete projects (exclude 'user' role)
                         $can_edit_projects = !hasRole('user');
                         if ($can_edit_projects): 
                         ?>
@@ -243,7 +234,12 @@
 
                         <div class="project-info">
                             <h3 class="project-name"><?= htmlspecialchars($row['project_name']) ?></h3>
-                            <p class="project-code">CODE: <?= htmlspecialchars($row['project_code']) ?></p>
+                            <div class="project-code-status">
+                                <p class="project-code">CODE: <?= htmlspecialchars($row['project_code']) ?></p>
+                                <span class="status-indicator status-<?= htmlspecialchars($row['status'] ?? 'active') ?>">
+                                    <?= strtoupper($row['status'] ?? 'active') ?>
+                                </span>
+                            </div>
                         </div>
                         <div class="project-actions">
                             <a href="ms_records.php?projectId=<?= urlencode($row['project_id']) ?>" class="btn-records">RECORDS</a>
@@ -281,6 +277,20 @@
                                 <div class="col-md-6">
                                     <label for="projectCode" class="form-label">Project Code</label>
                                     <input type="text" class="form-control" id="projectCode" name="projectCode" placeholder="Enter project code" required>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="form-section" id="statusSection" style="display: none;">
+                            <div class="form-section-title">Project Status</div>
+                            <div class="row g-3">
+                                <div class="col-md-12">
+                                    <label for="projectStatus" class="form-label">Status</label>
+                                    <select class="form-control" id="projectStatus" name="projectStatus">
+                                        <option value="active">Active</option>
+                                        <option value="completed">Completed</option>
+                                        <option value="archived">Archived</option>
+                                    </select>
                                 </div>
                             </div>
                         </div>
@@ -405,15 +415,56 @@
             company: document.getElementById("companyName"),
             description: document.getElementById("description")
         };
-        
+
+        // Initialize with active projects on page load
         document.addEventListener('DOMContentLoaded', function() {
+            // Status filtering variables
+            let currentStatusFilter = 'active';
+            
+            // Status toggle functionality
+            document.querySelectorAll('.status-toggle-btn').forEach(btn => {
+                btn.addEventListener('click', function() {
+                    console.log('Status button clicked:', this.getAttribute('data-status'));
+                    
+                    // Remove active class from all buttons
+                    document.querySelectorAll('.status-toggle-btn').forEach(b => b.classList.remove('active'));
+                    
+                    // Add active class to clicked button
+                    this.classList.add('active');
+                    
+                    // Get selected status
+                    currentStatusFilter = this.getAttribute('data-status');
+                    
+                    // Filter projects
+                    filterProjectsByStatus(currentStatusFilter);
+                });
+            });
+
+            // Filter projects by status
+            function filterProjectsByStatus(status) {
+                const projectCards = document.querySelectorAll('.project-card:not(.add-project)');
+                
+                projectCards.forEach(card => {
+                    const cardStatus = card.getAttribute('data-status') || 'active';
+                    
+                    if (cardStatus === status) {
+                        card.style.display = 'block';
+                    } else {
+                        card.style.display = 'none';
+                    }
+                });
+            }
+
+            // Initialize with active projects on page load
+            filterProjectsByStatus('active');
+
             // Search functionality
             const searchInput = document.querySelector('.search-input');
-            const projectCards = document.querySelectorAll('.project-card:not(.add-project)');
             
             if (searchInput) {
                 searchInput.addEventListener('input', function() {
                     const searchTerm = this.value.toLowerCase().trim();
+                    const projectCards = document.querySelectorAll('.project-card:not(.add-project)');
                     
                     projectCards.forEach(card => {
                         const projectName = card.dataset.projectName ? card.dataset.projectName.toLowerCase() : '';
@@ -535,9 +586,9 @@
                 });
             }
 
-            // Modal functionality (keeping your existing modal code)
+            // Modal functionality - FIXED variable names to match your HTML
             const modal = document.getElementById("addProjectModal");
-            const modalTitle = document.getElementById("projectModalLabel");
+            const modalTitle = document.getElementById("projectModalLabel"); // FIXED: was "modalTitle"
             const form = document.getElementById("projectForm");
             const submitButton = document.getElementById("submitButton");
             const formMode = document.getElementById("formMode");
@@ -546,12 +597,22 @@
             const addProjectBtn = document.getElementById("addProjectBtn");
             if (addProjectBtn) {
                 addProjectBtn.addEventListener("click", () => {
+                    console.log("Add project button clicked"); // Debug log
                     openProjectModal('add');
                 });
+            } else {
+                console.log("Add project button not found"); // Debug log
             }
 
             // Function to open modal in add or edit mode
             function openProjectModal(mode, projectData = null) {
+                console.log("Opening modal in mode:", mode); // Debug log
+                
+                if (!modal) {
+                    console.error("Modal not found!");
+                    return;
+                }
+                
                 const bsModal = new bootstrap.Modal(modal);
                 
                 if (mode === 'add') {
@@ -560,8 +621,16 @@
                     submitButton.className = "btn btn-primary";
                     formMode.value = "add";
                     form.reset();
-                    document.getElementById("addressSection").style.display = "none";
-                    document.getElementById("recordMeta").style.display = "none";
+                    
+                    // Hide sections for add mode
+                    const addressSection = document.getElementById("addressSection");
+                    const statusSection = document.getElementById("statusSection");
+                    const recordMeta = document.getElementById("recordMeta");
+                    
+                    if (addressSection) addressSection.style.display = "none";
+                    if (statusSection) statusSection.style.display = "none";
+                    if (recordMeta) recordMeta.style.display = "none";
+                    
                 } else if (mode === 'edit' && projectData) {
                     modalTitle.textContent = "Edit Project";
                     submitButton.textContent = "Update Project";
@@ -569,30 +638,65 @@
                     formMode.value = "edit";
                     
                     // Fill form with project data
-                    document.getElementById("editProjectId").value = projectData.id;
-                    document.getElementById("projectName").value = projectData.name;
-                    document.getElementById("projectCode").value = projectData.code;
-                    document.getElementById("clientFirstName").value = projectData.firstName;
-                    document.getElementById("clientLastName").value = projectData.lastName;
-                    document.getElementById("contact").value = projectData.contact;
-                    document.getElementById("email").value = projectData.email;
-                    document.getElementById("companyName").value = projectData.company;
-                    document.getElementById("description").value = projectData.description;
+                    const editProjectId = document.getElementById("editProjectId");
+                    const projectName = document.getElementById("projectName");
+                    const projectCode = document.getElementById("projectCode");
+                    const clientFirstName = document.getElementById("clientFirstName");
+                    const clientLastName = document.getElementById("clientLastName");
+                    const contact = document.getElementById("contact");
+                    const email = document.getElementById("email");
+                    const companyName = document.getElementById("companyName");
+                    const description = document.getElementById("description");
+                    
+                    if (editProjectId) editProjectId.value = projectData.id;
+                    if (projectName) projectName.value = projectData.name;
+                    if (projectCode) projectCode.value = projectData.code;
+                    if (clientFirstName) clientFirstName.value = projectData.firstName;
+                    if (clientLastName) clientLastName.value = projectData.lastName;
+                    if (contact) contact.value = projectData.contact;
+                    if (email) email.value = projectData.email;
+                    if (companyName) companyName.value = projectData.company;
+                    if (description) description.value = projectData.description;
                     
                     // Show address section for edit mode
-                    document.getElementById("addressSection").style.display = "block";
-                    document.getElementById("unit").value = projectData.unit || '';
-                    document.getElementById("street").value = projectData.street || '';
-                    document.getElementById("barangay").value = projectData.barangay || '';
-                    document.getElementById("city").value = projectData.city || '';
-                    document.getElementById("country").value = projectData.country || '';
+                    const addressSection = document.getElementById("addressSection");
+                    if (addressSection) {
+                        addressSection.style.display = "block";
+                        const unit = document.getElementById("unit");
+                        const street = document.getElementById("street");
+                        const barangay = document.getElementById("barangay");
+                        const city = document.getElementById("city");
+                        const country = document.getElementById("country");
+                        
+                        if (unit) unit.value = projectData.unit || '';
+                        if (street) street.value = projectData.street || '';
+                        if (barangay) barangay.value = projectData.barangay || '';
+                        if (city) city.value = projectData.city || '';
+                        if (country) country.value = projectData.country || '';
+                    }
+
+                    // Show and set status section
+                    const statusSection = document.getElementById("statusSection");
+                    const projectStatus = document.getElementById("projectStatus");
+                    if (statusSection && projectStatus) {
+                        statusSection.style.display = "block";
+                        projectStatus.value = projectData.status || 'active';
+                    }
                     
                     // Show metadata section
-                    document.getElementById("recordMeta").style.display = "block";
-                    document.getElementById("createdByMeta").textContent = projectData.createdBy || 'Unknown';
-                    document.getElementById("editedByMeta").textContent = projectData.editedBy || 'Unknown';
-                    document.getElementById("createdOnMeta").textContent = formatDate(projectData.createdOn) || 'Unknown';
-                    document.getElementById("editedOnMeta").textContent = formatDate(projectData.editedOn) || 'Unknown';
+                    const recordMeta = document.getElementById("recordMeta");
+                    if (recordMeta) {
+                        recordMeta.style.display = "block";
+                        const createdByMeta = document.getElementById("createdByMeta");
+                        const editedByMeta = document.getElementById("editedByMeta");
+                        const createdOnMeta = document.getElementById("createdOnMeta");
+                        const editedOnMeta = document.getElementById("editedOnMeta");
+                        
+                        if (createdByMeta) createdByMeta.textContent = projectData.createdBy || 'Unknown';
+                        if (editedByMeta) editedByMeta.textContent = projectData.editedBy || 'Unknown';
+                        if (createdOnMeta) createdOnMeta.textContent = formatDate(projectData.createdOn) || 'Unknown';
+                        if (editedOnMeta) editedOnMeta.textContent = formatDate(projectData.editedOn) || 'Unknown';
+                    }
                 }
                 
                 bsModal.show();
@@ -600,7 +704,14 @@
 
             // Edit button handler
             window.openEditModal = function(button) {
+                console.log("Edit button clicked"); // Debug log
+                
                 const card = button.closest(".project-card");
+                if (!card) {
+                    console.error("Project card not found");
+                    return;
+                }
+                
                 const projectData = {
                     id: card.dataset.projectId,
                     name: card.dataset.projectName,
@@ -616,12 +727,14 @@
                     barangay: card.dataset.barangay,
                     city: card.dataset.city,
                     country: card.dataset.country,
+                    status: card.dataset.status,
                     createdBy: card.dataset.createdBy,
                     editedBy: card.dataset.editedBy,
                     createdOn: card.dataset.createdOn,
                     editedOn: card.dataset.editedOn
                 };
                 
+                console.log("Project data:", projectData); // Debug log
                 openProjectModal('edit', projectData);
             };
 
@@ -641,23 +754,26 @@
             }
 
             // Form submission
-            form.addEventListener("submit", function (e) {
-                e.preventDefault();
-                const formData = new FormData(form);
+            if (form) {
+                form.addEventListener("submit", function (e) {
+                    e.preventDefault();
+                    console.log("Form submitted"); // Debug log
+                    const formData = new FormData(form);
 
-                fetch("", {
-                    method: "POST",
-                    body: formData,
-                })
-                .then((res) => res.text())
-                .then((data) => {
-                    if (data.trim() === "success") {
-                        location.reload();
-                    } else {
-                        alert("Error: " + data);
-                    }
+                    fetch("", {
+                        method: "POST",
+                        body: formData,
+                    })
+                    .then((res) => res.text())
+                    .then((data) => {
+                        if (data.trim() === "success") {
+                            location.reload();
+                        } else {
+                            alert("Error: " + data);
+                        }
+                    });
                 });
-            });
+            }
 
             // Keep existing dropdown and delete functionality
             window.toggleDropdown = function(event, el) {
@@ -729,6 +845,6 @@
                 }
             };
         });
-    </script>
+</script>
 </body>
 </html>

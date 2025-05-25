@@ -216,6 +216,40 @@ body {
     height: 123.8px; /* Set default height */
 }
 
+/* Status toggle buttons */
+.status-toggle {
+    display: flex;
+    background: white;
+    border-radius: 6px;
+    overflow: hidden;
+    border: 1px solid #dee2e6;
+    margin-left: auto;
+}
+
+.status-toggle-btn {
+    background: white;
+    border: none;
+    padding: 8px 16px;
+    font-size: 12px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    border-right: 1px solid #dee2e6;
+}
+
+.status-toggle-btn:last-child {
+    border-right: none;
+}
+
+.status-toggle-btn:hover {
+    background: #f8f9fa;
+}
+
+.status-toggle-btn.active {
+    background: #333;
+    color: white;
+}
+
 .project-menu {
     position: absolute;
     right: 8px;
@@ -310,10 +344,41 @@ body {
     font-weight: bold;
 }
 
-.project-code {
+/* Project code and status layout */
+.project-code-status {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
     margin: 5px 0 0;
+}
+
+.project-code {
+    margin: 0;
     font-size: 12px;
     color: #ccc;
+}
+
+/* Status indicator positioning and styling */
+.status-indicator {
+    font-size: 8px;
+    padding: 2px 8px;
+    border-radius: 8px;
+    text-transform: uppercase;
+    color: white;
+}
+
+.status-active {
+    background-color: #7ed957;
+}
+
+.status-completed {
+    background-color: #38b0ff;
+    color: white;
+}
+
+.status-archived {
+    background-color: #d9d9d9;
+    color: #666;
 }
 
 .project-actions {
