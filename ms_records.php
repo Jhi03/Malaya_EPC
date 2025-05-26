@@ -8,7 +8,7 @@
     $username = "u188693564_adminsolar";
     $password = "@Malayasolarenergies1";
     $dbname = "u188693564_malayasol";
-    $conn = new mysqli($host, $user, $password, $database);
+    $conn = new mysqli($host, $username, $password, $dbname);
     // Check connection
     if ($conn->connect_error) {
         die("Connection failed: " . $conn->connect_error);
