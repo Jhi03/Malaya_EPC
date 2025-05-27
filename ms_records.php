@@ -156,7 +156,7 @@
         while ($row = $result->fetch_assoc()) {
             $categories[] = $row;
         }
-
+        
         // Fetch subcategories
         $subcategories = [];
         $result = $conn->query("SELECT subcategory_id, category_name, subcategory_name FROM subcategories");
@@ -596,6 +596,89 @@
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 <body>
+
+    <script>
+    // Define subcategories data directly from PHP
+    window.subcategories = <?php echo json_encode($subcategories); ?>;
+
+    // Define a simple function to handle category changes
+    function handleCategoryChange() {
+        const categorySelect = document.getElementById('category');
+        const subcategorySelect = document.getElementById('subcategory');
+        
+        if (!categorySelect || !subcategorySelect) {
+            console.error("Category or subcategory elements not found");
+            return;
+        }
+        
+        // Get selected category
+        const selectedCategory = categorySelect.value;
+        console.log("Category changed to:", selectedCategory);
+        console.log("Available subcategories:", window.subcategories);
+        
+        // Clear existing options
+        subcategorySelect.innerHTML = '<option value="">Select Subcategory</option>';
+        
+        if (!selectedCategory) {
+            subcategorySelect.disabled = true;
+            return;
+        }
+        
+        // Filter subcategories for the selected category
+        const filteredSubcategories = window.subcategories.filter(sub => 
+            sub.category_name === selectedCategory
+        );
+        
+        console.log("Filtered subcategories:", filteredSubcategories);
+        
+        if (filteredSubcategories && filteredSubcategories.length > 0) {
+            // Enable subcategory select
+            subcategorySelect.disabled = false;
+            
+            // Add filtered options
+            filteredSubcategories.forEach(sub => {
+                const option = document.createElement('option');
+                option.value = sub.subcategory_name;
+                option.textContent = sub.subcategory_name;
+                subcategorySelect.appendChild(option);
+            });
+        } else {
+            // If no subcategories found
+            subcategorySelect.disabled = true;
+        }
+    }
+
+    // Attach event handler when DOM is loaded
+    document.addEventListener('DOMContentLoaded', function() {
+        const categorySelect = document.getElementById('category');
+        if (categorySelect) {
+            categorySelect.addEventListener('change', handleCategoryChange);
+            
+            // Also handle edit mode by listening for modal show events
+            const expenseModal = document.getElementById('expenseModal');
+            if (expenseModal) {
+                expenseModal.addEventListener('shown.bs.modal', function() {
+                    // If category has a value, trigger change event
+                    if (categorySelect.value) {
+                        handleCategoryChange();
+                    }
+                });
+            }
+        }
+        
+        // Also attach handler for edit buttons
+        document.addEventListener('click', function(e) {
+            if (e.target.classList.contains('edit-btn') || e.target.closest('.edit-btn')) {
+                setTimeout(function() {
+                    if (categorySelect.value) {
+                        handleCategoryChange();
+                    }
+                }, 300); // Delay to ensure modal is open and fields are populated
+            }
+        });
+    });
+    </script>
+
     <!-- ADD/EDIT RECORD MODAL -->
     <div class="modal fade" id="expenseModal" tabindex="-1" aria-labelledby="expenseModalLabel" aria-hidden="true">
         <div class="modal-dialog modal-lg">
@@ -900,12 +983,12 @@
             <?php if ($project && $project_id != 1): ?>
                 <div class="project-summary position-relative">
                     <div class="project-options">
-                        <button class="ellipsis-btn" onclick="toggleDropdown(this)">
+                        <button class="ellipsis-btn">
                             <img src="icons/ellipsis-vertical.svg" alt="Options">
                         </button>
                         <div class="dropdown-menu" style="display:none;">
-                            <button class="dropdown-edit" onclick="openEditModal()">Edit</button>
-                            <button class="dropdown-delete" onclick="deleteProject(<?= $project['project_id'] ?>)">Delete</button>
+                            <button class="dropdown-edit">Edit</button>
+                            <button class="dropdown-delete" data-project-id="<?= $project['project_id'] ?>">Delete</button>
                         </div>
                     </div>
                     
@@ -1001,7 +1084,7 @@
                                                 data-is_company_loss="<?= $row['is_company_loss'] ?? 'No' ?>">
                                                 <img src="icons/eye.svg" width="16" alt="View">
                                             </button>
-                                            <button type="button" class="btn btn-sm btn-primary edit-btn"
+                                            <button type="button" id="edit-btn-<?= $row['record_id'] ?>" class="btn btn-sm btn-primary edit-btn"
                                                 data-id="<?= $row['record_id'] ?>"
                                                 data-category="<?= htmlspecialchars($row['category']) ?>"
                                                 data-subcategory="<?= htmlspecialchars($row['subcategory']) ?>"
@@ -1019,7 +1102,7 @@
                                                 data-is_company_loss="<?= $row['is_company_loss'] ?? 'No' ?>">
                                                 <img src="icons/pencil-white.svg" width="16" alt="Edit">
                                             </button>
-                                            <button type="button" class="btn btn-sm btn-danger delete-btn" onclick="deleteExpense(<?= $row['record_id'] ?>)">
+                                            <button type="button" class="btn btn-sm btn-danger delete-btn">
                                                 <img src="icons/trash.svg" alt="Delete" width="16">
                                             </button>
                                         </td>
@@ -1039,792 +1122,74 @@
             </div>
         </div>
     </div>
-    
-    <?php if ($project_id != 1): ?>
-        <?php include('edit_project_modal.php'); ?>
-    <?php endif; ?>
 
-    <script src="js/sidebar.js"></script>
-    <script src="js/header.js"></script>
+<!-- Include the new event delegation script -->
+<script src="js/project_buttons.js"></script>
 
-    <script> //viewExpenseModal
-        $(document).ready(function () {
-            $(document).on('click', '.view-btn', function () {
-                const modal = new bootstrap.Modal(document.getElementById('viewExpenseModal'));
+<?php if ($project_id != 1): ?>
+    <?php include('edit_project_modal.php'); ?>
+<?php endif; ?>
 
-                $('#view_category').text($(this).data('category') || 'N/A');
-                $('#view_subcategory').text($(this).data('subcategory') || 'N/A');
-                $('#view_purchase_date').text($(this).data('date') || 'N/A');
-                $('#view_description').text($(this).data('record_description') || 'N/A');
-                $('#view_budget').text('₱' + parseFloat($(this).data('budget') || 0).toFixed(2));
-                $('#view_expense').text('₱' + parseFloat($(this).data('expense') || 0).toFixed(2));
-                $('#view_variance').text('₱' + parseFloat($(this).data('variance') || 0).toFixed(2));
-                $('#view_rental_rate').text('₱' + parseFloat($(this).data('rental_rate') || 0).toFixed(2));
-                $('#view_tax').text('₱' + parseFloat($(this).data('tax') || 0).toFixed(2));
-                $('#view_payee').text($(this).data('payee') || 'N/A');
-                $('#view_invoice_no').text($(this).data('invoice_no') || 'N/A');
-                $('#view_remarks').text($(this).data('remarks') || 'No remarks');
-                
-                // Add these new fields
-                $('#view_bill_to_client').text($(this).data('bill_to_client') || 'No');
-                $('#view_is_rental').text($(this).data('is_rental') || 'No');
-                $('#view_is_company_loss').text($(this).data('is_company_loss') || 'No');
+<script src="js/sidebar.js"></script>
+<script src="js/header.js"></script>
 
-                // Hide bill_to_client row if not Yes
-                if ($(this).data('bill_to_client') === 'Yes') {
-                    $('#view_bill_to_client').closest('tr').show();
-                    $('#view_bill_to_client').closest('tr').addClass('table-success');
-                } else {
-                    $('#view_bill_to_client').closest('tr').hide();
-                }
-                
-                // Hide company_loss row if not Yes
-                if ($(this).data('is_company_loss') === 'Yes') {
-                    $('#view_is_company_loss').closest('tr').show();
-                    $('#view_is_company_loss').closest('tr').addClass('table-danger');
-                } else {
-                    $('#view_is_company_loss').closest('tr').hide();
-                }
-                
-                // Show/highlight rental row based on is_rental value
-                if ($(this).data('is_rental') === 'Yes') {
-                    $('#view_rental_rate').closest('tr').addClass('table-primary');
-                } else {
-                    $('#view_rental_rate').closest('tr').removeClass('table-primary');
-                }
+<script>
+// jQuery-based view modal script (keep this since it works)
+$(document).ready(function () {
+    $(document).on('click', '.view-btn', function () {
+        const modal = new bootstrap.Modal(document.getElementById('viewExpenseModal'));
 
-                $.post('get_expense_details.php', {
-                record_id: $(this).data('id')
-                }, function (response) {
-                if (response.success) {
-                    $('#view_created_by').text(response.created_by_name || 'Unknown');
-                    $('#view_creation_date').text(response.creation_date || 'N/A');
-                    $('#view_edited_by').text(response.edited_by_name || 'N/A');
-                    $('#view_edit_date').text(response.edit_date || 'N/A');
-                }
-                }, 'json');
+        $('#view_category').text($(this).data('category') || 'N/A');
+        $('#view_subcategory').text($(this).data('subcategory') || 'N/A');
+        $('#view_purchase_date').text($(this).data('date') || 'N/A');
+        $('#view_description').text($(this).data('record_description') || 'N/A');
+        $('#view_budget').text('₱' + parseFloat($(this).data('budget') || 0).toFixed(2));
+        $('#view_expense').text('₱' + parseFloat($(this).data('expense') || 0).toFixed(2));
+        $('#view_variance').text('₱' + parseFloat($(this).data('variance') || 0).toFixed(2));
+        $('#view_rental_rate').text('₱' + parseFloat($(this).data('rental_rate') || 0).toFixed(2));
+        $('#view_tax').text('₱' + parseFloat($(this).data('tax') || 0).toFixed(2));
+        $('#view_payee').text($(this).data('payee') || 'N/A');
+        $('#view_invoice_no').text($(this).data('invoice_no') || 'N/A');
+        $('#view_remarks').text($(this).data('remarks') || 'No remarks');
+        
+        $('#view_bill_to_client').text($(this).data('bill_to_client') || 'No');
+        $('#view_is_rental').text($(this).data('is_rental') || 'No');
+        $('#view_is_company_loss').text($(this).data('is_company_loss') || 'No');
 
-                modal.show();
-            });
-        });
-    </script>
-
-    <script>//Project Summary Dropdown EDIT and DELETE
-        // Toggle dropdown menu
-        function toggleDropdown(button) {
-            const menu = button.nextElementSibling;
-            if (menu.style.display === 'block') {
-                menu.style.display = 'none';
-            } else {
-                // Close any other dropdowns open on the page first
-                document.querySelectorAll('.dropdown-menu').forEach(m => m.style.display = 'none');
-                menu.style.display = 'block';
-            }
+        // Hide/show and style rows based on data
+        if ($(this).data('bill_to_client') === 'Yes') {
+            $('#view_bill_to_client').closest('tr').show().addClass('table-success');
+        } else {
+            $('#view_bill_to_client').closest('tr').hide();
+        }
+        
+        if ($(this).data('is_company_loss') === 'Yes') {
+            $('#view_is_company_loss').closest('tr').show().addClass('table-danger');
+        } else {
+            $('#view_is_company_loss').closest('tr').hide();
+        }
+        
+        if ($(this).data('is_rental') === 'Yes') {
+            $('#view_rental_rate').closest('tr').addClass('table-primary');
+        } else {
+            $('#view_rental_rate').closest('tr').removeClass('table-primary');
         }
 
-        // Close dropdown if clicked outside
-        document.addEventListener('click', function(event) {
-            if (!event.target.closest('.project-options')) {
-                document.querySelectorAll('.dropdown-menu').forEach(menu => menu.style.display = 'none');
+        // Get additional details via AJAX
+        $.post('get_expense_details.php', {
+            record_id: $(this).data('id')
+        }, function (response) {
+            if (response.success) {
+                $('#view_created_by').text(response.created_by_name || 'Unknown');
+                $('#view_creation_date').text(response.creation_date || 'N/A');
+                $('#view_edited_by').text(response.edited_by_name || 'N/A');
+                $('#view_edit_date').text(response.edit_date || 'N/A');
             }
-        });
+        }, 'json');
 
-
-        // Attach handlers for edit/delete buttons
-        document.querySelectorAll('.dropdown-edit').forEach(button => {
-            button.addEventListener('click', function () {
-                // Show the slide-in edit panel
-                document.getElementById('editProjectPanel').classList.add('open');
-                // Optionally hide the dropdown
-                this.parentElement.style.display = 'none';
-            });
-        });
-
-        // Close panel function
-        function closeEditPanel() {
-            document.getElementById('editProjectPanel').classList.remove('open');
-        }
-
-        // Delete project with confirmation & AJAX
-        function deleteProject(projectId) {
-            if (!confirm('Are you sure you want to delete this project?')) {
-                return;
-            }
-
-            const xhr = new XMLHttpRequest();
-            xhr.open('POST', window.location.href, true);
-            xhr.setRequestHeader('Content-Type', 'application/x-www-form-urlencoded');
-
-            xhr.onload = function() {
-                if (xhr.status === 200) {
-                    if (xhr.responseText.trim() === 'success') {
-                        alert('Project deleted successfully.');
-                        window.location.href = 'ms_projects.php'; // Redirect to projects list page
-                    } else {
-                        alert('Failed to delete project: ' + xhr.responseText);
-                    }
-                } else {
-                    alert('Request failed. Returned status of ' + xhr.status);
-                }
-            };
-
-            xhr.send('delete_project_id=' + encodeURIComponent(projectId));
-        }
-    </script>
-    
-    <script>
-        document.querySelectorAll('.edit-btn').forEach(button => {
-            button.addEventListener('click', function(e) {
-                e.preventDefault();
-                
-                const recordData = {
-                    id: this.getAttribute('data-id'),
-                    category: this.getAttribute('data-category'),
-                    subcategory: this.getAttribute('data-subcategory'),
-                    date: this.getAttribute('data-date'),
-                    budget: this.getAttribute('data-budget'),
-                    expense: this.getAttribute('data-expense'),
-                    payee: this.getAttribute('data-payee'),
-                    record_description: this.getAttribute('data-record_description'),
-                    remarks: this.getAttribute('data-remarks'),
-                    rental_rate: this.getAttribute('data-rental_rate') || 0,
-                    tax: this.getAttribute('data-tax') || 0,
-                    invoice_no: this.getAttribute('data-invoice_no') || '',
-                    is_rental: this.getAttribute('data-is_rental') || 'No',
-                    bill_to_client: this.getAttribute('data-bill_to_client') || 'No',
-                    is_company_loss: this.getAttribute('data-is_company_loss') || 'No'
-                };
-                // Call your existing modal open function in edit mode
-                openExpenseModal('edit', recordData);
-            });
-        });
-
-        document.addEventListener('DOMContentLoaded', function() {
-
-            // Add at the beginning of your DOMContentLoaded handler
-            window.onerror = function(message, source, lineno, colno, error) {
-                console.error("JavaScript error:", message, "at", source, ":", lineno);
-                return false;
-            };
-
-            // Handle focus-clear class for placeholders
-            document.querySelectorAll('.focus-clear').forEach(input => {
-                const placeholder = input.placeholder;
-                
-                input.addEventListener('focus', function() {
-                    this.placeholder = '';
-                });
-                
-                input.addEventListener('blur', function() {
-                    if (this.value === '') {
-                        this.placeholder = placeholder;
-                    }
-                });
-            });
-            
-            // Store all subcategories from PHP in a JavaScript variable
-            const subcategories = <?php echo json_encode($subcategories); ?>;
-
-            // Category dropdown change handler
-            document.getElementById('category').addEventListener('change', function () {
-                const categorySelect = document.getElementById('category');
-                const subcategorySelect = document.getElementById('subcategory');
-                const selectedCategoryName = categorySelect.value;
-
-                // Clear previous options
-                subcategorySelect.innerHTML = '<option value="">Select Subcategory</option>';
-
-                // Filter subcategories by category_name
-                const filteredSubcategories = subcategories.filter(item =>
-                    item.category_name === selectedCategoryName
-                );
-
-                if (filteredSubcategories.length > 0) {
-                    subcategorySelect.disabled = false;
-                    subcategorySelect.setAttribute('required', 'required');
-
-                    filteredSubcategories.forEach(subcategory => {
-                        const option = document.createElement('option');
-                        option.value = subcategory.subcategory_name;
-                        option.textContent = subcategory.subcategory_name;
-                        subcategorySelect.appendChild(option);
-                    });
-                } else {
-                    // No subcategories — disable and make it not required
-                    subcategorySelect.disabled = true;
-                    subcategorySelect.removeAttribute('required');
-                }
-            });
-
-            // Checkbox event listeners
-            document.getElementById('is_rental').addEventListener('change', function() {
-                const expenseInputContainer = document.getElementById('expense_input');
-                const rentalInputContainer = document.getElementById('rental_input');
-                const summaryExpenseRow = document.getElementById('summary_expense_row');
-                const summaryRentalRow = document.getElementById('summary_rental_row');
-                const rentalRateInput = document.getElementById('rental_rate');
-                const expenseInput = document.getElementById('expense');
-                const isRentalField = document.getElementById('is_rental_field');
-                
-                if (this.checked) {
-                    expenseInputContainer.style.display = 'none';
-                    rentalInputContainer.style.display = 'block';
-                    expenseInput.value = '';
-                    expenseInput.required = false;
-                    expenseInput.placeholder = '0.00';
-                    rentalRateInput.required = true;
-                    summaryExpenseRow.style.display = 'none';
-                    summaryRentalRow.style.display = 'flex';
-                    isRentalField.value = 'Yes';
-                } else {
-                    expenseInputContainer.style.display = 'block';
-                    rentalInputContainer.style.display = 'none';
-                    rentalRateInput.value = '';
-                    rentalRateInput.required = false;
-                    rentalRateInput.placeholder = '0.00';
-                    expenseInput.required = true;
-                    summaryExpenseRow.style.display = 'flex';
-                    summaryRentalRow.style.display = 'none';
-                    isRentalField.value = 'No';
-                }
-                updateCalculations();
-            });
-
-            // Add a function to update company loss status based on scenarios
-            function updateCompanyLossStatus() {
-                const hasBudget = document.getElementById('has_budget').checked;
-                const isBillToClient = document.getElementById('bill_to_client_checkbox').checked;
-                const expenseAmount = document.getElementById('is_rental').checked 
-                    ? parseFloat(document.getElementById('rental_rate').value || 0) 
-                    : parseFloat(document.getElementById('expense').value || 0);
-                const budgetAmount = parseFloat(document.getElementById('budget').value || 0);
-                
-                // For logging/debugging
-                console.log("Updating company loss status:");
-                console.log("Has budget:", hasBudget);
-                console.log("Bill to client:", isBillToClient);
-                console.log("Expense amount:", expenseAmount);
-                console.log("Budget amount:", budgetAmount);
-                
-                let isCompanyLoss = false;
-                
-                // Scenario 1: Budget checked, expense <= budget
-                if (hasBudget && expenseAmount <= budgetAmount) {
-                    isCompanyLoss = false;
-                }
-                // Scenario 2: Budget NOT checked, bill_to_client NOT checked
-                else if (!hasBudget && !isBillToClient) {
-                    isCompanyLoss = true;
-                }
-                // Scenario 3: Budget checked, expense > budget, bill_to_client NOT checked
-                else if (hasBudget && expenseAmount > budgetAmount && !isBillToClient) {
-                    isCompanyLoss = true;
-                }
-                // Scenario 4: Budget checked, expense > budget, bill_to_client checked
-                else if (hasBudget && expenseAmount > budgetAmount && isBillToClient) {
-                    isCompanyLoss = false;
-                }
-                
-                console.log("Is company loss:", isCompanyLoss);
-                
-                // Add a hidden field for is_company_loss if it doesn't exist
-                let isCompanyLossField = document.getElementById('is_company_loss');
-                if (!isCompanyLossField) {
-                    isCompanyLossField = document.createElement('input');
-                    isCompanyLossField.type = 'hidden';
-                    isCompanyLossField.id = 'is_company_loss';
-                    isCompanyLossField.name = 'is_company_loss';
-                    document.getElementById('expenseForm').appendChild(isCompanyLossField);
-                }
-                
-                // Update the value
-                isCompanyLossField.value = isCompanyLoss ? 'Yes' : 'No';
-                
-                // Add a row to the expense summary
-                const summaryLossRow = document.getElementById('summary_loss_row');
-                if (summaryLossRow) {
-                    summaryLossRow.style.display = isCompanyLoss ? 'flex' : 'none';
-                    document.getElementById('summary_loss').textContent = isCompanyLoss ? 'Yes' : 'No';
-                }
-            }
-
-            // Add event listeners to expense, rental, and budget inputs to monitor for changes
-            document.querySelectorAll('.calculation').forEach(input => {
-                input.addEventListener('input', function() {
-                    if (this.id === 'expense' || this.id === 'rental_rate' || this.id === 'budget') {
-                        calculateTax();
-                        checkExpenseBudgetDifference(); // Check expense vs budget whenever these values change
-                        updateCompanyLossStatus();
-                    }
-                    updateCalculations();
-                });
-            });
-
-            // Update the checkbox event handlers
-            document.getElementById('has_budget').addEventListener('change', function() {
-                const budgetInput = document.getElementById('budget');
-                const summaryBudgetRow = document.getElementById('summary_budget_row');
-                const summaryVarianceRow = document.getElementById('summary_variance_row');
-                const billToClientCheckbox = document.getElementById('bill_to_client_checkbox');
-                const hasBudgetField = document.getElementById('has_budget_field');
-                
-                if (this.checked) {
-                    // Budget is checked
-                    budgetInput.disabled = false;
-                    budgetInput.required = true;
-                    summaryBudgetRow.style.display = 'flex';
-                    summaryVarianceRow.style.display = 'flex';
-                    hasBudgetField.value = 'on';
-                    
-                    // When budget is first checked, disable Bill to Client 
-                    // (we'll re-enable it if expense > budget later)
-                    billToClientCheckbox.disabled = true;
-                    billToClientCheckbox.checked = false;
-                    document.getElementById('bill_to_client').value = 'No';
-                    document.getElementById('summary_bill').textContent = 'No';
-                    document.getElementById('summary_bill_row').style.display = 'none';
-                    
-                    // Check existing values to see if expense > budget already
-                    checkExpenseBudgetDifference();
-                } else {
-                    // Budget is unchecked
-                    budgetInput.disabled = true;
-                    budgetInput.required = false;
-                    budgetInput.value = '';
-                    budgetInput.placeholder = '0.00';
-                    summaryBudgetRow.style.display = 'none';
-                    summaryVarianceRow.style.display = 'none';
-                    hasBudgetField.value = 'off';
-                    
-                    // Enable Bill to Client when Budget is unchecked
-                    billToClientCheckbox.disabled = false;
-                }
-                
-                updateCalculations();
-                updateCompanyLossStatus();
-            });
-
-            // Function to check if expense > budget and update the UI accordingly
-            function checkExpenseBudgetDifference() {
-                const hasBudget = document.getElementById('has_budget').checked;
-                if (!hasBudget) return; // Only proceed if budget is enabled
-                
-                const expenseAmount = document.getElementById('is_rental').checked 
-                    ? parseFloat(document.getElementById('rental_rate').value || 0) 
-                    : parseFloat(document.getElementById('expense').value || 0);
-                const budgetAmount = parseFloat(document.getElementById('budget').value || 0);
-                const billToClientCheckbox = document.getElementById('bill_to_client_checkbox');
-                
-                if (expenseAmount > budgetAmount) {
-                    // Expense exceeds budget - enable the Bill to Client checkbox
-                    billToClientCheckbox.disabled = false;
-                } else {
-                    // Expense is within budget - disable the Bill to Client checkbox
-                    billToClientCheckbox.disabled = true;
-                    billToClientCheckbox.checked = false;
-                    document.getElementById('bill_to_client').value = 'No';
-                    document.getElementById('summary_bill').textContent = 'No';
-                    document.getElementById('summary_bill_row').style.display = 'none';
-                }
-            }
-
-            
-            // Bill to Client checkbox
-            document.getElementById('bill_to_client_checkbox').addEventListener('change', function() {
-                const summaryBillRow = document.getElementById('summary_bill_row');
-                const billToClientField = document.getElementById('bill_to_client');
-                
-                if (this.checked) {
-                    billToClientField.value = 'Yes';
-                    document.getElementById('summary_bill').textContent = 'Yes';
-                    summaryBillRow.style.display = 'flex';
-                } else {
-                    billToClientField.value = 'No';
-                    document.getElementById('summary_bill').textContent = 'No';
-                    summaryBillRow.style.display = 'none';
-                }
-                
-                updateCompanyLossStatus();
-            });
-            
-            // Tax checkbox
-            document.getElementById('has_tax').addEventListener('change', function() {
-                const taxInput = document.getElementById('tax');
-                const summaryTaxRow = document.getElementById('summary_tax_row');
-                const taxEditBtn = document.getElementById('tax_edit_btn');
-                
-                if (this.checked) {
-                    taxInput.disabled = true;
-                    taxEditBtn.style.display = 'block';
-                    summaryTaxRow.style.display = 'flex';
-                    
-                    // Calculate tax as 12% of expense
-                    calculateTax();
-                } else {
-                    taxInput.disabled = true;
-                    taxInput.value = '';
-                    taxInput.placeholder = '0.00';
-                    taxEditBtn.style.display = 'none';
-                    document.getElementById('tax_edit_icon').src = 'icons/pencil-black.svg';
-                    summaryTaxRow.style.display = 'none';
-                }
-                updateCalculations();
-            });
-            
-            // Tax edit button
-            document.getElementById('tax_edit_btn').addEventListener('click', function() {
-                const taxInput = document.getElementById('tax');
-                const taxEditIcon = document.getElementById('tax_edit_icon');
-                
-                if (taxInput.disabled) {
-                    // Enable editing
-                    taxInput.disabled = false;
-                    taxEditIcon.src = 'icons/pencil-white.svg';
-                    this.classList.remove('btn-outline-secondary');
-                    this.classList.add('btn-primary');
-                } else {
-                    // Disable editing
-                    taxInput.disabled = true;
-                    taxEditIcon.src = 'icons/pencil-black.svg';
-                    this.classList.remove('btn-primary');
-                    this.classList.add('btn-outline-secondary');
-                    
-                    // Always recalculate tax as 12% of expense when toggling back to disabled
-                    calculateTax();
-                }
-            });
-            
-            // Invoice checkbox
-            document.getElementById('has_invoice').addEventListener('change', function() {
-                const invoiceInput = document.getElementById('invoice_no');
-                
-                if (this.checked) {
-                    invoiceInput.disabled = false;
-                    invoiceInput.required = true;
-                } else {
-                    invoiceInput.disabled = true;
-                    invoiceInput.required = false;
-                    invoiceInput.value = '';
-                    invoiceInput.placeholder = 'Enter Invoice Number';
-                }
-            });
-            
-            // Calculate tax as 12% of expense
-            function calculateTax() {
-                if (!document.getElementById('has_tax').checked) return;
-                
-                const isRental = document.getElementById('is_rental').checked;
-                const expense = isRental ? 
-                    (parseFloat(document.getElementById('rental_rate').value) || 0) : 
-                    (parseFloat(document.getElementById('expense').value) || 0);
-                
-                const taxAmount = expense * 0.12;
-                document.getElementById('tax').value = taxAmount.toFixed(2);
-                document.getElementById('summary_tax').textContent = '₱' + taxAmount.toFixed(2);
-            }
-            
-            // Input calculation event listeners
-            const calculationInputs = document.querySelectorAll('.calculation');
-            calculationInputs.forEach(input => {
-                input.addEventListener('input', function() {
-                    if (this.id === 'expense' || this.id === 'rental_rate') {
-                        calculateTax();
-                    }
-                    updateCalculations();
-                });
-            });
-            
-            // Function to update all calculations
-            function updateCalculations() {
-                const hasBudget = document.getElementById('has_budget').checked;
-                const budget = hasBudget ? (parseFloat(document.getElementById('budget').value) || 0) : 0;
-                
-                const isRental = document.getElementById('is_rental').checked;
-                const expense = isRental ? 
-                    (parseFloat(document.getElementById('rental_rate').value) || 0) : 
-                    (parseFloat(document.getElementById('expense').value) || 0);
-                
-                const hasTax = document.getElementById('has_tax').checked;
-                const tax = hasTax ? (parseFloat(document.getElementById('tax').value) || 0) : 0;
-                
-                // Calculate variance only if budget is enabled
-                if (hasBudget) {
-                    const variance = budget - expense;
-                    document.getElementById('variance').value = variance.toFixed(2);
-                    document.getElementById('summary_variance').textContent = '₱' + variance.toFixed(2);
-                } else {
-                    document.getElementById('variance').value = '';
-                    document.getElementById('variance').placeholder = '0.00';
-                }
-                
-                // Update summary display
-                if (hasBudget) {
-                    document.getElementById('summary_budget').textContent = '₱' + budget.toFixed(2);
-                }
-                
-                if (isRental) {
-                    document.getElementById('summary_rental').textContent = '₱' + expense.toFixed(2);
-                } else {
-                    document.getElementById('summary_expense').textContent = '₱' + expense.toFixed(2);
-                }
-                
-                if (hasTax) {
-                    document.getElementById('summary_tax').textContent = '₱' + tax.toFixed(2);
-                }
-            }
-            
-            // Function to open the expense modal (add or edit mode)
-            window.openExpenseModal = function(mode, recordData = null) {
-                const modal = document.getElementById('expenseModal');
-                const modalTitle = document.getElementById('expenseModalLabel');
-                const formMode = document.getElementById('form_mode');
-                const editId = document.getElementById('edit_id');
-                
-                // Reset form
-                document.getElementById('expenseForm').reset();
-                
-                // Reset all inputs to default state
-                document.getElementById('expense_input').style.display = 'block';
-                document.getElementById('rental_input').style.display = 'none';
-                document.getElementById('tax_input').style.display = 'block';
-                document.getElementById('invoice_input').style.display = 'block';
-                document.getElementById('tax').disabled = true;
-                document.getElementById('invoice_no').disabled = true;
-                document.getElementById('budget').disabled = true;
-                document.getElementById('bill_to_client_checkbox').disabled = false;
-                document.getElementById('tax_edit_btn').style.display = 'none';
-                document.getElementById('tax_edit_icon').src = 'icons/pencil-black.svg';
-                document.getElementById('tax_edit_btn').classList.remove('btn-primary');
-                document.getElementById('tax_edit_btn').classList.add('btn-outline-secondary');
-                
-                // Reset summary display
-                document.getElementById('summary_expense_row').style.display = 'flex';
-                document.getElementById('summary_rental_row').style.display = 'none';
-                document.getElementById('summary_tax_row').style.display = 'none';
-                document.getElementById('summary_budget_row').style.display = 'none';
-                document.getElementById('summary_variance_row').style.display = 'none';
-                document.getElementById('summary_bill_row').style.display = 'none';
-                
-                if (mode === 'add') {
-                    modalTitle.textContent = 'Add New Expense Record';
-                    formMode.value = 'add';
-                    editId.value = '0';
-                    document.getElementById('purchase_date').value = new Date().toISOString().split('T')[0]; // Today's date
-                } else if (mode === 'edit' && recordData) {
-                    modalTitle.textContent = 'Edit Expense Record';
-                    formMode.value = 'edit';
-                    editId.value = recordData.id;
-                    
-                    // Fill the form with existing data
-                    document.getElementById('category').value = recordData.category;
-                    // Trigger category change to load subcategories
-                    document.getElementById('category').dispatchEvent(new Event('change'));
-                    
-                    setTimeout(() => {
-                        document.getElementById('subcategory').value = recordData.subcategory;
-                    }, 100);
-                    
-                    document.getElementById('purchase_date').value = recordData.date;
-                    document.getElementById('payee').value = recordData.payee;
-                    document.getElementById('record_description').value = recordData.record_description;
-                    document.getElementById('remarks').value = recordData.remarks;
-                    
-                    // Check if is_rental is "Yes"
-                    if (recordData.is_rental === 'Yes' || 
-                        (recordData.rental_rate && parseFloat(recordData.rental_rate) > 0)) {
-                        document.getElementById('is_rental').checked = true;
-                        document.getElementById('is_rental_field').value = 'Yes';
-                        document.getElementById('rental_rate').value = recordData.rental_rate;
-                        document.getElementById('expense_input').style.display = 'none';
-                        document.getElementById('rental_input').style.display = 'block';
-                        document.getElementById('summary_expense_row').style.display = 'none';
-                        document.getElementById('summary_rental_row').style.display = 'flex';
-                        document.getElementById('rental_rate').required = true;
-                        document.getElementById('expense').required = false;
-                    } else {
-                        document.getElementById('expense').value = recordData.expense;
-                        document.getElementById('is_rental_field').value = 'No';
-                    }
-                    
-                    // Check if budget exists and is not zero
-                    if (recordData.budget && parseFloat(recordData.budget) > 0) {
-                        document.getElementById('has_budget').checked = true;
-                        document.getElementById('has_budget_field').value = 'on';
-                        document.getElementById('budget').disabled = false;
-                        document.getElementById('budget').required = true;
-                        document.getElementById('budget').value = recordData.budget;
-                        document.getElementById('summary_budget_row').style.display = 'flex';
-                        document.getElementById('summary_variance_row').style.display = 'flex';
-                        
-                        // Only disable Bill to Client if budget >= expense/rental_rate
-                        const expenseAmount = parseFloat(recordData.is_rental === 'Yes' ? recordData.rental_rate : recordData.expense) || 0;
-                        const budgetAmount = parseFloat(recordData.budget) || 0;
-                        
-                        if (expenseAmount <= budgetAmount) {
-                            document.getElementById('bill_to_client_checkbox').disabled = true;
-                        } else {
-                            document.getElementById('bill_to_client_checkbox').disabled = false;
-                        }
-                    }
-                    
-                    // Check if bill_to_client is "Yes"
-                    if (recordData.bill_to_client === 'Yes') {
-                        document.getElementById('bill_to_client_checkbox').checked = true;
-                        document.getElementById('bill_to_client').value = 'Yes';
-                        document.getElementById('summary_bill').textContent = 'Yes';
-                        document.getElementById('summary_bill_row').style.display = 'flex';
-                    }
-                    
-                    // Check if tax exists and is not zero
-                    if (recordData.tax && parseFloat(recordData.tax) > 0) {
-                        document.getElementById('has_tax').checked = true;
-                        document.getElementById('tax').value = recordData.tax;
-                        document.getElementById('tax_edit_btn').style.display = 'block';
-                        document.getElementById('summary_tax_row').style.display = 'flex';
-                    }
-                    
-                    // Check if invoice exists
-                    if (recordData.invoice_no && recordData.invoice_no.trim() !== '') {
-                        document.getElementById('has_invoice').checked = true;
-                        document.getElementById('invoice_no').disabled = false;
-                        document.getElementById('invoice_no').required = true;
-                        document.getElementById('invoice_no').value = recordData.invoice_no;
-                    }
-                    
-                    // Update calculations
-                    updateCalculations();
-                    
-                    // Update company loss status if needed
-                    if (typeof updateCompanyLossStatus === 'function') {
-                        updateCompanyLossStatus();
-                    }
-                }
-                
-                // Show the modal
-                const bsModal = new bootstrap.Modal(modal);
-                bsModal.show();
-            };
-            
-            // Handle form submission
-            document.getElementById('expenseForm').addEventListener('submit', function(e) {
-                // Log for debugging
-                console.log("Form submission started");
-                
-                // Always preventDefault first to handle our custom validation
-                e.preventDefault();
-                
-                // Form validation
-                if (!this.checkValidity()) {
-                    console.log("Form validation failed");
-                    this.classList.add('was-validated');
-                    return false;
-                }
-                
-                // Check if tax is greater than expense
-                const hasTax = document.getElementById('has_tax').checked;
-                
-                if (hasTax) {
-                    const isRental = document.getElementById('is_rental').checked;
-                    const expense = isRental ? 
-                        (parseFloat(document.getElementById('rental_rate').value) || 0) : 
-                        (parseFloat(document.getElementById('expense').value) || 0);
-                    const tax = parseFloat(document.getElementById('tax').value) || 0;
-                    
-                    if (tax > expense) {
-                        console.log("Tax validation failed: tax > expense");
-                        alert("Tax cannot be greater than expense.");
-                        return false;
-                    }
-                }
-                
-                // Log for debugging - right before submission
-                console.log("Validation passed, submitting form");
-                console.log("Is rental: " + document.getElementById('is_rental_field').value);
-                console.log("Expense value: " + document.getElementById('expense').value);
-                console.log("Rental rate value: " + document.getElementById('rental_rate').value);
-                
-                // If validation passes, manually submit the form
-                this.submit();
-            });
-        });
-        // Function to edit expense record
-        function editExpense(id, category, subcategory, date, budget, expense, payee, record_description, remarks, rental_rate, tax, invoice_no, bill_to_client) {
-            openExpenseModal('edit', {
-                id: id,
-                category: category,
-                subcategory: subcategory,
-                date: date,
-                budget: budget,
-                expense: expense,
-                payee: payee,
-                record_description: record_description,
-                remarks: remarks,
-                rental_rate: rental_rate,
-                tax: tax,
-                invoice_no: invoice_no,
-                bill_to_client: bill_to_client
-            });
-        }
-        // Function to delete expense record
-        function deleteExpense(id) {
-            if (confirm('Are you sure you want to delete this expense record?')) {
-                const form = document.createElement('form');
-                form.method = 'POST';
-                form.style.display = 'none';
-                
-                const idInput = document.createElement('input');
-                idInput.type = 'hidden';
-                idInput.name = 'record_id';
-                idInput.value = id;
-                
-                const deleteInput = document.createElement('input');
-                deleteInput.type = 'hidden';
-                deleteInput.name = 'delete_record';
-                deleteInput.value = '1';
-                
-                form.appendChild(idInput);
-                form.appendChild(deleteInput);
-                document.body.appendChild(form);
-                
-                form.submit();
-            }
-        }
-    </script>
-    <script>
-        document.addEventListener('DOMContentLoaded', function() {
-            const subcategories = <?php echo json_encode($subcategories); ?>;
-
-            const categorySelect = document.getElementById('category');
-            const subcategorySelect = document.getElementById('subcategory');
-
-            categorySelect.addEventListener('change', function() {
-                const selectedCategoryName = this.value;
-                
-                // Clear existing subcategory options
-                subcategorySelect.innerHTML = '<option value="">Select Subcategory</option>';
-                
-                if (selectedCategoryName) {
-                    // Enable subcategory dropdown
-                    subcategorySelect.disabled = false;
-                    
-                    // Filter subcategories by category_name (string)
-                    const filteredSubcategories = subcategories.filter(subcat => 
-                        subcat.category_name === selectedCategoryName
-                    );
-                    
-                    // Populate subcategory dropdown
-                    filteredSubcategories.forEach(subcat => {
-                        const option = document.createElement('option');
-                        option.value = subcat.subcategory_name;
-                        option.textContent = subcat.subcategory_name;
-                        subcategorySelect.appendChild(option);
-                    });
-                } else {
-                    // Disable subcategory dropdown if no category selected
-                    subcategorySelect.disabled = true;
-                }
-            });
-        });
-    </script>
+        modal.show();
+    });
+});
+</script>
 </body>
 </html>

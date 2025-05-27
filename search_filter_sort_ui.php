@@ -106,7 +106,7 @@
 <div class="search-filter-bar">
     <!-- Left group: Add, Search, Filter -->
     <div class="left-controls">
-        <button onclick="openExpenseModal('add')" class="add-record-btn">ADD RECORD</button>
+        <button id="add-record-btn" class="add-record-btn">ADD RECORD</button>
 
         <div class="search-container">
             <input type="text" id="search-input" class="search-input" placeholder="SEARCH">
