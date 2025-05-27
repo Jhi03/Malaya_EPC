@@ -431,11 +431,5 @@
     <script src="js/sidebar.js"></script>
     <script src="js/header.js"></script>
     <script src="js/ms_assets.js"></script>
-    
-    <script>
-        function changePage(page) {
-            window.location.href = 'ms_assets.php?page=' + page;
-        }
-    </script>
 </body>
 </html>

@@ -165,12 +165,12 @@
                     <div class="vendor-list-table-container">
                         <table class="table">
                             <thead>
-                                <tr>
-                                    <th></th>
-                                    <th>Vendor Name</th>
-                                    <th>Type</th>
-                                    <th>POC</th>
-                                    <th>Contact</th>
+                                <tr style="background: #f8f9fa !important;">
+                                    <th style="background: #f8f9fa !important;"></th>
+                                    <th style="background: #f8f9fa !important;">Vendor Name</th>
+                                    <th style="background: #f8f9fa !important;">Type</th>
+                                    <th style="background: #f8f9fa !important;">POC</th>
+                                    <th style="background: #f8f9fa !important;">Contact</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -183,7 +183,7 @@
                                             <span class="row-number"><?= $counter++ ?></span>
                                             <input type="checkbox" class="row-checkbox">
                                         </td>
-                                        <td><?= htmlspecialchars($row['vendor_name']) ?></td>
+                                        <td style="font-weight: 500;"><?= htmlspecialchars($row['vendor_name']) ?></td>
                                         <td><?= htmlspecialchars($row['vendor_type']) ?></td>
                                         <td><?= htmlspecialchars($row['contact_person']) ?></td>
                                         <td><?= htmlspecialchars($row['contact_no']) ?></td>
@@ -268,7 +268,7 @@
                             <div class="detail-section">
                                 <h4>Address Information</h4>
                                 <div class="detail-item">
-                                    <div class="detail-label">Building/Unit:</div>
+                                    <div class="detail-label">Bldg/Unit:</div>
                                     <div class="detail-value" id="vendorUnit"></div>
                                 </div>
                                 <div class="detail-item">
@@ -772,23 +772,3 @@ document.getElementById('vendor_remarks').value = vendorData.vendor_remarks || '
     </script>
 </body>
 </html>
-
-<!--
-NOTES: 
-    05-22-25
-    CHANGES:
-    - Updated search bar to match the reference files
-    - Removed analytics, record, sort by, and filter buttons
-    - Enhanced search functionality to search by vendor_name, vendor_type, and contact_person
-    - Added server-side search with URL parameters
-    - Added search icon to search input
-    - Improved select button styling and interaction
-    - Fixed select mode functionality
-    - Improved search input styling
-    - Added "No results" message when search returns no vendors
-    - Added clear search button when search is active
-    - Improved responsive design for the search filter bar
-    - Added input group for contact number with leading 0
-    - Fixed search form submission behavior
-    - Improved table hover styling
--->            

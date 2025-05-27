@@ -508,30 +508,39 @@ document.addEventListener('DOMContentLoaded', function() {
     }
     
     function showNoResultsMessage(show) {
-        let noResultsMsg = document.getElementById('noResultsMessage');
+        const rows = document.querySelectorAll('.asset-row');
+        const tableWrapper = document.querySelector('.asset-list-table-wrapper');
         
-        if (show && !noResultsMsg) {
-            noResultsMsg = document.createElement('div');
-            noResultsMsg.id = 'noResultsMessage';
-            noResultsMsg.className = 'no-assets';
-            noResultsMsg.innerHTML = `
-                <img src="icons/search.svg" alt="No Results" width="48">
-                <p>No assets found matching your search</p>
-                <button class="add-first-asset-btn" onclick="document.getElementById('searchInput').value=''; document.getElementById('searchInput').dispatchEvent(new Event('input'));">
-                    Clear Search
-                </button>
-            `;
+        if (show) {
+            // Hide all rows but keep table structure
+            rows.forEach(row => row.style.visibility = 'hidden');
             
-            const tableWrapper = document.querySelector('.asset-list-table-wrapper');
-            if (tableWrapper) {
-                tableWrapper.style.display = 'none';
-                tableWrapper.parentNode.appendChild(noResultsMsg);
+            // Show message in an existing empty row or create one
+            let noResultsRow = document.getElementById('noResultsRow');
+            if (!noResultsRow) {
+                const tbody = document.querySelector('.asset-list-table tbody');
+                noResultsRow = document.createElement('tr');
+                noResultsRow.id = 'noResultsRow';
+                noResultsRow.innerHTML = `
+                    <td colspan="6" class="text-center py-5">
+                        <div class="no-assets">
+                            <img src="icons/search.svg" alt="No Results" width="48">
+                            <p>No assets found matching your search</p>
+                            <button class="add-first-asset-btn" onclick="document.getElementById('searchInput').value=''; document.getElementById('searchInput').dispatchEvent(new Event('input'));">
+                                Clear Search
+                            </button>
+                        </div>
+                    </td>
+                `;
+                tbody.appendChild(noResultsRow);
             }
-        } else if (!show && noResultsMsg) {
-            noResultsMsg.remove();
-            const tableWrapper = document.querySelector('.asset-list-table-wrapper');
-            if (tableWrapper) {
-                tableWrapper.style.display = 'flex';
+            noResultsRow.style.display = 'table-row';
+        } else {
+            // Show all rows and hide no results
+            rows.forEach(row => row.style.visibility = 'visible');
+            const noResultsRow = document.getElementById('noResultsRow');
+            if (noResultsRow) {
+                noResultsRow.style.display = 'none';
             }
         }
     }

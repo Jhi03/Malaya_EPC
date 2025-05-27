@@ -214,7 +214,7 @@ body {
     overflow: hidden;
 }
 
-/* Asset List - Updated for scrolling */
+/* Asset List - Updated for consistent footer positioning */
 .asset-list {
     flex: 1;
     background: white;
@@ -248,18 +248,29 @@ body {
     font-size: 12px;
 }
 
-/* Updated table wrapper for scrolling */
+/* Fix for footer jumping - ensure consistent layout */
 .asset-list-table-wrapper {
     flex: 1;
     overflow-y: auto;
     overflow-x: hidden;
-    min-height: 0;
+    min-height: 400px;
+    display: flex;
+    flex-direction: column;
+    position: relative; /* Add this */
 }
 
+/* Ensure table maintains its space even when hidden */
 .asset-list-table {
     width: 100%;
     border-collapse: collapse;
     font-size: 12px;
+    flex: 1; /* Add this */
+}
+
+/* When table is hidden, maintain the space */
+.asset-list-table.hidden-for-search {
+    visibility: hidden;
+    height: 100%;
 }
 
 .asset-list-table thead {
@@ -356,7 +367,52 @@ body {
     color: #721c24;
 }
 
-/* Updated Asset List Footer */
+/* Add styles for empty state within table */
+.no-results-row {
+    height: 200px;
+}
+
+.no-results-cell {
+    text-align: center;
+    vertical-align: middle;
+    color: #6c757d;
+    font-style: italic;
+    font-size: 12px;
+}
+
+/* Ensure no-results message takes same space as table */
+.no-results-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    background: white;
+    z-index: 5;
+}
+
+/* Update existing no-assets styles to work as overlay */
+.no-results-overlay.no-assets {
+    padding: 60px 20px;
+    text-align: center;
+    color: #6c757d;
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    background: white;
+}
+
+/* Updated Asset List Footer - always stays at bottom */
 .asset-list-footer {
     padding: 15px 20px;
     border-top: 1px solid #eee;
@@ -365,6 +421,7 @@ body {
     align-items: center;
     background: #fafafa;
     flex-shrink: 0;
+    margin-top: auto; /* This pushes footer to bottom */
 }
 
 .footer-right {
