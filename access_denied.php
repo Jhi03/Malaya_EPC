@@ -126,13 +126,6 @@ $user_department = getCurrentUserDepartment();
                 window.location.href = 'ms_dashboard.php';
             }
         }
-        
-        // Auto-redirect after 10 seconds if user doesn't interact
-        setTimeout(function() {
-            if (confirm('Would you like to return to the dashboard?')) {
-                window.location.href = 'ms_dashboard.php';
-            }
-        }, 10000);
     </script>
 </body>
 </html>
